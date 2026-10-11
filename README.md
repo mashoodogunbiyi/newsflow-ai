@@ -50,9 +50,10 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 
 ## Planning documents
 
-- [PROJECT_PLAN.md](PROJECT_PLAN.md) — end-to-end delivery plan organised as Epics and Tasks.
-- [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) — Jira setup, workflow, issue templates, roadmap, and operating rules.
-- [docs/jira/NFA-3.md](docs/jira/NFA-3.md) — functional and non-functional requirements baseline with measurable acceptance criteria.
+- [PROJECT_PLAN.md](PROJECT_PLAN.md) - end-to-end delivery plan organised as Epics and Tasks.
+- [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) - Jira setup, workflow, issue templates, roadmap, and operating rules.
+- [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
+- [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 
 ## Intended repository layout
 
@@ -90,7 +91,7 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Start Epic E0 in [PROJECT_PLAN.md](PROJECT_PLAN.md), especially the CNN access decision. In parallel, initialise Jira from [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) and create the local project skeleton using fixtures that contain no copied CNN article text.
+Review the completed [NFA-4 CNN data-access research](docs/jira/NFA-4.md). After approval, complete NFA-5 by obtaining and recording written authorisation for the selected live source. Until then, build only with synthetic fixtures that contain no copied CNN article text.
 
 ## Licence
 
