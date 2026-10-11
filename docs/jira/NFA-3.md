@@ -1,4 +1,4 @@
-# NFA-3 — Baseline Requirements and Acceptance Criteria
+# NFA-3 - Baseline Requirements and Acceptance Criteria
 
 ## 1. Document control
 
@@ -7,8 +7,8 @@
 | Project | NewsFlow AI |
 | Jira issue | NFA-3 |
 | Project-plan task | T0.1 - Baseline requirements and acceptance criteria |
-| Version | 1.0 candidate baseline |
-| Status | Ready for product-owner review |
+| Version | 1.0 |
+| Status | Approved requirements baseline |
 | Created | 11 October 2026 |
 | Primary source | Approved project brief: *AI-Powered CNN News-to-LinkedIn Content Generator* |
 | Repository path | `docs/jira/NFA-3.md` |
@@ -18,21 +18,23 @@
 | Version | Date | Change | Author |
 |---|---|---|---|
 | 1.0 candidate | 11 October 2026 | Initial functional, non-functional, scope, acceptance, and traceability baseline | Mashood Ogunbiyi |
+| 1.0 | 11 October 2026 | Baseline reviewed and approved by Dagogo Orifama and Mashood Ogunbiyi | Mashood Ogunbiyi |
 
 ### Approval
 
-This document becomes the approved version 1.0 baseline when the product owner confirms that it reflects the intended MVP. Jira remains the source of truth for the issue's workflow status.
+This document is the approved version 1.0 requirements baseline. Dagogo Orifama reviewed and approved the baseline as the project assigner. Mashood Ogunbiyi approved it as the project and document owner and completed the technical self-review for the current solo phase. Jira remains the source of truth for the issue's workflow status.
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
-| Product owner | To be completed | Pending review | — |
-| Technical reviewer | To be completed | Pending review | — |
+| Project assigner | Dagogo Orifama | Reviewed and approved | 11 October 2026 |
+| Project and document owner | Mashood Ogunbiyi | Approved | 11 October 2026 |
+| Technical reviewer | Mashood Ogunbiyi | Self-reviewed and accepted for the current solo phase | 11 October 2026 |
 
 ## 2. Purpose
 
 This document establishes the initial requirements baseline for NewsFlow AI. It defines what the first release must do, the quality and control standards it must meet, how each major feature will be accepted, and what is deliberately excluded.
 
-It is the deliverable for Jira issue NFA-3. Later Jira issues may produce separate research, architecture, design, implementation, and test documents. This file should change only when an approved requirement changes; ordinary task progress remains in Jira.
+This file contains the work completed for Jira issue NFA-3. Other Jira tasks may create their own documents. Update this file only when the project requirements change. Use Jira, not this file, to track whether tasks are To Do, In Progress, or Done.
 
 ## 3. Product objective
 
@@ -44,9 +46,10 @@ CNN is the only news source for the MVP and the factual source of truth. The app
 
 | Role | Interest and responsibility |
 |---|---|
-| Product owner | Approves scope, requirements, CNN access decision, and release acceptance |
+| Project sponsor/assigner - Dagogo Orifama | Provided or assigned the project brief and expected outcome |
+| Project and document owner - Mashood Ogunbiyi | Owns the working scope and approves the requirements baseline and later controlled changes |
 | Application user | Discovers articles and creates, reviews, manages, and exports content |
-| Developer/operator | Builds, configures, monitors, tests, and supports the application |
+| Developer/operator - Mashood Ogunbiyi | Builds, configures, monitors, tests, and supports the application |
 | Content-rights owner/provider | Defines what CNN information may be accessed, stored, processed, and attributed |
 | AI provider | Supplies text and image generation through the OpenAI API |
 
@@ -167,7 +170,7 @@ The MVP has one application-user permission level. Administrative UI features ar
 | ID | Priority | Requirement | Measurable acceptance criteria |
 |---|---|---|---|
 | FR-TEXT-001 | Must | A user shall choose a tone from Professional, Educational, Conversational, Inspirational, and Analytical. | All five values are accepted by the API and represented in the user interface; any other value is rejected with a validation error. |
-| FR-TEXT-002 | Must | A user shall choose Short, Medium, or Long post length. | Generated drafts target 75–150 words for Short, 151–300 for Medium, and 301–500 for Long. Output outside the chosen band is flagged or rejected before display. These ranges may change only through an approved baseline revision. |
+| FR-TEXT-002 | Must | A user shall choose Short, Medium, or Long post length. | Generated drafts target 75-150 words for Short, 151-300 for Medium, and 301-500 for Long. Output outside the chosen band is flagged or rejected before display. These ranges may change only through an approved baseline revision. |
 | FR-TEXT-003 | Must | A user shall choose General professionals, Business leaders, Technology professionals, or Entrepreneurs as the target audience. | All four values are accepted and supplied to the versioned prompt; any other value is rejected. Evaluation fixtures confirm that each audience option changes the framing without changing source facts. |
 | FR-TEXT-004 | Must | The system shall generate the required post structure. | A valid draft contains an opening hook, concise news explanation, professional insight or discussion point, call to action where appropriate, three to five relevant hashtags, and source attribution with the canonical CNN URL. |
 | FR-TEXT-005 | Must | Every factual claim shall be grounded in the selected source snapshot. | The structured result maps every factual claim to one or more valid fact IDs. A response containing an unknown fact ID or an unmapped factual claim fails validation and is not presented as a successful draft. |
@@ -272,35 +275,35 @@ The release must pass every **Must** row below. Detailed criteria remain authori
 
 | Major feature | Release acceptance test | Requirement coverage |
 |---|---|---|
-| Authorised CNN discovery | Approved adapter imports a valid test batch, records permitted fields/provenance, rejects malformed items, and creates no duplicates; without approval it makes no live request. | FR-SRC-001–008, DR-001, NFR-COMP-001 |
-| Authentication | A new user registers, logs in, refreshes the session, logs out, and is denied afterward; a second user cannot access the first user's content. | FR-AUTH-001–005, NFR-SEC-001–004 |
-| Article dashboard | User views required metadata, filters all categories, selects an eligible article, opens the canonical CNN link, and sees explicit empty/error states. | FR-DASH-001–005 |
-| LinkedIn generation | User exercises every tone, length, and audience option; valid sources create structured, attributed drafts with claim mappings; thin sources refuse generation. | FR-TEXT-001–010, NFR-COMP-002 |
-| Image generation | User generates and independently regenerates an original image, supplies additional instructions, sees appropriate disclosure, and downloads it; sensitive fixtures use conceptual treatment. | FR-IMG-001–007 |
-| Editor and preview | User edits text, changes controls, previews current text/image, receives an unsaved-change warning, and copies the exact final text. | FR-EDIT-001–005 |
-| Content management | User saves, reopens, edits, versions, lists, and deletes their own content; another user is denied every operation. | FR-CONT-001–005, DR-002–006 |
-| Failure handling | Simulated timeouts, rate limits, invalid provider responses, database errors, and storage errors produce safe recoverable states without duplicate or corrupted content. | FR-API-001–004, NFR-REL-001–002, NFR-OBS-001 |
+| Authorised CNN discovery | Approved adapter imports a valid test batch, records permitted fields/provenance, rejects malformed items, and creates no duplicates; without approval it makes no live request. | FR-SRC-001 to FR-SRC-008, DR-001, NFR-COMP-001 |
+| Authentication | A new user registers, logs in, refreshes the session, logs out, and is denied afterward; a second user cannot access the first user's content. | FR-AUTH-001 to FR-AUTH-005, NFR-SEC-001 to NFR-SEC-004 |
+| Article dashboard | User views required metadata, filters all categories, selects an eligible article, opens the canonical CNN link, and sees explicit empty/error states. | FR-DASH-001 to FR-DASH-005 |
+| LinkedIn generation | User exercises every tone, length, and audience option; valid sources create structured, attributed drafts with claim mappings; thin sources refuse generation. | FR-TEXT-001 to FR-TEXT-010, NFR-COMP-002 |
+| Image generation | User generates and independently regenerates an original image, supplies additional instructions, sees appropriate disclosure, and downloads it; sensitive fixtures use conceptual treatment. | FR-IMG-001 to FR-IMG-007 |
+| Editor and preview | User edits text, changes controls, previews current text/image, receives an unsaved-change warning, and copies the exact final text. | FR-EDIT-001 to FR-EDIT-005 |
+| Content management | User saves, reopens, edits, versions, lists, and deletes their own content; another user is denied every operation. | FR-CONT-001 to FR-CONT-005, DR-002 to DR-006 |
+| Failure handling | Simulated timeouts, rate limits, invalid provider responses, database errors, and storage errors produce safe recoverable states without duplicate or corrupted content. | FR-API-001 to FR-API-004, NFR-REL-001 to NFR-REL-002, NFR-OBS-001 |
 | Local delivery | A reviewer follows the README from a clean clone, starts the application, loads safe fixtures, and completes the critical workflow with all release checks passing. | NFR-TEST-001, NFR-DEP-001 |
 
 ## 14. Project-brief traceability
 
 | Project brief section | Baseline coverage |
 |---|---|
-| 2.1 CNN News Discovery and Extraction | FR-SRC-001–008, DR-001, NFR-COMP-001 |
-| 2.2 News Article Dashboard | FR-DASH-001–005 |
-| 2.3 AI-Powered LinkedIn Post Generation | FR-TEXT-001–010, BR-003–005 |
-| 2.4 AI Image Generation | FR-IMG-001–007, BR-006 |
-| 2.5 LinkedIn Content Editor and Preview | FR-EDIT-001–005 |
-| 2.6 Content Management | FR-CONT-001–005, DR-002–006 |
-| 2.7 User Authentication | FR-AUTH-001–005, NFR-SEC-001–004 |
+| 2.1 CNN News Discovery and Extraction | FR-SRC-001 to FR-SRC-008, DR-001, NFR-COMP-001 |
+| 2.2 News Article Dashboard | FR-DASH-001 to FR-DASH-005 |
+| 2.3 AI-Powered LinkedIn Post Generation | FR-TEXT-001 to FR-TEXT-010, BR-003 to BR-005 |
+| 2.4 AI Image Generation | FR-IMG-001 to FR-IMG-007, BR-006 |
+| 2.5 LinkedIn Content Editor and Preview | FR-EDIT-001 to FR-EDIT-005 |
+| 2.6 Content Management | FR-CONT-001 to FR-CONT-005, DR-002 to DR-006 |
+| 2.7 User Authentication | FR-AUTH-001 to FR-AUTH-005, NFR-SEC-001 to NFR-SEC-004 |
 | 3 Expected Application Workflow | Major-feature acceptance matrix in Section 13 |
 | 4 Proposed System Architecture | NFR-MAINT-001 and the architecture in `PROJECT_PLAN.md` |
 | 5 Suggested Technology Stack | NFR-DEP-001 and the planned architecture in `README.md` |
-| 6 Technical Requirements | FR-API-001–004 and all non-functional requirements |
+| 6 Technical Requirements | FR-API-001 to FR-API-004 and all non-functional requirements |
 | 7 Development Milestones | `PROJECT_PLAN.md` and `PROJECT_MANAGEMENT.md` |
 | 8 Project Deliverables | NFR-TEST-001, NFR-DEP-001, and Epic E9 in `PROJECT_PLAN.md` |
-| 9 Acceptance Criteria | Sections 9–13 of this baseline |
-| 10 Scope and Limitations | Section 6 and BR-001–008 |
+| 9 Acceptance Criteria | Sections 9 to 13 of this baseline |
+| 10 Scope and Limitations | Section 6 and BR-001 to BR-008 |
 | 11 Final Expected Outcome | Product objective in Section 3 and acceptance matrix in Section 13 |
 
 No approved project-brief requirement is intentionally omitted. Clarifications added here make broad brief statements measurable without expanding the product into an excluded feature.
@@ -312,19 +315,21 @@ No approved project-brief requirement is intentionally omitted. Clarifications a
 | Functional requirements are documented | Section 9 and Section 10 | Met |
 | Non-functional requirements are documented | Section 11 | Met |
 | In-scope and out-of-scope features are identified | Section 6 | Met |
-| Each major feature has measurable acceptance criteria | Detailed tables in Sections 9–11 and summary matrix in Section 13 | Met |
-| Requirements are consistent with the approved project brief | Section 14 traceability matrix | Met, pending product-owner review |
+| Each major feature has measurable acceptance criteria | Detailed tables in Sections 9 to 11 and summary matrix in Section 13 | Met |
+| Requirements are consistent with the approved project brief | Section 14 traceability matrix | Met |
 | Requirements baseline is saved in project documentation | `docs/jira/NFA-3.md` | Met |
 
 ## 16. Baseline review checklist
 
-- [ ] Product owner confirms the product objective and primary user workflow.
-- [ ] Product owner confirms in-scope and out-of-scope boundaries.
-- [ ] Product owner confirms the measurable post-length ranges and other clarified business rules.
-- [ ] Technical reviewer confirms requirements are feasible and testable.
-- [ ] Reviewer confirms traceability to the approved brief.
-- [ ] Approval table in Section 1 is completed.
-- [ ] NFA-3 is moved through the agreed Jira review/verification status and then marked Done.
+- [x] Project and document owner confirms the product objective and primary user workflow.
+- [x] Project and document owner confirms in-scope and out-of-scope boundaries.
+- [x] Project and document owner confirms the measurable post-length ranges and other clarified business rules.
+- [x] Technical self-review confirms the requirements are feasible and testable for the current solo phase.
+- [x] Document owner confirms traceability to the approved brief.
+- [x] Project assigner confirms the baseline was reviewed and approved.
+- [x] Approval table in Section 1 is completed.
+
+The document review is complete. The remaining workflow action is for Mashood Ogunbiyi to move NFA-3 to **Done** in Jira and attach the resulting commit or pull-request link as evidence. When another contributor joins the project, future technical changes should use peer review where practical.
 
 ## 17. Change control
 
