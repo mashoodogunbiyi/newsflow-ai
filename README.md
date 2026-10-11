@@ -54,6 +54,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) - Jira setup, workflow, issue templates, roadmap, and operating rules.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
+- [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
 
 ## Intended repository layout
 
@@ -91,7 +92,7 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Review the completed [NFA-4 CNN data-access research](docs/jira/NFA-4.md). After approval, complete NFA-5 by obtaining and recording written authorisation for the selected live source. Until then, build only with synthetic fixtures that contain no copied CNN article text.
+Review the [NFA-5 CNN authorisation record](docs/jira/NFA-5.md). It records that no written live-source permission is currently held, so live CNN ingestion remains blocked. After approval, start NFA-6 with a fixture-first source data contract and use only synthetic records that contain no copied CNN article text.
 
 ## Licence
 
