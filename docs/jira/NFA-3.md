@@ -46,10 +46,10 @@ CNN is the only news source for the MVP and the factual source of truth. The app
 
 | Role | Interest and responsibility |
 |---|---|
-| Project sponsor/assigner - Dagogo Orifama | Provided or assigned the project brief and expected outcome |
+| Project assigner - Dagogo Orifama | Provided or assigned the project brief and expected outcome |
 | Project and document owner - Mashood Ogunbiyi | Owns the working scope and approves the requirements baseline and later controlled changes |
 | Application user | Discovers articles and creates, reviews, manages, and exports content |
-| Developer/operator - Mashood Ogunbiyi | Builds, configures, monitors, tests, and supports the application |
+| Developer - Mashood Ogunbiyi | Builds, configures, monitors, tests, and supports the application |
 | Content-rights owner/provider | Defines what CNN information may be accessed, stored, processed, and attributed |
 | AI provider | Supplies text and image generation through the OpenAI API |
 
