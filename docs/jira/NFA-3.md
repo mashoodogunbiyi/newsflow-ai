@@ -6,7 +6,7 @@
 |---|---|
 | Project | NewsFlow AI |
 | Jira issue | NFA-3 |
-| Project-plan task | T0.1 — Baseline requirements and acceptance criteria |
+| Project-plan task | T0.1 - Baseline requirements and acceptance criteria |
 | Version | 1.0 candidate baseline |
 | Status | Ready for product-owner review |
 | Created | 11 October 2026 |
@@ -17,7 +17,7 @@
 
 | Version | Date | Change | Author |
 |---|---|---|---|
-| 1.0 candidate | 11 October 2026 | Initial functional, non-functional, scope, acceptance, and traceability baseline | Project team |
+| 1.0 candidate | 11 October 2026 | Initial functional, non-functional, scope, acceptance, and traceability baseline | Mashood Ogunbiyi |
 
 ### Approval
 
