@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: planning and discovery. NFA-3 through NFA-7 are complete and approved. Development may use original synthetic fixtures under the approved privacy, copyright, and AI safety safeguards, but implementation must not connect to live CNN content until the permitted access method and licence terms are confirmed.
+> Status: planning and discovery. NFA-3 through NFA-8 are complete and approved. ADR-001 records a No-Go decision for live CNN integration and a Go decision for development with original synthetic fixtures under the approved safeguards.
 
 ## Product workflow
 
@@ -57,6 +57,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
 - [docs/jira/NFA-6.md](docs/jira/NFA-6.md) - approved fixture-first source data contract covering required fields, validation, missing information, attribution, provenance, refresh, and retention.
 - [docs/jira/NFA-7.md](docs/jira/NFA-7.md) - approved privacy, copyright, hallucination, and AI-generated image risk review with mandatory safeguards and release gates.
+- [docs/jira/NFA-8.md](docs/jira/NFA-8.md) - approved architecture decision recording No-Go for live CNN integration and Go for fixture-based development.
 
 ### Documentation update rule
 
@@ -104,9 +105,9 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Review the approved [NFA-7 privacy, copyright, and AI safety review](docs/jira/NFA-7.md) and record its GitHub evidence in Jira. The review permits synthetic-fixture development under mandatory safeguards and confirms that live CNN ingestion and processing remain blocked.
+Review the approved [NFA-8 Architecture Decision Record](docs/jira/NFA-8.md) and record its GitHub evidence in Jira. ADR-001 formally blocks live CNN integration while allowing the fixture-backed product and engineering work to continue.
 
-After NFA-7 is recorded as Done in Jira, continue to NFA-8 - Record go/no-go ADR.
+After NFA-8 is recorded as Done in Jira, continue to NFA-9 - Create the initial risk register.
 
 ## Licence
 
