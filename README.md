@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: planning and discovery. NFA-3 through NFA-9 are complete and approved. ADR-001 records a No-Go decision for live CNN integration, and the initial risk register establishes named ownership and controls for development with original synthetic fixtures.
+> Status: engineering foundation started. NFA-3 through NFA-9 are complete and approved. NFA-11 establishes the initial repository structure for fixture-backed development. ADR-001 continues to block live CNN integration.
 
 ## Product workflow
 
@@ -70,23 +70,53 @@ The README is the running written record of the project's progress. Whenever a p
 
 The README and the related project document should be staged and committed together so the repository history remains understandable.
 
-## Intended repository layout
+## Repository structure
 
 ```text
 newsflow-ai/
 ├── apps/
 │   ├── api/                 # FastAPI application
 │   └── web/                 # Next.js application
-├── packages/                # Shared schemas or generated API client
-├── infrastructure/          # Docker and deployment configuration
-├── docs/                    # Architecture decisions, API notes, and reports
+├── packages/                # Shared contracts, schemas, or generated clients
+├── infrastructure/
+│   ├── database/            # Database and migration configuration
+│   └── docker/              # Container and local-service configuration
+├── docs/
+│   ├── architecture/        # Architecture Decision Records and design notes
+│   └── jira/                # Jira task deliverables and approved baselines
 ├── tests/                   # Cross-service and end-to-end tests
+├── .editorconfig            # Shared text-formatting defaults
+├── .env.example             # Safe local configuration template
+├── .gitignore               # Excludes secrets, dependencies, builds, and local files
 ├── README.md
 ├── PROJECT_PLAN.md
 └── PROJECT_MANAGEMENT.md
 ```
 
-The layout is a target, not a claim about files that already exist.
+The directories are established as tracked scaffolds. Application source files, package configuration, migrations, containers, and automated tests will be added by their related engineering tasks.
+
+### Directory responsibilities
+
+| Path | Responsibility |
+|---|---|
+| `apps/web` | Frontend user interface, authentication screens, dashboard, editor, and previews |
+| `apps/api` | Backend API, validation, authorisation, persistence, and external-service orchestration |
+| `packages` | Code and contracts shared between applications |
+| `infrastructure/database` | Database service, migration, backup, and restore configuration |
+| `infrastructure/docker` | Docker and local dependency configuration |
+| `docs/architecture` | Architecture decisions and technical design records |
+| `docs/jira` | Approved Jira deliverables and project-governance evidence |
+| `tests` | Cross-application, integration, and end-to-end tests |
+
+### Local configuration
+
+Copy the safe example when local environment configuration is needed:
+
+```bash
+cp .env.example .env
+```
+
+Add real values only to `.env`. The `.env` file is ignored by Git and must never be committed. The committed example deliberately contains no API key. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised.
 
 ## Key delivery gates
 
@@ -106,9 +136,9 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Review the approved [NFA-9 initial project risk register](docs/jira/NFA-9.md) and record its GitHub evidence in Jira. The register tracks 20 major risks with named owners, triggers, mitigations, contingencies, residual ratings, and review dates.
+Review the NFA-11 repository scaffold, confirm the frontend, backend, documentation, infrastructure, package, and test paths, and merge it through the normal GitHub workflow. The root `.gitignore` protects local secrets and generated files, while `.env.example` provides a safe fixture-mode configuration template.
 
-After NFA-9 is recorded as Done in Jira, review the Epic E0 exit criteria and begin the engineering foundation with T1.1 - Initialise the repository structure.
+After NFA-11 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
 
 ## Licence
 
