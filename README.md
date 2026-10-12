@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: planning and discovery. Implementation must not begin against live CNN content until the permitted access method and licence terms are confirmed.
+> Status: planning and discovery. NFA-3 through NFA-6 are complete and approved. Development may use original synthetic fixtures, but implementation must not connect to live CNN content until the permitted access method and licence terms are confirmed.
 
 ## Product workflow
 
@@ -55,6 +55,17 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
+- [docs/jira/NFA-6.md](docs/jira/NFA-6.md) - approved fixture-first source data contract covering required fields, validation, missing information, attribution, provenance, refresh, and retention.
+
+### Documentation update rule
+
+The README is the running written record of the project's progress. Whenever a project Markdown document or NFA deliverable is added or modified, the same change must update this README to:
+
+- Link to the new or modified document where appropriate.
+- Explain what work was completed or changed.
+- Update the current project status and next step when affected.
+
+The README and the related project document should be staged and committed together so the repository history remains understandable.
 
 ## Intended repository layout
 
@@ -92,7 +103,9 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Review the [NFA-5 CNN authorisation record](docs/jira/NFA-5.md). It records that no written live-source permission is currently held, so live CNN ingestion remains blocked. After approval, start NFA-6 with a fixture-first source data contract and use only synthetic records that contain no copied CNN article text.
+Review the approved [NFA-6 source data contract](docs/jira/NFA-6.md) and record its GitHub evidence in Jira. The contract permits development with original synthetic fixtures and defines the structure that future source adapters must follow. Live CNN ingestion remains blocked because written live-source authorisation has not been obtained.
+
+After NFA-6 is recorded as Done in Jira, continue to NFA-7 - Complete privacy, copyright, and AI safety review.
 
 ## Licence
 
