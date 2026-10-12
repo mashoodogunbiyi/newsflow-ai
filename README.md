@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: planning and discovery. NFA-3 through NFA-8 are complete and approved. ADR-001 records a No-Go decision for live CNN integration and a Go decision for development with original synthetic fixtures under the approved safeguards.
+> Status: planning and discovery. NFA-3 through NFA-9 are complete and approved. ADR-001 records a No-Go decision for live CNN integration, and the initial risk register establishes named ownership and controls for development with original synthetic fixtures.
 
 ## Product workflow
 
@@ -58,6 +58,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/jira/NFA-6.md](docs/jira/NFA-6.md) - approved fixture-first source data contract covering required fields, validation, missing information, attribution, provenance, refresh, and retention.
 - [docs/jira/NFA-7.md](docs/jira/NFA-7.md) - approved privacy, copyright, hallucination, and AI-generated image risk review with mandatory safeguards and release gates.
 - [docs/jira/NFA-8.md](docs/jira/NFA-8.md) - approved architecture decision recording No-Go for live CNN integration and Go for fixture-based development.
+- [docs/jira/NFA-9.md](docs/jira/NFA-9.md) - approved initial risk register covering development, delivery, security, cost, AI safety, and legal compliance, with named owners and treatment actions.
 
 ### Documentation update rule
 
@@ -105,9 +106,9 @@ The layout is a target, not a claim about files that already exist.
 
 ## Current next step
 
-Review the approved [NFA-8 Architecture Decision Record](docs/jira/NFA-8.md) and record its GitHub evidence in Jira. ADR-001 formally blocks live CNN integration while allowing the fixture-backed product and engineering work to continue.
+Review the approved [NFA-9 initial project risk register](docs/jira/NFA-9.md) and record its GitHub evidence in Jira. The register tracks 20 major risks with named owners, triggers, mitigations, contingencies, residual ratings, and review dates.
 
-After NFA-8 is recorded as Done in Jira, continue to NFA-9 - Create the initial risk register.
+After NFA-9 is recorded as Done in Jira, review the Epic E0 exit criteria and begin the engineering foundation with T1.1 - Initialise the repository structure.
 
 ## Licence
 
