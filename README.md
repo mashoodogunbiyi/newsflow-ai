@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 establishes a working Next.js, React, TypeScript, and Tailwind CSS frontend in `apps/web`. ADR-001 continues to block live CNN integration, so the homepage uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, and NFA-13 provides the working Python FastAPI backend foundation in `apps/api`. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -93,7 +93,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The directories are established as tracked scaffolds. Application source files, package configuration, migrations, containers, and automated tests will be added by their related engineering tasks.
+The frontend and backend directories now contain working application foundations. Database configuration, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -108,7 +108,7 @@ The directories are established as tracked scaffolds. Application source files, 
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `tests` | Cross-application, integration, and end-to-end tests |
 
-The frontend has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow.
+The frontend has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow. The backend has a separate [FastAPI setup and structure guide](apps/api/README.md).
 
 ### Frontend application
 
@@ -123,6 +123,23 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Run `npm run lint` and `npm run build` before committing frontend changes. Application dependencies, `.next` output, local environment files, and logs remain excluded from Git.
+
+### Backend application
+
+The NFA-13 backend uses Python and FastAPI. It provides a tested `GET /health` endpoint, generated OpenAPI documentation, and consistent JSON responses for expected HTTP errors, validation failures, and unexpected server errors.
+
+Use Python 3.10 or newer. Python 3.12 is recommended. Run it locally from the repository root:
+
+```bash
+cd apps/api
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+fastapi dev app/main.py
+```
+
+Keep the development server running, then open `http://127.0.0.1:8000/health` for the health check or `http://127.0.0.1:8000/docs` for the interactive API documentation. Run `pytest` before committing backend changes. The virtual environment, Python caches, test caches, local environment files, and logs remain excluded from Git.
 
 ### Local configuration
 
@@ -152,9 +169,9 @@ Add real values only to `.env`. The `.env` file is ignored by Git and must never
 
 ## Current next step
 
-Review the NFA-12 frontend on desktop and mobile, then merge it through the normal GitHub workflow. The current page demonstrates the intended source-to-review experience without claiming that backend, OpenAI, or live CNN integrations are already implemented.
+Review the NFA-13 FastAPI foundation, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend currently proves application startup, health monitoring, generated API documentation, and baseline error handling. It does not yet connect to a database, the OpenAI API, or a live news source.
 
-After NFA-12 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
+After NFA-13 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
 
 ## Licence
 
