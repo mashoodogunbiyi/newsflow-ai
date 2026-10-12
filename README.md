@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation started. NFA-3 through NFA-9 are complete and approved. NFA-11 establishes the initial repository structure for fixture-backed development. ADR-001 continues to block live CNN integration.
+> Status: engineering foundation in progress. NFA-12 establishes a working Next.js, React, TypeScript, and Tailwind CSS frontend in `apps/web`. ADR-001 continues to block live CNN integration, so the homepage uses original static demonstration content.
 
 ## Product workflow
 
@@ -108,6 +108,22 @@ The directories are established as tracked scaffolds. Application source files, 
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `tests` | Cross-application, integration, and end-to-end tests |
 
+The frontend has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow.
+
+### Frontend application
+
+The NFA-12 frontend uses Next.js 16, React 19, TypeScript, the App Router, and Tailwind CSS 4. Its current homepage is a responsive presentation of the planned NewsFlow AI workflow and fixture-mode product controls.
+
+Run it locally from the repository root:
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Run `npm run lint` and `npm run build` before committing frontend changes. Application dependencies, `.next` output, local environment files, and logs remain excluded from Git.
+
 ### Local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -136,9 +152,9 @@ Add real values only to `.env`. The `.env` file is ignored by Git and must never
 
 ## Current next step
 
-Review the NFA-11 repository scaffold, confirm the frontend, backend, documentation, infrastructure, package, and test paths, and merge it through the normal GitHub workflow. The root `.gitignore` protects local secrets and generated files, while `.env.example` provides a safe fixture-mode configuration template.
+Review the NFA-12 frontend on desktop and mobile, then merge it through the normal GitHub workflow. The current page demonstrates the intended source-to-review experience without claiming that backend, OpenAI, or live CNN integrations are already implemented.
 
-After NFA-11 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
+After NFA-12 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
 
 ## Licence
 
