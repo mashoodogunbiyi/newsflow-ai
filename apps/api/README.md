@@ -1,10 +1,11 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application entry point, health check, local API documentation, consistent error responses, and automated foundation tests.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds environment-based PostgreSQL configuration, a startup connection check, database readiness reporting, safe connection-error handling, and automated tests.
 
 ## Requirements
 
 - Python 3.10 or newer. Python 3.12 is recommended and recorded in `.python-version`.
+- PostgreSQL 16 or another currently supported PostgreSQL release running locally.
 - A terminal opened in `apps/api`.
 
 The current FastAPI release requires Python 3.10 or newer. Do not use the macOS system Python 3.9 environment for this application.
@@ -23,6 +24,25 @@ python -m pip install -e ".[dev]"
 
 If your supported Python executable has a different name, replace `python3.12` with that executable in the virtual-environment command.
 
+## Configure PostgreSQL
+
+Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. Detailed tables and relationships are intentionally deferred to Epic E2.
+
+From the repository root, create your ignored local configuration file:
+
+```bash
+cp .env.example .env
+```
+
+Edit only `.env` and replace the database placeholders with your local values:
+
+```dotenv
+DATABASE_URL=postgresql://your-local-user:your-local-password@localhost:5432/newsflow
+DATABASE_CONNECT_TIMEOUT_SECONDS=5
+```
+
+Do not add real credentials to `.env.example`, source code, documentation, Jira, screenshots, commits, or pull requests. The repository `.gitignore` excludes `.env` files while retaining the safe `.env.example` template.
+
 ## Run the API
 
 Activate the virtual environment, then run:
@@ -34,6 +54,7 @@ fastapi dev app/main.py
 Keep that terminal running while using these local addresses:
 
 - Health check: `http://127.0.0.1:8000/health`
+- Database readiness: `http://127.0.0.1:8000/ready`
 - Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 - Alternative ReDoc documentation: `http://127.0.0.1:8000/redoc`
 - OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
@@ -48,13 +69,30 @@ The health check returns:
 }
 ```
 
+The readiness check runs `SELECT 1` against PostgreSQL and returns:
+
+```json
+{
+  "status": "ready",
+  "database": "connected"
+}
+```
+
+The API checks PostgreSQL during startup. It stops with a safe configuration or connection error when `DATABASE_URL` is missing, invalid, or unreachable. If PostgreSQL becomes unavailable while the API is running, `/ready` returns HTTP `503` without exposing credentials or driver details. `/health` remains a liveness check and does not query the database.
+
 ## Run the tests
 
 ```bash
 pytest
 ```
 
-The test suite verifies the health response, generated OpenAPI schema, Swagger UI availability, and standard 404 error response.
+The normal test suite uses a database test double, so it does not need real credentials or a running PostgreSQL server. It verifies startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, and standard API errors.
+
+To prove the connection against your configured local PostgreSQL database, run the opt-in integration test without placing the URL in Git:
+
+```bash
+TEST_DATABASE_URL="$DATABASE_URL" pytest -m integration tests/test_database_integration.py
+```
 
 ## Project structure
 
@@ -62,10 +100,13 @@ The test suite verifies the health response, generated OpenAPI schema, Swagger U
 apps/api/
 |-- app/
 |   |-- api/routes/health.py    # GET /health
+|   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
+|   |-- database/connection.py  # PostgreSQL connection check
 |   |-- models/health.py        # Health response schema
 |   `-- main.py                 # FastAPI application factory and entry point
-|-- tests/test_api.py           # API foundation tests
+|-- tests/test_api.py           # API and readiness tests
+|-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- .python-version             # Recommended Python runtime
 |-- pyproject.toml              # Application and development dependencies
 `-- README.md                   # Backend setup and operating guide
@@ -91,6 +132,8 @@ Unexpected exceptions are logged on the server, while clients receive a generic 
 Dependencies are declared in `pyproject.toml`:
 
 - `fastapi[standard-no-fastapi-cloud-cli]` provides FastAPI, the Uvicorn development server, and the standard local development dependencies without adding deployment tooling.
+- `psycopg[binary]` provides the PostgreSQL driver and asynchronous connection support.
+- `pydantic-settings` validates environment-based application settings and masks the database URL as a secret value.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.
 - `hatchling` builds the installable Python package.

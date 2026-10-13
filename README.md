@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, and NFA-13 provides the working Python FastAPI backend foundation in `apps/api`. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, and NFA-14 connects the backend to a securely configured PostgreSQL development database. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -93,7 +93,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories now contain working application foundations. Database configuration, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories now contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Detailed database models, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -124,9 +124,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Run `npm run lint` and `npm run build` before committing frontend changes. Application dependencies, `.next` output, local environment files, and logs remain excluded from Git.
 
-### Backend application
+### Backend application and PostgreSQL
 
-The NFA-13 backend uses Python and FastAPI. It provides a tested `GET /health` endpoint, generated OpenAPI documentation, and consistent JSON responses for expected HTTP errors, validation failures, and unexpected server errors.
+The backend uses Python and FastAPI. NFA-13 provides the application foundation, and NFA-14 adds a PostgreSQL connection boundary, environment-based database settings, startup verification, and a tested `GET /ready` endpoint. Database credentials remain in the ignored local `.env` file and are never returned in API errors.
 
 Use Python 3.10 or newer. Python 3.12 is recommended. Run it locally from the repository root:
 
@@ -139,7 +139,7 @@ python -m pip install -e ".[dev]"
 fastapi dev app/main.py
 ```
 
-Keep the development server running, then open `http://127.0.0.1:8000/health` for the health check or `http://127.0.0.1:8000/docs` for the interactive API documentation. Run `pytest` before committing backend changes. The virtual environment, Python caches, test caches, local environment files, and logs remain excluded from Git.
+Before starting the API, copy `.env.example` to `.env` and replace the PostgreSQL placeholders with the credentials for your local `newsflow` database. Keep the development server running, then open `http://127.0.0.1:8000/health` for API liveness, `http://127.0.0.1:8000/ready` for PostgreSQL readiness, or `http://127.0.0.1:8000/docs` for interactive API documentation. Run `pytest` before committing backend changes. The virtual environment, Python caches, test caches, local environment files, and logs remain excluded from Git.
 
 ### Local configuration
 
@@ -169,9 +169,9 @@ Add real values only to `.env`. The `.env` file is ignored by Git and must never
 
 ## Current next step
 
-Review the NFA-13 FastAPI foundation, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend currently proves application startup, health monitoring, generated API documentation, and baseline error handling. It does not yet connect to a database, the OpenAI API, or a live news source.
+Review and verify the NFA-14 PostgreSQL integration, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. Detailed tables and relationships remain deferred to Epic E2. The backend does not yet connect to the OpenAI API or a live news source.
 
-After NFA-13 is merged and its GitHub evidence is recorded in Jira, continue with the next approved engineering-foundation task.
+After NFA-14 is merged and its GitHub evidence is recorded in Jira, continue with NFA-15 - Configure environment variables and secrets.
 
 ## Licence
 
