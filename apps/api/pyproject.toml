@@ -10,6 +10,8 @@ readme = "README.md"
 requires-python = ">=3.10,<3.15"
 dependencies = [
     "fastapi[standard-no-fastapi-cloud-cli]>=0.143,<0.144",
+    "psycopg[binary]>=3.2,<4",
+    "pydantic-settings>=2.10,<3",
 ]
 
 [project.optional-dependencies]
@@ -24,3 +26,6 @@ packages = ["app"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+markers = [
+    "integration: tests that require a running PostgreSQL database",
+]
