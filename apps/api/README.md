@@ -105,6 +105,19 @@ The readiness check runs `SELECT 1` against PostgreSQL and returns:
 
 The API checks PostgreSQL during startup. It stops with a safe configuration or connection error when `DATABASE_URL` is missing, invalid, or unreachable. If PostgreSQL becomes unavailable while the API is running, `/ready` returns HTTP `503` without exposing credentials or driver details. `/health` remains a liveness check and does not query the database.
 
+## Run with Docker Compose
+
+NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Replace the PostgreSQL placeholders in `.env` before starting. Compose supplies a container-specific database URL that uses `database` as the PostgreSQL hostname. The backend waits for PostgreSQL to become healthy, performs its own startup connection check, and then exposes its health and readiness endpoints on `http://localhost:8000`.
+
+Use `docker compose down` for a normal shutdown. The PostgreSQL named volume remains available for the next startup. See the [complete Docker development guide](../../infrastructure/docker/README.md) for configuration, service checks, logs, persistence, and troubleshooting.
+
 ## Run the tests
 
 ```bash
@@ -123,6 +136,8 @@ TEST_DATABASE_URL="$DATABASE_URL" pytest -m integration tests/test_database_inte
 
 ```text
 apps/api/
+|-- Dockerfile                  # FastAPI development image
+|-- .dockerignore               # Files excluded from the image build context
 |-- app/
 |   |-- api/routes/health.py    # GET /health
 |   |-- core/config.py          # Environment-based settings

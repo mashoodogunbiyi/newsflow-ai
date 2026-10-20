@@ -7,7 +7,17 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+
+def find_environment_file() -> Path:
+    """Locate the repository .env file without assuming a fixed directory depth."""
+
+    for directory in Path(__file__).resolve().parents:
+        if (directory / ".env.example").is_file():
+            return directory / ".env"
+    return Path.cwd() / ".env"
+
+
+ENVIRONMENT_FILE = find_environment_file()
 
 
 class ConfigurationError(RuntimeError):
@@ -26,7 +36,7 @@ class Settings(BaseSettings):
     """Validated settings loaded from environment variables or the root .env file."""
 
     model_config = SettingsConfigDict(
-        env_file=REPOSITORY_ROOT / ".env",
+        env_file=ENVIRONMENT_FILE,
         env_file_encoding="utf-8",
         extra="ignore",
     )

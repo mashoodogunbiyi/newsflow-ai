@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+dist
+coverage
+.turbo
+.npm
+*.tsbuildinfo
+npm-debug.log*
+.env
+.env.*
+!.env.example
+*.pem
+*.key
