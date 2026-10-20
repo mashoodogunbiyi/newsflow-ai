@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds environment-based PostgreSQL configuration, a startup connection check, database readiness reporting, safe connection-error handling, and automated tests.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration, secure OpenAI and database credential loading, safe missing-configuration errors, placeholder protection, and automated secret-safety tests.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ python -m pip install -e ".[dev]"
 
 If your supported Python executable has a different name, replace `python3.12` with that executable in the virtual-environment command.
 
-## Configure PostgreSQL
+## Configure the application
 
 Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. Detailed tables and relationships are intentionally deferred to Epic E2.
 
@@ -34,14 +34,39 @@ From the repository root, create your ignored local configuration file:
 cp .env.example .env
 ```
 
-Edit only `.env` and replace the database placeholders with your local values:
+Edit only `.env` and replace the placeholders with your local values:
 
 ```dotenv
-DATABASE_URL=postgresql://your-local-user:your-local-password@localhost:5432/newsflow
+APP_ENV=development
+NEWS_SOURCE_MODE=fixture
+DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
+OPENAI_API_KEY=your_real_openai_api_key
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-Do not add real credentials to `.env.example`, source code, documentation, Jira, screenshots, commits, or pull requests. The repository `.gitignore` excludes `.env` files while retaining the safe `.env.example` template.
+`DATABASE_URL` is required when the API starts. `OPENAI_API_KEY` is loaded and validated by the backend but is required only when an OpenAI-powered feature runs. This keeps the current non-AI API usable while its OpenAI integration is developed. Empty values and the committed example placeholders produce clear errors without printing secret values.
+
+Do not add real credentials to `.env.example`, source code, browser code, documentation, Jira, screenshots, commits, or pull requests. The repository `.gitignore` excludes `.env` files while retaining the safe `.env.example` template. The OpenAI API key is server-side only and must never use a `NEXT_PUBLIC_` name because Next.js exposes variables with that prefix to browser code. This follows [OpenAI's API authentication guidance](https://developers.openai.com/api/reference/overview), which says API keys must be loaded from an environment variable or key management service on the server.
+
+### Configuration reference
+
+| Variable | Required | Sensitive | Purpose |
+|---|---|---|---|
+| `APP_ENV` | No | No | Selects `development`, `test`, `staging`, or `production`; defaults to `development`. |
+| `NEWS_SOURCE_MODE` | No | No | Remains `fixture` while live CNN access is not authorised. |
+| `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
+| `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
+| `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
+| `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
+
+Operating rules:
+
+- Local development uses the ignored repository-root `.env` file.
+- Deployed environments must inject secrets through their environment or a managed secret store instead of committing a file.
+- Application code accesses credentials through `Settings`; it must not read or hard-code credentials elsewhere.
+- Logs, API responses, exception messages, tests, screenshots, and Jira evidence must not contain secret values.
+- If a secret is exposed, revoke or rotate it immediately, remove it from active files, and treat Git-history cleanup as a separate incident response task.
 
 ## Run the API
 
@@ -86,7 +111,7 @@ The API checks PostgreSQL during startup. It stops with a safe configuration or 
 pytest
 ```
 
-The normal test suite uses a database test double, so it does not need real credentials or a running PostgreSQL server. It verifies startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, and standard API errors.
+The normal test suite uses a database test double, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, and standard API errors.
 
 To prove the connection against your configured local PostgreSQL database, run the opt-in integration test without placing the URL in Git:
 
@@ -106,6 +131,7 @@ apps/api/
 |   |-- models/health.py        # Health response schema
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- tests/test_api.py           # API and readiness tests
+|-- tests/test_config.py        # Environment and secret-safety tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- .python-version             # Recommended Python runtime
 |-- pyproject.toml              # Application and development dependencies
@@ -133,9 +159,9 @@ Dependencies are declared in `pyproject.toml`:
 
 - `fastapi[standard-no-fastapi-cloud-cli]` provides FastAPI, the Uvicorn development server, and the standard local development dependencies without adding deployment tooling.
 - `psycopg[binary]` provides the PostgreSQL driver and asynchronous connection support.
-- `pydantic-settings` validates environment-based application settings and masks the database URL as a secret value.
+- `pydantic-settings` validates environment-based application settings and masks the database URL and OpenAI API key as secret values.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.
 - `hatchling` builds the installable Python package.
 
-Application code must not read secrets directly from committed files. Future OpenAI credentials and other secrets will be provided through ignored environment variables or a managed secret store.
+Application code must not read secrets directly from committed files. OpenAI credentials, database credentials, and other secrets must be provided through ignored environment variables or a managed secret store.

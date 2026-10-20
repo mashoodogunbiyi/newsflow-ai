@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, and NFA-14 connects the backend to a securely configured PostgreSQL development database. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, and NFA-15 establishes secure environment-based configuration for database and OpenAI credentials. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -93,7 +93,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories now contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Detailed database models, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories now contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Detailed database models, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -141,7 +141,7 @@ fastapi dev app/main.py
 
 Before starting the API, copy `.env.example` to `.env` and replace the PostgreSQL placeholders with the credentials for your local `newsflow` database. Keep the development server running, then open `http://127.0.0.1:8000/health` for API liveness, `http://127.0.0.1:8000/ready` for PostgreSQL readiness, or `http://127.0.0.1:8000/docs` for interactive API documentation. Run `pytest` before committing backend changes. The virtual environment, Python caches, test caches, local environment files, and logs remain excluded from Git.
 
-### Local configuration
+### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
 
@@ -149,7 +149,14 @@ Copy the safe example when local environment configuration is needed:
 cp .env.example .env
 ```
 
-Add real values only to `.env`. The `.env` file is ignored by Git and must never be committed. The committed example deliberately contains no API key. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised.
+Add real values only to `.env`. The `.env` file is ignored by Git and must never be committed. The committed example contains placeholders rather than working credentials. Replace the database and OpenAI placeholders only in `.env`:
+
+```dotenv
+DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
+OPENAI_API_KEY=your_real_openai_api_key
+```
+
+The FastAPI backend loads these values through one validated settings class and stores both as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` is required only when an OpenAI feature runs; a missing value or unchanged example placeholder produces a clear error without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
 ## Key delivery gates
 
@@ -169,9 +176,9 @@ Add real values only to `.env`. The `.env` file is ignored by Git and must never
 
 ## Current next step
 
-Review and verify the NFA-14 PostgreSQL integration, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. Detailed tables and relationships remain deferred to Epic E2. The backend does not yet connect to the OpenAI API or a live news source.
+Review and verify the NFA-15 secure configuration implementation, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can now load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
 
-After NFA-14 is merged and its GitHub evidence is recorded in Jira, continue with NFA-15 - Configure environment variables and secrets.
+After NFA-15 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
 
 ## Licence
 
