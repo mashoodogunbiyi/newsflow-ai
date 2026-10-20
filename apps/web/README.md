@@ -21,6 +21,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in a browser.
 
+## Run with Docker Compose
+
+NFA-16 adds a frontend development image and runs it with FastAPI and PostgreSQL from the repository-root `compose.yaml` file. From the repository root:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). Browser requests use `NEXT_PUBLIC_API_BASE_URL`, while future server-side frontend requests can use the Docker network address `http://backend:8000`. Use `docker compose down` for a normal shutdown. See the [complete Docker development guide](../../infrastructure/docker/README.md) for all commands and service checks.
+
 ## Quality checks
 
 ```bash
@@ -38,6 +49,8 @@ npm run start
 
 ```text
 apps/web/
+├── Dockerfile             # Next.js development image
+├── .dockerignore          # Files excluded from the image build context
 ├── app/
 │   ├── globals.css          # Tailwind import and global design tokens
 │   ├── layout.tsx           # Root layout, fonts, and metadata

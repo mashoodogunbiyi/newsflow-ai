@@ -4,9 +4,15 @@ import pytest
 
 from app.core.config import (
     DatabaseConfigurationError,
+    ENVIRONMENT_FILE,
     OpenAIConfigurationError,
     Settings,
 )
+
+
+def test_environment_file_is_found_without_fixed_path_depth() -> None:
+    assert ENVIRONMENT_FILE.name == ".env"
+    assert ENVIRONMENT_FILE.parent.joinpath(".env.example").is_file()
 
 
 def test_settings_load_secrets_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:

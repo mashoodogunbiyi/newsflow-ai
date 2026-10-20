@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, and NFA-15 establishes secure environment-based configuration for database and OpenAI credentials. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, and NFA-16 provides a Docker Compose development environment for all three services. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -74,9 +74,10 @@ The README and the related project document should be staged and committed toget
 
 ```text
 newsflow-ai/
+├── compose.yaml             # Frontend, backend, and PostgreSQL development stack
 ├── apps/
-│   ├── api/                 # FastAPI application
-│   └── web/                 # Next.js application
+│   ├── api/                 # FastAPI application and development Dockerfile
+│   └── web/                 # Next.js application and development Dockerfile
 ├── packages/                # Shared contracts, schemas, or generated clients
 ├── infrastructure/
 │   ├── database/            # Database and migration configuration
@@ -93,7 +94,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories now contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Detailed database models, shared packages, containers, and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. Detailed database models, shared packages, and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -107,6 +108,7 @@ The frontend and backend directories now contain working application foundations
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `tests` | Cross-application, integration, and end-to-end tests |
+| `compose.yaml` | Local multi-container development configuration |
 
 The frontend has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow. The backend has a separate [FastAPI setup and structure guide](apps/api/README.md).
 
@@ -158,6 +160,23 @@ OPENAI_API_KEY=your_real_openai_api_key
 
 The FastAPI backend loads these values through one validated settings class and stores both as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` is required only when an OpenAI feature runs; a missing value or unchanged example placeholder produces a clear error without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
+### Docker development environment
+
+NFA-16 runs the application as three cooperating containers:
+
+- `frontend` runs the Next.js development server and is available at `http://localhost:3000`.
+- `backend` runs FastAPI and is available at `http://localhost:8000`.
+- `database` runs PostgreSQL and stores its data in the persistent `postgres_data` named volume.
+
+For first-time setup, create the ignored local configuration file, replace its PostgreSQL placeholders, and start the stack:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Docker waits for PostgreSQL to become healthy before starting FastAPI, then waits for FastAPI before starting Next.js. Stop the stack with `docker compose down`; this preserves the database volume. Full startup, shutdown, log, communication-test, persistence, and troubleshooting instructions are in the [Docker development guide](infrastructure/docker/README.md).
+
 ## Key delivery gates
 
 - **CNN access gate:** document a written, authorised feed, API, licensed service, or other permitted route before connecting the ingestion service to live CNN content. CNN International Commercial provides a route for licensing enquiries, and its published terms restrict unapproved reuse.
@@ -176,9 +195,9 @@ The FastAPI backend loads these values through one validated settings class and 
 
 ## Current next step
 
-Review and verify the NFA-15 secure configuration implementation, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can now load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
+Review and verify the NFA-16 Docker development environment, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
 
-After NFA-15 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
+After NFA-16 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
 
 ## Licence
 
