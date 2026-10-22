@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, NFA-16 provides the Docker environment, and NFA-17 adds automated linting, formatting, type checking, and basic frontend and backend tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, NFA-16 provides the Docker environment, NFA-17 adds automated code-quality checks and tests, and NFA-18 provides the complete local development guide. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -52,6 +52,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 
 - [PROJECT_PLAN.md](PROJECT_PLAN.md) - end-to-end delivery plan organised as Epics and Tasks.
 - [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) - Jira setup, workflow, issue templates, roadmap, and operating rules.
+- [docs/development-setup.md](docs/development-setup.md) - complete beginner-friendly installation, configuration, startup, testing, verification, and troubleshooting guide.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -83,6 +84,7 @@ newsflow-ai/
 │   ├── database/            # Database and migration configuration
 │   └── docker/              # Container and local-service configuration
 ├── docs/
+│   ├── development-setup.md # Complete local development guide
 │   ├── architecture/        # Architecture Decision Records and design notes
 │   └── jira/                # Jira task deliverables and approved baselines
 ├── tests/                   # Cross-service and end-to-end tests
@@ -107,10 +109,11 @@ The frontend and backend directories contain working application foundations. Po
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
+| `docs/development-setup.md` | Software requirements, setup, configuration, testing, verification, and troubleshooting |
 | `tests` | Cross-application, integration, and end-to-end tests |
 | `compose.yaml` | Local multi-container development configuration |
 
-The frontend has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow. The backend has a separate [FastAPI setup and structure guide](apps/api/README.md).
+Start with the complete [local development guide](docs/development-setup.md). The frontend also has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow. The backend has a separate [FastAPI setup and structure guide](apps/api/README.md).
 
 ### Frontend application
 
@@ -228,9 +231,9 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review and verify the NFA-17 code-quality and testing configuration, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
+Review the NFA-18 local development guide, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The guide consolidates the verified Docker and manual setup paths, environment configuration, tests, and common problem solutions for a new developer. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
 
-After NFA-17 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
+After NFA-18 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
 
 ## Licence
 
