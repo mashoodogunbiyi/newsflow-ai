@@ -3,8 +3,8 @@
 import pytest
 
 from app.core.config import (
-    DatabaseConfigurationError,
     ENVIRONMENT_FILE,
+    DatabaseConfigurationError,
     OpenAIConfigurationError,
     Settings,
 )
@@ -15,7 +15,9 @@ def test_environment_file_is_found_without_fixed_path_depth() -> None:
     assert ENVIRONMENT_FILE.parent.joinpath(".env.example").is_file()
 
 
-def test_settings_load_secrets_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_load_secrets_from_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     database_url = "postgresql://test-user:test-password@localhost:5432/newsflow"
     openai_api_key = "test-openai-key-loaded-from-environment"
     monkeypatch.setenv("DATABASE_URL", database_url)

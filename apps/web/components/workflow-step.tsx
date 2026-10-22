@@ -5,12 +5,7 @@ type WorkflowStepProps = {
   description: string;
 };
 
-export function WorkflowStep({
-  number,
-  eyebrow,
-  title,
-  description,
-}: WorkflowStepProps) {
+export function WorkflowStep({ number, eyebrow, title, description }: WorkflowStepProps) {
   return (
     <article className="grid grid-cols-[auto_1fr] gap-5 border-b border-emerald-950/10 py-9 sm:gap-7 sm:py-11">
       <span className="font-mono text-sm font-semibold text-amber-600">{number}</span>

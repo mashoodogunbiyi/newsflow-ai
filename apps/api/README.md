@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration, secure OpenAI and database credential loading, safe missing-configuration errors, placeholder protection, and automated secret-safety tests.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework.
 
 ## Requirements
 
@@ -132,6 +132,25 @@ To prove the connection against your configured local PostgreSQL database, run t
 TEST_DATABASE_URL="$DATABASE_URL" pytest -m integration tests/test_database_integration.py
 ```
 
+## Code quality
+
+Install the development dependencies, including Ruff and Pytest, with `python -m pip install -e ".[dev]"`. Run the backend checks from `apps/api`:
+
+```bash
+ruff check .
+ruff format --check .
+pytest
+```
+
+Apply safe automatic lint fixes and formatting when needed:
+
+```bash
+ruff check --fix .
+ruff format .
+```
+
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest continues to cover the health endpoint, database readiness, safe error handling, and secure configuration.
+
 ## Project structure
 
 ```text
@@ -177,6 +196,7 @@ Dependencies are declared in `pyproject.toml`:
 - `pydantic-settings` validates environment-based application settings and masks the database URL and OpenAI API key as secret values.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.
+- `ruff` provides Python linting, import checks, bug-pattern checks, and formatting.
 - `hatchling` builds the installable Python package.
 
 Application code must not read secrets directly from committed files. OpenAI credentials, database credentials, and other secrets must be provided through ignored environment variables or a managed secret store.

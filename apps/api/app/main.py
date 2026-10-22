@@ -35,9 +35,7 @@ def create_app(
                     ),
                 )
             except DatabaseConfigurationError:
-                logger.error(
-                    "PostgreSQL configuration is missing or invalid."
-                )
+                logger.error("PostgreSQL configuration is missing or invalid.")
                 raise
 
         application.state.database = configured_database
@@ -45,9 +43,7 @@ def create_app(
         try:
             await configured_database.check_connection()
         except DatabaseConnectionError:
-            logger.error(
-                "PostgreSQL startup connection check failed."
-            )
+            logger.error("PostgreSQL startup connection check failed.")
             raise
 
         logger.info("PostgreSQL startup connection check succeeded.")

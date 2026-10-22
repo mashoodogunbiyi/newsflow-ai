@@ -99,9 +99,9 @@ export default function Home() {
               Turn careful reporting into confident LinkedIn content.
             </h1>
             <p className="mt-7 max-w-xl text-pretty text-lg leading-8 text-emerald-950/65 sm:text-xl">
-              NewsFlow AI is a review-first workspace for transforming authorised
-              news facts into professional drafts and original visual concepts,
-              with the source and the human editor kept in view.
+              NewsFlow AI is a review-first workspace for transforming authorised news facts into
+              professional drafts and original visual concepts, with the source and the human editor
+              kept in view.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
@@ -142,9 +142,7 @@ export default function Home() {
                 <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-emerald-950/45">
                   Publishing
                 </dt>
-                <dd className="mt-1 text-sm font-semibold text-emerald-950 sm:text-base">
-                  Manual
-                </dd>
+                <dd className="mt-1 text-sm font-semibold text-emerald-950 sm:text-base">Manual</dd>
               </div>
             </dl>
           </div>
@@ -168,9 +166,7 @@ export default function Home() {
               <div className="bg-emerald-950 p-5 sm:p-6" key={principle.label}>
                 <div className="mb-8 h-1.5 w-8 rounded-full bg-amber-300" />
                 <h3 className="font-semibold">{principle.label}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/60">
-                  {principle.detail}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-white/60">{principle.detail}</p>
               </div>
             ))}
           </div>
@@ -189,8 +185,8 @@ export default function Home() {
               </h2>
             </div>
             <p className="max-w-xl text-lg leading-8 text-emerald-950/60 md:justify-self-end">
-              The product is designed to reduce context switching while preserving
-              the checks that responsible news-based content needs.
+              The product is designed to reduce context switching while preserving the checks that
+              responsible news-based content needs.
             </p>
           </div>
 
@@ -212,9 +208,8 @@ export default function Home() {
               The foundation is live. The data gate stays closed.
             </h2>
             <p className="mt-5 max-w-lg leading-7 text-emerald-950/60">
-              This interface uses no live CNN content. Development continues with
-              original synthetic fixtures until an authorised source and its exact
-              licence terms are approved.
+              This interface uses no live CNN content. Development continues with original synthetic
+              fixtures until an authorised source and its exact licence terms are approved.
             </p>
           </div>
 
