@@ -33,8 +33,8 @@ export function ProductPreview() {
                 A verified source becomes a focused professional story.
               </h2>
               <p className="mt-4 text-sm leading-6 text-emerald-950/55">
-                A bounded fixture demonstrates how title, date, category, source URL,
-                and permitted facts stay attached throughout generation.
+                A bounded fixture demonstrates how title, date, category, source URL, and permitted
+                facts stay attached throughout generation.
               </p>
               <div className="mt-7 space-y-3 border-t border-emerald-950/10 pt-5">
                 {[
@@ -55,7 +55,9 @@ export function ProductPreview() {
                 <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-emerald-800/55">
                   Draft workspace
                 </p>
-                <span className="text-[0.62rem] font-semibold text-emerald-700">Review required</span>
+                <span className="text-[0.62rem] font-semibold text-emerald-700">
+                  Review required
+                </span>
               </div>
 
               <div className="mt-5 rounded-2xl border border-emerald-950/10 bg-white p-4 shadow-sm">
@@ -69,9 +71,8 @@ export function ProductPreview() {
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-emerald-950/70">
-                  A strong post does not need more facts. It needs the right facts,
-                  a clear point of view, and a final human check before it leaves the
-                  workspace.
+                  A strong post does not need more facts. It needs the right facts, a clear point of
+                  view, and a final human check before it leaves the workspace.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {["#ResponsibleAI", "#ContentWorkflow", "#NewsTech"].map((tag) => (
@@ -95,21 +96,19 @@ export function ProductPreview() {
                     Claim check
                   </p>
                   <div>
-                    <p className="text-xl font-semibold tracking-[-0.03em] text-emerald-950">6 / 6</p>
+                    <p className="text-xl font-semibold tracking-[-0.03em] text-emerald-950">
+                      6 / 6
+                    </p>
                     <p className="text-[0.65rem] text-emerald-950/45">facts mapped</p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-auto flex items-center justify-between pt-5">
-                <span
-                  className="rounded-full border border-emerald-950/10 px-3 py-2 text-[0.65rem] font-semibold text-emerald-950/55"
-                >
+                <span className="rounded-full border border-emerald-950/10 px-3 py-2 text-[0.65rem] font-semibold text-emerald-950/55">
                   Edit draft
                 </span>
-                <span
-                  className="rounded-full bg-emerald-950 px-3 py-2 text-[0.65rem] font-semibold text-white"
-                >
+                <span className="rounded-full bg-emerald-950 px-3 py-2 text-[0.65rem] font-semibold text-white">
                   Review output
                 </span>
               </div>

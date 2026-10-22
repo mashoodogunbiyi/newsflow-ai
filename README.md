@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, and NFA-16 provides a Docker Compose development environment for all three services. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, NFA-16 provides the Docker environment, and NFA-17 adds automated linting, formatting, type checking, and basic frontend and backend tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -177,6 +177,39 @@ docker compose up --build
 
 Docker waits for PostgreSQL to become healthy before starting FastAPI, then waits for FastAPI before starting Next.js. Stop the stack with `docker compose down`; this preserves the database volume. Full startup, shutdown, log, communication-test, persistence, and troubleshooting instructions are in the [Docker development guide](infrastructure/docker/README.md).
 
+### Code quality and testing
+
+NFA-17 records the following tool selection:
+
+| Area | Tool | Purpose |
+|---|---|---|
+| Frontend linting | ESLint with Next.js Core Web Vitals and TypeScript rules | Finds React, Next.js, accessibility, and TypeScript-related mistakes. |
+| Frontend formatting | Prettier | Applies one consistent format to frontend source and configuration files. |
+| Frontend type checking | TypeScript | Detects incompatible types without creating build output. |
+| Frontend testing | Vitest, React Testing Library, and jsdom | Tests React components in a lightweight simulated browser environment. |
+| Backend linting and formatting | Ruff | Finds Python errors and common bug patterns, sorts imports, and formats Python. |
+| Backend testing | Pytest | Runs API, configuration, readiness, and error-handling tests. |
+
+Run the frontend checks from `apps/web`:
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck
+npm test
+npm run build
+```
+
+Run the backend checks from `apps/api` after installing the development dependencies:
+
+```bash
+ruff check .
+ruff format --check .
+pytest
+```
+
+Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
+
 ## Key delivery gates
 
 - **CNN access gate:** document a written, authorised feed, API, licensed service, or other permitted route before connecting the ingestion service to live CNN content. CNN International Commercial provides a route for licensing enquiries, and its published terms restrict unapproved reuse.
@@ -195,9 +228,9 @@ Docker waits for PostgreSQL to become healthy before starting FastAPI, then wait
 
 ## Current next step
 
-Review and verify the NFA-16 Docker development environment, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
+Review and verify the NFA-17 code-quality and testing configuration, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
 
-After NFA-16 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
+After NFA-17 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
 
 ## Licence
 

@@ -20,7 +20,9 @@ class DatabaseConnection(Protocol):
 class PostgresDatabase:
     """Open a short-lived PostgreSQL connection for availability checks."""
 
-    def __init__(self, database_url: SecretStr, connect_timeout_seconds: int = 5) -> None:
+    def __init__(
+        self, database_url: SecretStr, connect_timeout_seconds: int = 5
+    ) -> None:
         self._database_url = database_url
         self._connect_timeout_seconds = connect_timeout_seconds
 
