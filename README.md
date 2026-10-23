@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation in progress. NFA-12 provides the working Next.js frontend, NFA-13 provides the FastAPI backend foundation, NFA-14 connects the backend to PostgreSQL, NFA-15 establishes secure configuration, NFA-16 provides the Docker environment, NFA-17 adds automated code-quality checks and tests, and NFA-18 provides the complete local development guide. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation and data design in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 now documents the proposed MVP PostgreSQL schema and ERD. Its final migration baseline remains conditional on the T1.2 architecture-decision gate. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -60,6 +60,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/jira/NFA-7.md](docs/jira/NFA-7.md) - approved privacy, copyright, hallucination, and AI-generated image risk review with mandatory safeguards and release gates.
 - [docs/jira/NFA-8.md](docs/jira/NFA-8.md) - approved architecture decision recording No-Go for live CNN integration and Go for fixture-based development.
 - [docs/jira/NFA-9.md](docs/jira/NFA-9.md) - approved initial risk register covering development, delivery, security, cost, AI safety, and legal compliance, with named owners and treatment actions.
+- [docs/jira/NFA-20.md](docs/jira/NFA-20.md) - PostgreSQL MVP schema and ERD covering accounts, source provenance, generations, versioned posts, images, saved content, ownership, constraints, indexes, and 3NF review.
 
 ### Documentation update rule
 
@@ -96,7 +97,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. Detailed database models, shared packages, and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the detailed database model, ownership paths, constraints, indexes, and migration handoff; executable migrations remain a later task after the architecture gate is resolved. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -231,9 +232,9 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-18 local development guide, then merge it through the normal GitHub workflow and record the GitHub evidence in Jira. The guide consolidates the verified Docker and manual setup paths, environment configuration, tests, and common problem solutions for a new developer. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests. It also does not connect to a live news source.
+Review the NFA-20 database schema and Mermaid ERD, then resolve or explicitly approve the remaining T1.2 architecture decisions before treating the schema as the final migration baseline. Merge the documentation through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests or connect to a live news source.
 
-After NFA-18 is merged and its GitHub evidence is recorded in Jira, continue with the next planned Jira task.
+After NFA-20 is final and its GitHub evidence is recorded in Jira, continue with T2.2 to create and test the PostgreSQL migrations and synthetic seed data.
 
 ## Licence
 
