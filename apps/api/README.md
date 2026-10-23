@@ -26,7 +26,7 @@ If your supported Python executable has a different name, replace `python3.12` w
 
 ## Configure the application
 
-Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. Detailed tables and relationships are intentionally deferred to Epic E2.
+Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. The proposed Epic E2 tables, relationships, constraints, indexes, ownership rules, and ERD are documented in [NFA-20](../../docs/jira/NFA-20.md). Executable migrations are intentionally deferred until that design's architecture gate is resolved.
 
 From the repository root, create your ignored local configuration file:
 
