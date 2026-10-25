@@ -91,6 +91,7 @@ SESSION_LIFETIME_MINUTES=60
 SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+API_INTERNAL_BASE_URL=http://localhost:8000
 ```
 
 Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATABASE_URL. URL-encode special characters inside DATABASE_URL.
@@ -118,8 +119,9 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
 | OPENAI_API_KEY                   | Authenticates future server-side OpenAI features. | Not required for current features or tests       |
 | NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
+| API_INTERNAL_BASE_URL            | Lets the Next.js server reach FastAPI.            | No - defaults to http://localhost:8000 manually  |
 
-Docker Compose constructs its own backend database URL using database as the hostname. The DATABASE_URL in .env is for FastAPI running directly on the host.
+Docker Compose constructs its own backend database URL using database as the hostname and sets the frontend's internal API URL to http://backend:8000. The DATABASE_URL and API_INTERNAL_BASE_URL values in .env are for services running directly on the host.
 
 ### Secret safety
 
@@ -321,6 +323,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Stop the server with Control-C.
 
+The authentication pages require FastAPI and PostgreSQL to be running. Visit `/register` to create an account, `/login` to sign in, and `/dashboard` to verify that the session survives a refresh. The browser calls the same-origin `/api/auth` route; the Next.js server then uses `API_INTERNAL_BASE_URL` to contact FastAPI.
+
 For a clean, reproducible installation from package-lock.json, use:
 
 ```bash
@@ -339,7 +343,7 @@ npm test
 npm run build
 ```
 
-The basic frontend test checks the homepage heading and fixture-mode status.
+The frontend tests check the homepage and the NFA-24 registration, login, error, loading, logout, session-restoration, gateway, and route-protection behaviour.
 
 Run all backend checks from apps/api with the development virtual environment active:
 
@@ -402,6 +406,10 @@ A working environment meets this checklist:
 - POST http://localhost:8000/api/v1/auth/login sets an HTTP-only session cookie and returns no credential or token data.
 - GET http://localhost:8000/api/v1/auth/me returns the logged-in user's ID and email.
 - POST http://localhost:8000/api/v1/auth/logout requires CSRF proof and invalidates the session.
+- http://localhost:3000/register creates an account and offers a route to sign in.
+- http://localhost:3000/login authenticates the account and redirects to the dashboard.
+- http://localhost:3000/dashboard restores a valid session after refresh and redirects an unauthenticated visitor.
+- The dashboard logout button revokes the session and returns to the login page.
 - Frontend linting, formatting, type checking, tests, and build pass.
 - Backend linting, formatting, and tests pass.
 - `alembic current` reports revision `20261025_0002`.
@@ -460,6 +468,13 @@ Install PostgreSQL 16 client tools and add them to the system path, or use the D
 
 Confirm Node.js 20.19 or later is active, then run npm ci from apps/web. Peer warnings can appear while Next.js lint plugins update their ESLint 10 declarations. The current configuration has been verified and linting should still pass.
 
+### Authentication pages report that the service is unavailable
+
+- Confirm FastAPI is running and `http://localhost:8000/health` succeeds.
+- When running Next.js directly, set `API_INTERNAL_BASE_URL=http://localhost:8000`.
+- When using Docker Compose, do not replace the automatically supplied `http://backend:8000` value with localhost inside the frontend container.
+- Confirm PostgreSQL is running and the backend `/ready` endpoint succeeds.
+
 ### An OpenAI key error appears
 
 Current health checks, the fixture homepage, and normal tests do not need an OpenAI key. A future OpenAI-powered feature will need a real key in .env. Never send it to the frontend or commit it.
@@ -475,6 +490,6 @@ Current health checks, the fixture homepage, and normal tests do not need an Ope
 
 ## 13. Verification record
 
-These instructions were checked on 23 October 2026 against the repository structure, environment template, Docker Compose configuration, frontend scripts, backend package configuration, and working toolchain.
+These instructions were checked on 25 October 2026 against the repository structure, environment template, Docker Compose configuration, authentication interface, frontend scripts, backend package configuration, and working toolchain.
 
 The verified environment used Git 2.50.1, Docker 29.8.2, Docker Compose v5.5.1, Node.js 26.11.1, npm 11.20.0, Python 3.12.15 in the backend virtual environment, and the Compose-managed postgres:16-alpine image. Other developers should use the supported versions listed above.

@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation and account implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 adds secure user registration. NFA-23 adds credential verification, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation and account implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 provide secure registration, login, expiring server-managed sessions, CSRF-protected logout, and authentication rate limiting. NFA-24 adds the responsive registration and login pages, protected dashboard, authentication-state restoration, and frontend authentication tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -97,7 +97,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 securely creates user accounts, and NFA-23 authenticates those accounts with server-managed sessions. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 and NFA-23 provide the backend account lifecycle, and NFA-24 connects that lifecycle to a responsive frontend. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -119,7 +119,14 @@ Start with the complete [local development guide](docs/development-setup.md). Th
 
 ### Frontend application
 
-The NFA-12 frontend uses Next.js 16, React 19, TypeScript, the App Router, and Tailwind CSS 4. Its current homepage is a responsive presentation of the planned NewsFlow AI workflow and fixture-mode product controls.
+The frontend uses Next.js 16, React 19, TypeScript, the App Router, and Tailwind CSS 4. It includes a responsive homepage and the NFA-24 authentication experience:
+
+- `/register` creates an account through the FastAPI registration endpoint.
+- `/login` starts a secure server-managed session.
+- `/dashboard` restores and validates the current session on refresh and redirects unauthenticated visitors.
+- The dashboard logout control submits the CSRF token required by FastAPI and ends the session.
+
+Browser authentication requests go through same-origin Next.js route handlers under `/api/auth`. Those handlers forward only authentication cookies and required headers to FastAPI. The HTTP-only session cookie is never read by client-side JavaScript, and no session secret is stored in browser storage.
 
 Run it locally from the repository root:
 
@@ -129,7 +136,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Run `npm run lint` and `npm run build` before committing frontend changes. Application dependencies, `.next` output, local environment files, and logs remain excluded from Git.
+Open [http://localhost:3000](http://localhost:3000). The backend and PostgreSQL must also be running to register, log in, restore a session, or log out. Run `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, and `npm run build` before committing frontend changes. Application dependencies, `.next` output, local environment files, and logs remain excluded from Git.
 
 ### Backend application and PostgreSQL
 
@@ -176,7 +183,7 @@ DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/new
 OPENAI_API_KEY=your_real_openai_api_key
 ```
 
-The FastAPI backend loads these values through one validated settings class and stores both as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` is required only when an OpenAI feature runs; a missing value or unchanged example placeholder produces a clear error without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
+The FastAPI backend loads these values through one validated settings class and stores both as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` is required only when an OpenAI feature runs; a missing value or unchanged example placeholder produces a clear error without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
 ### Docker development environment
 
@@ -248,7 +255,7 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-23 authentication endpoints, session expiry, cookie controls, CSRF protection, rate limiting, and automated test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The backend can now register and authenticate users and load an OpenAI API key securely, but it does not yet make OpenAI API requests or connect to a live news source.
+Review the NFA-24 registration page, login page, protected dashboard, logout flow, responsive layout, accessibility behaviour, and automated test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The application now provides a full user-facing account journey, but it does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 
