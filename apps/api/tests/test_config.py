@@ -89,3 +89,10 @@ def test_seed_data_is_disabled_by_default() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.seed_data_enabled is False
+
+
+def test_registration_rate_limit_has_safe_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.registration_rate_limit_attempts == 5
+    assert settings.registration_rate_limit_window_seconds == 60

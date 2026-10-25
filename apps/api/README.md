@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration.
 
 ## Requirements
 
@@ -41,6 +41,8 @@ APP_ENV=development
 NEWS_SOURCE_MODE=fixture
 DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
+REGISTRATION_RATE_LIMIT_ATTEMPTS=5
+REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 OPENAI_API_KEY=your_real_openai_api_key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
@@ -57,6 +59,8 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `NEWS_SOURCE_MODE` | No | No | Remains `fixture` while live CNN access is not authorised. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
+| `REGISTRATION_RATE_LIMIT_ATTEMPTS` | No | No | Maximum registration requests per client and window; defaults to 5. |
+| `REGISTRATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | Registration rate-limit window; defaults to 60 seconds. |
 | `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
@@ -106,6 +110,49 @@ The readiness check runs `SELECT 1` against PostgreSQL and returns:
 
 The API checks PostgreSQL during startup. It stops with a safe configuration or connection error when `DATABASE_URL` is missing, invalid, or unreachable. If PostgreSQL becomes unavailable while the API is running, `/ready` returns HTTP `503` without exposing credentials or driver details. `/health` remains a liveness check and does not query the database.
 
+## Register a user
+
+The registration endpoint is:
+
+```text
+POST /api/v1/auth/register
+```
+
+Example request:
+
+```json
+{
+  "email": "example@email.com",
+  "password": "ExampleSecurePassword123!"
+}
+```
+
+Example HTTP `201` response:
+
+```json
+{
+  "id": "generated-user-id",
+  "email": "example@email.com",
+  "message": "Account created successfully"
+}
+```
+
+The password must contain 12 to 128 characters with at least one uppercase letter, one lowercase letter, one number, and one non-whitespace symbol. Common passwords are rejected. Passwords are never trimmed, logged by the registration code, saved, or returned. The backend stores only a uniquely salted Argon2id hash using 19 MiB memory, two iterations, and one degree of parallelism.
+
+Email addresses are trimmed, validated with `email-validator`, and stored in lowercase. PostgreSQL constraint `uq_users_email` provides the final duplicate-account guarantee, including concurrent requests. Duplicate registration returns HTTP `409`; invalid input returns `422`; temporary storage failure returns `503` without database details.
+
+Try the endpoint through Swagger UI at `http://127.0.0.1:8000/docs`, or run:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"example@email.com","password":"ExampleSecurePassword123!"}'
+```
+
+The in-process limiter allows five registration requests per client per 60 seconds by default and returns HTTP `429` with `Retry-After` when exceeded. It counts invalid requests as well as valid ones. A deployed multi-instance application must also enforce registration limits at a trusted reverse proxy, API gateway, or shared rate-limit store because in-memory counters are not shared between processes.
+
+Production registration traffic must use HTTPS so credentials are encrypted in transit. Configure TLS and trusted proxy handling at the deployment boundary before exposing this endpoint publicly.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -121,7 +168,7 @@ Use `docker compose down` for a normal shutdown. The PostgreSQL named volume rem
 
 ## Database migrations and seed data
 
-Alembic is the selected migration tool. SQLAlchemy supplies its PostgreSQL schema types and engine integration; the application can continue using Psycopg for its current connection check. Alembic reads `DATABASE_URL` through the same validated settings class as FastAPI, so no password is stored in `alembic.ini`.
+Alembic is the selected migration tool. SQLAlchemy supplies the migration types and the asynchronous registration repository, while the readiness check uses Psycopg directly. Both read `DATABASE_URL` through the same validated settings class, so no password is stored in `alembic.ini`.
 
 From `apps/api`, with the virtual environment active and PostgreSQL running:
 
@@ -178,6 +225,14 @@ pytest -m integration tests/test_migrations_integration.py
 
 Never point this test at the normal development database or any shared database.
 
+The registration integration test requires a separate disposable database whose name contains `newsflow_registration_test`. It verifies real PostgreSQL insertion, lowercase email storage, Argon2id hashing, and uniqueness enforcement:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_registration_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_registration_integration.py
+```
+
 ## Code quality
 
 Install the development dependencies, including Ruff and Pytest, with `python -m pip install -e ".[dev]"`. Run the backend checks from `apps/api`:
@@ -205,11 +260,18 @@ apps/api/
 |-- .dockerignore               # Files excluded from the image build context
 |-- app/
 |   |-- api/routes/health.py    # GET /health
+|   |-- api/routes/auth.py      # POST /api/v1/auth/register
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- database/connection.py  # PostgreSQL connection check
 |   |-- database/seed.py        # Repeatable synthetic development fixtures
+|   |-- database/sqlalchemy.py  # Async SQLAlchemy sessions
+|   |-- database/tables.py      # Migration-backed users mapping
+|   |-- models/auth.py          # Registration request and response validation
 |   |-- models/health.py        # Health response schema
+|   |-- repositories/users.py   # PostgreSQL user persistence
+|   |-- security/               # Argon2id and registration rate limiting
+|   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
 |-- alembic.ini                 # Credential-free migration configuration
@@ -217,6 +279,10 @@ apps/api/
 |-- tests/test_config.py        # Environment and secret-safety tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test
+|-- tests/test_passwords.py      # Argon2id hashing tests
+|-- tests/test_rate_limit.py     # Registration abuse-control tests
+|-- tests/test_registration.py   # Registration API tests
+|-- tests/test_registration_integration.py # Opt-in PostgreSQL registration test
 |-- tests/test_seed.py          # Seed safety and fixture tests
 |-- .python-version             # Recommended Python runtime
 |-- pyproject.toml              # Application and development dependencies
@@ -244,8 +310,10 @@ Dependencies are declared in `pyproject.toml`:
 
 - `fastapi[standard-no-fastapi-cloud-cli]` provides FastAPI, the Uvicorn development server, and the standard local development dependencies without adding deployment tooling.
 - `psycopg[binary]` provides the PostgreSQL driver and asynchronous connection support.
-- `SQLAlchemy` supplies database types and engine integration for migrations.
+- `SQLAlchemy[asyncio]` supplies asynchronous PostgreSQL sessions and migration types.
 - `Alembic` versions, applies, and rolls back PostgreSQL schema changes.
+- `argon2-cffi` hashes passwords using Argon2id with a unique random salt.
+- `email-validator` validates registration email addresses through Pydantic.
 - `pydantic-settings` validates environment-based application settings and masks the database URL and OpenAI API key as secret values.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.

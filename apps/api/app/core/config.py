@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     news_source_mode: Literal["fixture"] = "fixture"
     database_url: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    registration_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
+    registration_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     openai_api_key: SecretStr | None = None
     seed_data_enabled: bool = False
 
