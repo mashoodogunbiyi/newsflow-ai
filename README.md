@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation and data design in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 now documents the proposed MVP PostgreSQL schema and ERD. Its final migration baseline remains conditional on the T1.2 architecture-decision gate. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation and database implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 is now the approved MVP PostgreSQL schema. NFA-21 implements it with Alembic migrations and repeatable synthetic seed data. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -60,7 +60,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/jira/NFA-7.md](docs/jira/NFA-7.md) - approved privacy, copyright, hallucination, and AI-generated image risk review with mandatory safeguards and release gates.
 - [docs/jira/NFA-8.md](docs/jira/NFA-8.md) - approved architecture decision recording No-Go for live CNN integration and Go for fixture-based development.
 - [docs/jira/NFA-9.md](docs/jira/NFA-9.md) - approved initial risk register covering development, delivery, security, cost, AI safety, and legal compliance, with named owners and treatment actions.
-- [docs/jira/NFA-20.md](docs/jira/NFA-20.md) - PostgreSQL MVP schema and ERD covering accounts, source provenance, generations, versioned posts, images, saved content, ownership, constraints, indexes, and 3NF review.
+- [docs/jira/NFA-20.md](docs/jira/NFA-20.md) - approved PostgreSQL MVP schema and ERD covering accounts, source provenance, generations, versioned posts, images, saved content, ownership, constraints, indexes, and 3NF review.
 
 ### Documentation update rule
 
@@ -78,7 +78,7 @@ The README and the related project document should be staged and committed toget
 newsflow-ai/
 ├── compose.yaml             # Frontend, backend, and PostgreSQL development stack
 ├── apps/
-│   ├── api/                 # FastAPI application and development Dockerfile
+│   ├── api/                 # FastAPI application, Alembic migrations, seed data, and Dockerfile
 │   └── web/                 # Next.js application and development Dockerfile
 ├── packages/                # Shared contracts, schemas, or generated clients
 ├── infrastructure/
@@ -97,7 +97,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the detailed database model, ownership paths, constraints, indexes, and migration handoff; executable migrations remain a later task after the architecture gate is resolved. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, and NFA-21 provides its version-controlled Alembic migration, constraints, indexes, rollback, and safe synthetic seed process. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -105,8 +105,9 @@ The frontend and backend directories contain working application foundations. Po
 |---|---|
 | `apps/web` | Frontend user interface, authentication screens, dashboard, editor, and previews |
 | `apps/api` | Backend API, validation, authorisation, persistence, and external-service orchestration |
+| `apps/api/migrations` | Alembic database migration environment and versioned schema revisions |
 | `packages` | Code and contracts shared between applications |
-| `infrastructure/database` | Database service, migration, backup, and restore configuration |
+| `infrastructure/database` | Future hosted database, backup, and restore configuration |
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
@@ -146,6 +147,15 @@ fastapi dev app/main.py
 ```
 
 Before starting the API, copy `.env.example` to `.env` and replace the PostgreSQL placeholders with the credentials for your local `newsflow` database. Keep the development server running, then open `http://127.0.0.1:8000/health` for API liveness, `http://127.0.0.1:8000/ready` for PostgreSQL readiness, or `http://127.0.0.1:8000/docs` for interactive API documentation. Run `pytest` before committing backend changes. The virtual environment, Python caches, test caches, local environment files, and logs remain excluded from Git.
+
+Create or update the schema and load the optional development fixture from `apps/api`:
+
+```bash
+alembic upgrade head
+SEED_DATA_ENABLED=true python -m app.database.seed
+```
+
+The seed loader runs only in development or test, contains fictional data on the reserved `example.invalid` domain, and is safe to run repeatedly without creating duplicates. It is disabled by default and refuses staging or production.
 
 ### Secure local configuration
 
@@ -232,9 +242,7 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-20 database schema and Mermaid ERD, then resolve or explicitly approve the remaining T1.2 architecture decisions before treating the schema as the final migration baseline. Merge the documentation through the normal GitHub workflow and record the GitHub evidence in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests or connect to a live news source.
-
-After NFA-20 is final and its GitHub evidence is recorded in Jira, continue with T2.2 to create and test the PostgreSQL migrations and synthetic seed data.
+Review the NFA-21 migration, synthetic seed process, and verification results. Merge the implementation through the normal GitHub workflow, then record the document, pull-request, implementation-commit, and merge-commit links in Jira. The backend can load an OpenAI API key securely, but it does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 

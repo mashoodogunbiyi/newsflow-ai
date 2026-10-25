@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ If your supported Python executable has a different name, replace `python3.12` w
 
 ## Configure the application
 
-Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. The proposed Epic E2 tables, relationships, constraints, indexes, ownership rules, and ERD are documented in [NFA-20](../../docs/jira/NFA-20.md). Executable migrations are intentionally deferred until that design's architecture gate is resolved.
+Create a local PostgreSQL role and database using your preferred local PostgreSQL installation. The development database name used by this project is `newsflow`. The approved Epic E2 tables, relationships, constraints, indexes, ownership rules, and ERD are documented in [NFA-20](../../docs/jira/NFA-20.md). NFA-21 implements that baseline in Alembic migration `20261025_0001`.
 
 From the repository root, create your ignored local configuration file:
 
@@ -57,6 +57,7 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `NEWS_SOURCE_MODE` | No | No | Remains `fixture` while live CNN access is not authorised. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
+| `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
 
@@ -118,19 +119,64 @@ Replace the PostgreSQL placeholders in `.env` before starting. Compose supplies 
 
 Use `docker compose down` for a normal shutdown. The PostgreSQL named volume remains available for the next startup. See the [complete Docker development guide](../../infrastructure/docker/README.md) for configuration, service checks, logs, persistence, and troubleshooting.
 
+## Database migrations and seed data
+
+Alembic is the selected migration tool. SQLAlchemy supplies its PostgreSQL schema types and engine integration; the application can continue using Psycopg for its current connection check. Alembic reads `DATABASE_URL` through the same validated settings class as FastAPI, so no password is stored in `alembic.ini`.
+
+From `apps/api`, with the virtual environment active and PostgreSQL running:
+
+```bash
+alembic current
+alembic upgrade head
+alembic history
+```
+
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. To roll back the latest revision in a disposable development database:
+
+```bash
+alembic downgrade -1
+```
+
+The initial downgrade deletes all NewsFlow AI tables and their data. Never use it against a database containing information that must be retained. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+
+Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
+
+```bash
+SEED_DATA_ENABLED=true python -m app.database.seed
+```
+
+The script inserts deterministic fictional records, uses the reserved `example.invalid` domain, creates a disabled account with no usable password, and contains no CNN content or credentials. It uses fixed identifiers and conflict-safe inserts, so running the command again does not create duplicate fixtures. It refuses to run in staging or production.
+
+With Docker Compose running, use:
+
+```bash
+docker compose exec backend alembic upgrade head
+docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.seed
+```
+
 ## Run the tests
 
 ```bash
 pytest
 ```
 
-The normal test suite uses a database test double, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, and standard API errors.
+The normal test suite uses a database test double, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, and the seed safety gates.
 
 To prove the connection against your configured local PostgreSQL database, run the opt-in integration test without placing the URL in Git:
 
 ```bash
 TEST_DATABASE_URL="$DATABASE_URL" pytest -m integration tests/test_database_integration.py
 ```
+
+The migration integration test is intentionally destructive and requires a separate disposable database whose name contains `newsflow_migration_test`. It verifies upgrade from empty, expected tables, connectivity, two identical seed runs, complete rollback, and a final rebuild:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_migration_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_migrations_integration.py
+```
+
+Never point this test at the normal development database or any shared database.
 
 ## Code quality
 
@@ -162,11 +208,16 @@ apps/api/
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- database/connection.py  # PostgreSQL connection check
+|   |-- database/seed.py        # Repeatable synthetic development fixtures
 |   |-- models/health.py        # Health response schema
 |   `-- main.py                 # FastAPI application factory and entry point
+|-- migrations/                 # Alembic environment and revision files
+|-- alembic.ini                 # Credential-free migration configuration
 |-- tests/test_api.py           # API and readiness tests
 |-- tests/test_config.py        # Environment and secret-safety tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
+|-- tests/test_migrations_integration.py # Opt-in destructive migration test
+|-- tests/test_seed.py          # Seed safety and fixture tests
 |-- .python-version             # Recommended Python runtime
 |-- pyproject.toml              # Application and development dependencies
 `-- README.md                   # Backend setup and operating guide
@@ -193,6 +244,8 @@ Dependencies are declared in `pyproject.toml`:
 
 - `fastapi[standard-no-fastapi-cloud-cli]` provides FastAPI, the Uvicorn development server, and the standard local development dependencies without adding deployment tooling.
 - `psycopg[binary]` provides the PostgreSQL driver and asynchronous connection support.
+- `SQLAlchemy` supplies database types and engine integration for migrations.
+- `Alembic` versions, applies, and rolls back PostgreSQL schema changes.
 - `pydantic-settings` validates environment-based application settings and masks the database URL and OpenAI API key as secret values.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.

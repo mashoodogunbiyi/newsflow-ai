@@ -7,8 +7,8 @@
 | Project               | NewsFlow AI                                                                    |
 | Jira issue            | NFA-20                                                                         |
 | Project-plan task     | T2.1 - Design the database schema                                              |
-| Version               | 1.0                                                                            |
-| Status                | Technically complete - conditional approval pending the T1.2 architecture gate |
+| Version               | 1.1                                                                            |
+| Status                | Approved database schema and NFA-21 migration baseline                          |
 | Created               | 23 October 2026                                                                |
 | Owner                 | Mashood Ogunbiyi                                                               |
 | Database              | PostgreSQL 16                                                                  |
@@ -23,20 +23,21 @@
 | Version | Date            | Change                                                                                                                              | Author           |
 | ------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
 | 1.0     | 23 October 2026 | Designed the MVP PostgreSQL schema, ERD, keys, constraints, indexes, ownership model, normalisation review, and scenario validation | Mashood Ogunbiyi |
+| 1.1     | 25 October 2026 | Confirmed the approved fixture-first schema as the implementation baseline for NFA-21 migrations                                  | Mashood Ogunbiyi |
 
 ### Review and approval position
 
 Mashood Ogunbiyi has authorised and reviewed the preparation of this database design for the current solo project phase.
 
-The design is approved as the fixture-first basis for review and migration planning. It is not yet the final migration baseline because the original project plan requires T1.2 - Document architecture decisions - before T2.1 is finalised. Section 3 records the remaining architecture gate. Once T1.2 confirms the relevant assumptions, this document can be marked fully approved without changing the schema when the assumptions remain unchanged.
+Mashood Ogunbiyi's instruction to implement NFA-21 confirms the fixture-first design and the assumptions in Section 3 as the approved initial migration baseline. Later architecture decisions remain version-controlled changes and must use a new migration when they alter this schema.
 
 This document does not authorise live CNN ingestion. NFA-8 remains No-Go for live CNN integration, and only the NFA-6 `fixture-v1` source profile may be enabled.
 
 | Role                       | Name             | Decision                                                     | Date            |
 | -------------------------- | ---------------- | ------------------------------------------------------------ | --------------- |
-| Project and document owner | Mashood Ogunbiyi | Conditional approval for fixture-first migration planning    | 23 October 2026 |
-| Technical reviewer         | Mashood Ogunbiyi | Self-reviewed for the current solo phase                     | 23 October 2026 |
-| Architecture dependency    | T1.2             | Must be approved before migrations become the final baseline | Open            |
+| Project and document owner | Mashood Ogunbiyi | Approved as the NFA-21 fixture-first migration baseline | 25 October 2026 |
+| Technical reviewer         | Mashood Ogunbiyi | Self-reviewed for the current solo phase                | 25 October 2026 |
+| Architecture dependency    | T1.2             | Current schema assumptions explicitly approved          | 25 October 2026 |
 
 ## 2. Purpose and scope
 
@@ -52,7 +53,7 @@ This document defines the PostgreSQL schema required for the NewsFlow AI MVP. It
 - Ownership, retention, deletion, privacy, and source-rights controls.
 - An Entity Relationship Diagram and representative scenario review.
 
-This is a logical and physical design. NFA-20 does not create database migrations or application models. Those belong to T2.2 after this design and its architecture dependency are approved.
+This is the approved logical and physical design. NFA-21 implements it as version-controlled migrations and synthetic development seed data.
 
 ## 3. Dependency review and architecture assumptions
 
@@ -61,11 +62,11 @@ This is a logical and physical design. NFA-20 does not create database migration
 | Dependency                             | Evidence                                                                    | Status             | Effect on NFA-20                                                                                                                                |
 | -------------------------------------- | --------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | T0.4 - Define the source data contract | Approved NFA-6 contract                                                     | Resolved           | Required article, provenance, rights, attribution, validation, and snapshot fields are included                                                 |
-| T1.2 - Document architecture decisions | Project plan, README architecture, and NFA-8 cover part of the decision set | Partially resolved | General decisions for authentication, worker, object storage, and service boundaries still need formal approval before migrations are finalised |
+| T1.2 - Document architecture decisions | Project plan, README architecture, NFA-8, and owner approval to begin NFA-21 | Resolved for this schema | The assumptions below are approved for the initial fixture-first migration; later changes require a new ADR and migration |
 
-The unresolved T1.2 work does not prevent a complete schema proposal. It prevents this proposal from becoming the irreversible migration baseline until the affected assumptions are confirmed.
+The assumptions below are the approved basis for the initial migration. Broader architecture work may continue, but it does not block NFA-21 unless it changes a table, key, lifecycle, or trust boundary.
 
-### 3.2 Assumptions requiring T1.2 confirmation
+### 3.2 Approved initial architecture assumptions
 
 | Area            | Schema assumption                                                                                       |
 | --------------- | ------------------------------------------------------------------------------------------------------- |
@@ -80,7 +81,7 @@ The unresolved T1.2 work does not prevent a complete schema proposal. It prevent
 | Ownership       | Each generated post has one owning user, and all child content inherits that ownership                  |
 | Deletion        | User content supports soft deletion followed by controlled policy-based purging                         |
 
-If T1.2 changes any assumption that affects a table, key, lifecycle, or trust boundary, NFA-20 must be revised before T2.2 migrations begin.
+If a later architecture decision changes an assumption that affects a table, key, lifecycle, or trust boundary, NFA-20 must be revised and the change must be delivered through a new migration.
 
 ## 4. Database design conventions
 
@@ -930,19 +931,16 @@ The migration must not seed a real password, API key, CNN content item, provider
 | Article provenance and permitted usage included  | `source_profiles` and `article_snapshots` | Complete                              |
 | User ownership represented                       | Sections 6.6, 6.14, and 8.2               | Complete                              |
 | Design reviewed against application requirements | Sections 12 and 13                        | Complete                              |
-| Dependencies reviewed                            | Section 3                                 | T0.4 complete; T1.2 gate remains open |
+| Dependencies reviewed                            | Section 3                                 | T0.4 complete; current T1.2 assumptions approved |
 | Schema stored in project documentation           | Document control and repository path      | Complete locally                      |
 
 ## 17. Jira completion position
 
-The NFA-20 schema deliverable is complete for technical review. All NFA-20 design acceptance criteria are addressed.
+The NFA-20 schema deliverable is approved and all design acceptance criteria are addressed. It is the baseline for NFA-21.
 
 The final workflow actions are:
 
-1. Review this Markdown document and its Mermaid ERD.
-2. Complete or explicitly approve the T1.2 architecture decisions that affect this schema.
-3. Update this document from conditional to final approval if those decisions do not require schema changes.
-4. Commit and merge NFA-20 and the README updates through the normal GitHub workflow.
-5. Add the document, pull-request, implementation-commit, and merge-commit links to NFA-20 in Jira.
-6. Move NFA-20 to Done only after the architecture gate and GitHub evidence are recorded.
-7. Begin T2.2 database migrations after NFA-20 is final.
+1. Preserve the approved schema through version-controlled Alembic migrations.
+2. Test upgrade, repeatable synthetic seeding, application connectivity, and rollback against PostgreSQL 16.
+3. Record NFA-21 implementation and GitHub evidence in Jira.
+4. Use a new ADR and migration for any later architecture decision that changes this baseline.

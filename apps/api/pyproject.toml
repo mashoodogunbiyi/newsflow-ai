@@ -9,9 +9,11 @@ description = "FastAPI backend for NewsFlow AI."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 dependencies = [
+    "alembic>=1.14,<2",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.143,<0.144",
     "psycopg[binary]>=3.2,<4",
     "pydantic-settings>=2.10,<3",
+    "SQLAlchemy>=2.0,<3",
 ]
 
 [project.optional-dependencies]

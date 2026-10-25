@@ -82,6 +82,7 @@ POSTGRES_PASSWORD=choose_a_local_password
 POSTGRES_DB=newsflow
 DATABASE_URL=postgresql://choose_a_local_username:choose_a_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
+SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
@@ -102,6 +103,7 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | POSTGRES_DB                      | Creates the Docker database.                      | Yes for Docker Compose                           |
 | DATABASE_URL                     | Connects a host-run backend to PostgreSQL.        | Yes for a manually run backend                   |
 | DATABASE_CONNECT_TIMEOUT_SECONDS | Sets the database timeout.                        | No - defaults to 5                               |
+| SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
 | OPENAI_API_KEY                   | Authenticates future server-side OpenAI features. | Not required for current features or tests       |
 | NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
 
@@ -146,6 +148,15 @@ docker compose ps
 ```
 
 All three services should eventually report running or healthy.
+
+Create the database schema and optionally load the synthetic fixture:
+
+```bash
+docker compose exec backend alembic upgrade head
+docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.seed
+```
+
+The seed command is repeatable and does not create duplicate fixtures.
 
 ### Local addresses
 
@@ -223,6 +234,7 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
+alembic upgrade head
 fastapi dev app/main.py
 ```
 
@@ -245,6 +257,14 @@ Stop it with Control-C. Leave the virtual environment with:
 ```bash
 deactivate
 ```
+
+To add the optional synthetic data while the environment is active:
+
+```bash
+SEED_DATA_ENABLED=true python -m app.database.seed
+```
+
+The script refuses to run unless `APP_ENV` is `development` or `test`. Keep `SEED_DATA_ENABLED=false` in `.env` and opt in for only the command that needs it.
 
 ## 8. Manual frontend setup
 
@@ -288,6 +308,16 @@ pytest
 
 The normal backend tests use a database test double. They do not need PostgreSQL, real database credentials, or an OpenAI API key.
 
+Migration verification uses a separate disposable PostgreSQL database because the test deliberately upgrades, seeds twice, rolls back, and rebuilds the schema:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_migration_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_migrations_integration.py
+```
+
+Never use the normal `newsflow` development database for that destructive test.
+
 Apply formatting when needed:
 
 ```bash
@@ -311,6 +341,8 @@ A working environment meets this checklist:
 - Swagger UI opens at http://localhost:8000/docs.
 - Frontend linting, formatting, type checking, tests, and build pass.
 - Backend linting, formatting, and tests pass.
+- `alembic current` reports revision `20261025_0001`.
+- Running the seed command twice reports the same fixture counts without duplicates.
 - git status --short does not show .env, dependency directories, build output, or test caches.
 
 ## 11. Common setup problems

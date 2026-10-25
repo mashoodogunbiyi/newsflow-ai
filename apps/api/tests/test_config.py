@@ -83,3 +83,9 @@ def test_database_url_placeholder_is_rejected() -> None:
         match="example placeholders",
     ):
         settings.require_database_url()
+
+
+def test_seed_data_is_disabled_by_default() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.seed_data_enabled is False

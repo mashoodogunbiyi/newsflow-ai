@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     openai_api_key: SecretStr | None = None
+    seed_data_enabled: bool = False
 
     def require_database_url(self) -> SecretStr:
         """Return the configured database URL or fail with a safe message."""
