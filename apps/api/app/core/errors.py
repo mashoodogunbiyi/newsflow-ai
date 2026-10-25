@@ -1,7 +1,7 @@
 """Consistent, safe JSON error handling for the API."""
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -15,10 +15,17 @@ logger = logging.getLogger(__name__)
 class ApplicationError(Exception):
     """An expected application failure safe to return to an API client."""
 
-    def __init__(self, status_code: int, code: str, message: str) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
         self.status_code = status_code
         self.code = code
         self.message = message
+        self.headers = dict(headers) if headers else None
         super().__init__(message)
 
 
@@ -46,6 +53,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=_error_payload(code=exc.code, message=exc.message),
+            headers=exc.headers,
         )
 
     @app.exception_handler(RequestValidationError)

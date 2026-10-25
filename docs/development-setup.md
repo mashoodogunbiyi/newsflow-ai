@@ -82,6 +82,8 @@ POSTGRES_PASSWORD=choose_a_local_password
 POSTGRES_DB=newsflow
 DATABASE_URL=postgresql://choose_a_local_username:choose_a_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
+REGISTRATION_RATE_LIMIT_ATTEMPTS=5
+REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
@@ -103,6 +105,8 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | POSTGRES_DB                      | Creates the Docker database.                      | Yes for Docker Compose                           |
 | DATABASE_URL                     | Connects a host-run backend to PostgreSQL.        | Yes for a manually run backend                   |
 | DATABASE_CONNECT_TIMEOUT_SECONDS | Sets the database timeout.                        | No - defaults to 5                               |
+| REGISTRATION_RATE_LIMIT_ATTEMPTS | Limits registration attempts per client.         | No - defaults to 5                               |
+| REGISTRATION_RATE_LIMIT_WINDOW_SECONDS | Sets the rate-limit window in seconds.      | No - defaults to 60                              |
 | SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
 | OPENAI_API_KEY                   | Authenticates future server-side OpenAI features. | Not required for current features or tests       |
 | NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
@@ -175,6 +179,16 @@ Check the API from the terminal:
 curl http://localhost:8000/health
 curl http://localhost:8000/ready
 ```
+
+Register a development account after applying the migration:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"example@email.com","password":"ExampleSecurePassword123!"}'
+```
+
+The response contains only the generated ID, normalised email, and success message. It never contains the password or password hash. The full endpoint contract is available in Swagger UI.
 
 View logs:
 
@@ -318,6 +332,14 @@ pytest -m integration tests/test_migrations_integration.py
 
 Never use the normal `newsflow` development database for that destructive test.
 
+Run the registration integration test only against a separate disposable database:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_registration_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_registration_integration.py
+```
+
 Apply formatting when needed:
 
 ```bash
@@ -339,6 +361,7 @@ A working environment meets this checklist:
 - GET http://localhost:8000/health returns HTTP 200 and {"status":"ok"}.
 - GET http://localhost:8000/ready returns HTTP 200 and confirms the database connection.
 - Swagger UI opens at http://localhost:8000/docs.
+- POST http://localhost:8000/api/v1/auth/register creates an account and returns no password data.
 - Frontend linting, formatting, type checking, tests, and build pass.
 - Backend linting, formatting, and tests pass.
 - `alembic current` reports revision `20261025_0001`.
