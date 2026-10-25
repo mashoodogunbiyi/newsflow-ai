@@ -43,12 +43,25 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "staging", "production"] = "development"
     news_source_mode: Literal["fixture"] = "fixture"
+    frontend_origin: str = Field(
+        default="http://localhost:3000",
+        pattern=r"^https?://[^/]+$",
+    )
     database_url: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     registration_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
     registration_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    login_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
+    login_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    session_lifetime_minutes: int = Field(default=60, ge=5, le=10_080)
     openai_api_key: SecretStr | None = None
     seed_data_enabled: bool = False
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        """Require HTTPS-only session cookies outside local and test environments."""
+
+        return self.app_env in {"staging", "production"}
 
     def require_database_url(self) -> SecretStr:
         """Return the configured database URL or fail with a safe message."""

@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration. NFA-23 adds login, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting.
 
 ## Requirements
 
@@ -39,10 +39,14 @@ Edit only `.env` and replace the placeholders with your local values:
 ```dotenv
 APP_ENV=development
 NEWS_SOURCE_MODE=fixture
+FRONTEND_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
 REGISTRATION_RATE_LIMIT_ATTEMPTS=5
 REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
+LOGIN_RATE_LIMIT_ATTEMPTS=5
+LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
+SESSION_LIFETIME_MINUTES=60
 OPENAI_API_KEY=your_real_openai_api_key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
@@ -57,10 +61,14 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 |---|---|---|---|
 | `APP_ENV` | No | No | Selects `development`, `test`, `staging`, or `production`; defaults to `development`. |
 | `NEWS_SOURCE_MODE` | No | No | Remains `fixture` while live CNN access is not authorised. |
+| `FRONTEND_ORIGIN` | No | No | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
 | `REGISTRATION_RATE_LIMIT_ATTEMPTS` | No | No | Maximum registration requests per client and window; defaults to 5. |
 | `REGISTRATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | Registration rate-limit window; defaults to 60 seconds. |
+| `LOGIN_RATE_LIMIT_ATTEMPTS` | No | No | Maximum login requests per client and window; defaults to 5. |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | No | Login rate-limit window; defaults to 60 seconds. |
+| `SESSION_LIFETIME_MINUTES` | No | No | Absolute authenticated-session lifetime; defaults to 60 minutes. |
 | `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
@@ -153,6 +161,47 @@ The in-process limiter allows five registration requests per client per 60 secon
 
 Production registration traffic must use HTTPS so credentials are encrypted in transit. Configure TLS and trusted proxy handling at the deployment boundary before exposing this endpoint publicly.
 
+## Log in and manage a session
+
+NFA-23 provides these endpoints:
+
+```text
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+POST /api/v1/auth/logout
+```
+
+Login accepts the registered email and password. Unknown accounts and incorrect passwords both return HTTP `401` with the same `Invalid email address or password.` message, which avoids revealing whether an email is registered. Passwords are verified against their Argon2id hashes and are never stored again, logged by the authentication code, or returned.
+
+A successful login creates two independent random values:
+
+- `newsflow_session` is the session identifier. It is sent in an HTTP-only cookie, so browser JavaScript cannot read it.
+- `newsflow_csrf` is a CSRF token that the frontend reads and sends in the `X-CSRF-Token` header for state-changing authenticated requests such as logout.
+
+Only SHA-256 hashes of these random values are stored in PostgreSQL. The CSRF hash is tied to the same server-side session, so a different token is rejected. Both cookies use `SameSite=Lax`, `Path=/`, and the configured absolute expiry. The session cookie is also `HttpOnly`. Cookies receive the `Secure` attribute automatically in staging and production, where HTTPS is required; local development and tests can use HTTP on localhost.
+
+Credentialed browser requests are accepted only from the exact `FRONTEND_ORIGIN` configured for the environment. The default is `http://localhost:3000`. CORS allows credentials and the `X-CSRF-Token` header without using a wildcard origin. Deploy the frontend and API on the same site, such as two subdomains of one HTTPS domain, to retain the `SameSite=Lax` protection.
+
+The default session lifetime is 60 minutes. The `/me` endpoint accepts only an active, non-revoked, non-expired session belonging to an active user. Logout requires both cookies and the matching `X-CSRF-Token` header, sets `revoked_at` in PostgreSQL, and expires both browser cookies. An expired or logged-out session receives HTTP `401` from protected endpoints.
+
+With the backend running and a user registered, this terminal example preserves the cookies in a temporary `cookies.txt` file:
+
+```bash
+curl -c cookies.txt -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"example@email.com","password":"ExampleSecurePassword123!"}'
+
+curl -b cookies.txt http://127.0.0.1:8000/api/v1/auth/me
+
+CSRF_TOKEN=$(awk '$6 == "newsflow_csrf" { print $7 }' cookies.txt)
+curl -b cookies.txt -X POST http://127.0.0.1:8000/api/v1/auth/logout \
+  -H "X-CSRF-Token: ${CSRF_TOKEN}"
+```
+
+Delete `cookies.txt` after the check because it contains local session credentials. Browser frontend code must send requests with credentials enabled and copy the `newsflow_csrf` cookie into the `X-CSRF-Token` header for protected state-changing requests.
+
+Login is limited to five attempts per client per 60 seconds by default. As with registration, a deployed multi-instance application must also enforce abuse controls at a trusted proxy, API gateway, or shared rate-limit store. Configure trusted proxy handling before relying on a client IP supplied through deployment infrastructure.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -178,13 +227,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. Because sessions created before this migration cannot have valid CSRF proof, the migration invalidates any pre-release session rows. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-The initial downgrade deletes all NewsFlow AI tables and their data. Never use it against a database containing information that must be retained. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261025_0002`, this command removes only the NFA-23 session additions. Downgrading all the way to `base` also runs the initial downgrade and deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -233,6 +282,14 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_registration_integration.py
 ```
 
+The authentication integration test requires a separate disposable database whose name contains `newsflow_authentication_test`. It verifies registration, login, hashed token persistence, current-user access, CSRF-protected logout, revocation, and expiry rejection:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_authentication_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_authentication_integration.py
+```
+
 ## Code quality
 
 Install the development dependencies, including Ruff and Pytest, with `python -m pip install -e ".[dev]"`. Run the backend checks from `apps/api`:
@@ -250,7 +307,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest continues to cover the health endpoint, database readiness, safe error handling, and secure configuration.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, and rate limiting.
 
 ## Project structure
 
@@ -260,22 +317,26 @@ apps/api/
 |-- .dockerignore               # Files excluded from the image build context
 |-- app/
 |   |-- api/routes/health.py    # GET /health
-|   |-- api/routes/auth.py      # POST /api/v1/auth/register
+|   |-- api/routes/auth.py      # Register, login, current-user, and logout APIs
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- database/connection.py  # PostgreSQL connection check
 |   |-- database/seed.py        # Repeatable synthetic development fixtures
 |   |-- database/sqlalchemy.py  # Async SQLAlchemy sessions
-|   |-- database/tables.py      # Migration-backed users mapping
-|   |-- models/auth.py          # Registration request and response validation
+|   |-- database/tables.py      # Migration-backed users and sessions mappings
+|   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
-|   |-- repositories/users.py   # PostgreSQL user persistence
-|   |-- security/               # Argon2id and registration rate limiting
+|   |-- repositories/authentication.py # Login and session persistence
+|   |-- repositories/users.py   # PostgreSQL registration persistence
+|   |-- security/               # Argon2id and authentication rate limiting
+|   |-- services/authentication.py # Login, session, CSRF, and logout workflow
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
 |-- alembic.ini                 # Credential-free migration configuration
 |-- tests/test_api.py           # API and readiness tests
+|-- tests/test_authentication.py # Fast authentication and cookie tests
+|-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_config.py        # Environment and secret-safety tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test

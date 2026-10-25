@@ -1,5 +1,6 @@
-"""Validated registration request and safe response schemas."""
+"""Validated authentication requests and safe public response schemas."""
 
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
@@ -90,3 +91,56 @@ class RegisterUserResponse(BaseModel):
     id: UUID
     email: EmailStr
     message: str = "Account created successfully"
+
+
+class LoginUserRequest(BaseModel):
+    """Credentials accepted by the login endpoint."""
+
+    email: EmailStr = Field(description="Email address used to identify the account.")
+    password: SecretStr = Field(
+        min_length=1,
+        max_length=MAXIMUM_PASSWORD_LENGTH,
+        description="Account password. The value is never returned or logged.",
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def strip_email(cls, value: object) -> object:
+        """Remove accidental surrounding whitespace before email validation."""
+
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: EmailStr) -> str:
+        """Match the lowercase email invariant used for registration."""
+
+        return str(value).lower()
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "example@email.com",
+                    "password": "ExampleSecurePassword123!",
+                }
+            ]
+        },
+    )
+
+
+class AuthenticatedUserResponse(BaseModel):
+    """Non-sensitive identity fields for an authenticated user."""
+
+    id: UUID
+    email: EmailStr
+
+
+class LoginUserResponse(AuthenticatedUserResponse):
+    """Safe login result with the absolute session expiry time."""
+
+    expires_at: datetime
+    message: str = "Login successful"

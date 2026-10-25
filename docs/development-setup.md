@@ -74,6 +74,7 @@ Open .env and replace the PostgreSQL username and password placeholders with dev
 ```dotenv
 APP_ENV=development
 NEWS_SOURCE_MODE=fixture
+FRONTEND_ORIGIN=http://localhost:3000
 FRONTEND_PORT=3000
 BACKEND_PORT=8000
 POSTGRES_PORT=5432
@@ -84,6 +85,9 @@ DATABASE_URL=postgresql://choose_a_local_username:choose_a_local_password@localh
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
 REGISTRATION_RATE_LIMIT_ATTEMPTS=5
 REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
+LOGIN_RATE_LIMIT_ATTEMPTS=5
+LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
+SESSION_LIFETIME_MINUTES=60
 SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
@@ -97,6 +101,7 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | -------------------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | APP_ENV                          | Selects the application environment.              | No - defaults to development                     |
 | NEWS_SOURCE_MODE                 | Selects the approved news source mode.            | No - must remain fixture                         |
+| FRONTEND_ORIGIN                  | Allows this exact browser origin to send API cookies. | No - defaults to http://localhost:3000        |
 | FRONTEND_PORT                    | Host port for the Docker frontend.                | No - defaults to 3000                            |
 | BACKEND_PORT                     | Host port for the Docker backend.                 | No - defaults to 8000                            |
 | POSTGRES_PORT                    | Host port for Docker PostgreSQL.                  | No - defaults to 5432                            |
@@ -107,6 +112,9 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | DATABASE_CONNECT_TIMEOUT_SECONDS | Sets the database timeout.                        | No - defaults to 5                               |
 | REGISTRATION_RATE_LIMIT_ATTEMPTS | Limits registration attempts per client.         | No - defaults to 5                               |
 | REGISTRATION_RATE_LIMIT_WINDOW_SECONDS | Sets the rate-limit window in seconds.      | No - defaults to 60                              |
+| LOGIN_RATE_LIMIT_ATTEMPTS        | Limits login attempts per client.                | No - defaults to 5                               |
+| LOGIN_RATE_LIMIT_WINDOW_SECONDS  | Sets the login rate-limit window in seconds.     | No - defaults to 60                              |
+| SESSION_LIFETIME_MINUTES         | Sets the absolute authenticated-session lifetime.| No - defaults to 60                              |
 | SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
 | OPENAI_API_KEY                   | Authenticates future server-side OpenAI features. | Not required for current features or tests       |
 | NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
@@ -189,6 +197,27 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 ```
 
 The response contains only the generated ID, normalised email, and success message. It never contains the password or password hash. The full endpoint contract is available in Swagger UI.
+
+Log in and save the returned cookies after registering the account:
+
+```bash
+curl -c cookies.txt -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"example@email.com","password":"ExampleSecurePassword123!"}'
+
+curl -b cookies.txt http://localhost:8000/api/v1/auth/me
+```
+
+The session identifier is in an HTTP-only cookie and cannot be read by browser JavaScript. PostgreSQL stores only its SHA-256 hash. Logout is a state-changing request, so it also requires the session-specific CSRF cookie value in the `X-CSRF-Token` header:
+
+```bash
+CSRF_TOKEN=$(awk '$6 == "newsflow_csrf" { print $7 }' cookies.txt)
+curl -b cookies.txt -X POST http://localhost:8000/api/v1/auth/logout \
+  -H "X-CSRF-Token: ${CSRF_TOKEN}"
+rm cookies.txt
+```
+
+The cookie file contains temporary local credentials, so delete it when the check is complete. Sessions expire after 60 minutes by default. Staging and production session cookies receive the HTTPS-only `Secure` attribute automatically.
 
 View logs:
 
@@ -340,6 +369,14 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_registration_integration.py
 ```
 
+Run the NFA-23 authentication integration test only against a separate disposable database:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_authentication_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_authentication_integration.py
+```
+
 Apply formatting when needed:
 
 ```bash
@@ -362,9 +399,12 @@ A working environment meets this checklist:
 - GET http://localhost:8000/ready returns HTTP 200 and confirms the database connection.
 - Swagger UI opens at http://localhost:8000/docs.
 - POST http://localhost:8000/api/v1/auth/register creates an account and returns no password data.
+- POST http://localhost:8000/api/v1/auth/login sets an HTTP-only session cookie and returns no credential or token data.
+- GET http://localhost:8000/api/v1/auth/me returns the logged-in user's ID and email.
+- POST http://localhost:8000/api/v1/auth/logout requires CSRF proof and invalidates the session.
 - Frontend linting, formatting, type checking, tests, and build pass.
 - Backend linting, formatting, and tests pass.
-- `alembic current` reports revision `20261025_0001`.
+- `alembic current` reports revision `20261025_0002`.
 - Running the seed command twice reports the same fixture counts without duplicates.
 - git status --short does not show .env, dependency directories, build output, or test caches.
 

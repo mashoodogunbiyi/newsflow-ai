@@ -85,6 +85,14 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
     command.upgrade(alembic_config, "head")
 
     assert EXPECTED_TABLES <= set(sa.inspect(engine).get_table_names())
+    session_columns = {
+        column["name"] for column in sa.inspect(engine).get_columns("sessions")
+    }
+    assert "csrf_token_hash" in session_columns
+    session_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("sessions")
+    }
+    assert {"ix_sessions_user_id", "ix_sessions_expires_at"} <= session_indexes
     with engine.connect() as connection:
         assert connection.execute(sa.text("SELECT 1")).scalar_one() == 1
 
