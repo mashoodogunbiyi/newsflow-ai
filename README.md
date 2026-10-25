@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation and account implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 adds secure user registration with email validation, Argon2id password hashing, duplicate prevention, and rate limiting. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation and account implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 adds secure user registration. NFA-23 adds credential verification, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -97,7 +97,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, and NFA-22 securely creates user accounts through FastAPI and PostgreSQL. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 securely creates user accounts, and NFA-23 authenticates those accounts with server-managed sessions. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -158,6 +158,8 @@ SEED_DATA_ENABLED=true python -m app.database.seed
 The seed loader runs only in development or test, contains fictional data on the reserved `example.invalid` domain, and is safe to run repeatedly without creating duplicates. It is disabled by default and refuses staging or production.
 
 NFA-22 adds `POST /api/v1/auth/register`. It validates and normalises the email address, enforces the documented password policy, stores only an Argon2id hash, relies on PostgreSQL uniqueness for race-safe duplicate prevention, and never returns the password or hash. The interactive contract and example request are available at `http://127.0.0.1:8000/docs` while the backend is running.
+
+NFA-23 adds `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, and `POST /api/v1/auth/logout`. A successful login verifies the Argon2id password hash, creates an absolute-expiry PostgreSQL session, and sends a random session identifier in an HTTP-only cookie. PostgreSQL stores only its SHA-256 hash. The current-user endpoint rejects missing, expired, revoked, and disabled-user sessions. Logout requires a session-specific CSRF token, revokes the server record, and expires the browser cookies. Login attempts are rate limited, invalid credentials use one generic response, and deployment cookies automatically require HTTPS in staging and production.
 
 ### Secure local configuration
 
@@ -246,7 +248,7 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-22 registration endpoint, password policy, safe responses, and test evidence. Merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The backend can register users and load an OpenAI API key securely, but it does not yet authenticate existing users, make OpenAI API requests, or connect to a live news source.
+Review the NFA-23 authentication endpoints, session expiry, cookie controls, CSRF protection, rate limiting, and automated test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The backend can now register and authenticate users and load an OpenAI API key securely, but it does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 

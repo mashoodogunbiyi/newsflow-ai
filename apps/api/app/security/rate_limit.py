@@ -1,4 +1,4 @@
-"""Small per-client rate limiter for the registration endpoint."""
+"""Small per-client rate limiter for authentication endpoints."""
 
 import asyncio
 import math
@@ -12,7 +12,7 @@ class RateLimitExceeded(RuntimeError):
 
     def __init__(self, retry_after_seconds: int) -> None:
         self.retry_after_seconds = retry_after_seconds
-        super().__init__("Registration rate limit exceeded.")
+        super().__init__("Rate limit exceeded.")
 
 
 class InMemoryRateLimiter:

@@ -96,3 +96,14 @@ def test_registration_rate_limit_has_safe_defaults() -> None:
 
     assert settings.registration_rate_limit_attempts == 5
     assert settings.registration_rate_limit_window_seconds == 60
+
+
+def test_authentication_settings_have_safe_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.login_rate_limit_attempts == 5
+    assert settings.login_rate_limit_window_seconds == 60
+    assert settings.session_lifetime_minutes == 60
+    assert settings.frontend_origin == "http://localhost:3000"
+    assert settings.session_cookie_secure is False
+    assert Settings(_env_file=None, app_env="production").session_cookie_secure is True

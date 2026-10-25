@@ -3,8 +3,10 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import timedelta
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
@@ -14,14 +16,19 @@ from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.database import DatabaseConnection, DatabaseConnectionError, PostgresDatabase
 from app.database.sqlalchemy import SqlAlchemyDatabase
-from app.repositories import SqlAlchemyUserRepository, UserRepository
+from app.repositories import (
+    AuthenticationRepository,
+    SqlAlchemyAuthenticationRepository,
+    SqlAlchemyUserRepository,
+    UserRepository,
+)
 from app.security import (
     Argon2PasswordHasher,
     InMemoryRateLimiter,
     PasswordHasher,
     RateLimitExceeded,
 )
-from app.services import RegistrationService
+from app.services import AuthenticationService, RegistrationService
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +40,8 @@ def create_app(
     user_repository: UserRepository | None = None,
     password_hasher: PasswordHasher | None = None,
     registration_rate_limiter: InMemoryRateLimiter | None = None,
+    authentication_repository: AuthenticationRepository | None = None,
+    login_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
 
@@ -67,7 +76,11 @@ def create_app(
 
         sqlalchemy_database = None
         configured_user_repository = user_repository
-        if configured_user_repository is None:
+        configured_authentication_repository = authentication_repository
+        if (
+            configured_user_repository is None
+            or configured_authentication_repository is None
+        ):
             database_url = database_url or application_settings.require_database_url()
             sqlalchemy_database = SqlAlchemyDatabase(
                 database_url=database_url,
@@ -75,11 +88,26 @@ def create_app(
                     application_settings.database_connect_timeout_seconds
                 ),
             )
-            configured_user_repository = SqlAlchemyUserRepository(sqlalchemy_database)
+            if configured_user_repository is None:
+                configured_user_repository = SqlAlchemyUserRepository(
+                    sqlalchemy_database
+                )
+            if configured_authentication_repository is None:
+                configured_authentication_repository = (
+                    SqlAlchemyAuthenticationRepository(sqlalchemy_database)
+                )
 
+        configured_password_hasher = password_hasher or Argon2PasswordHasher()
         application.state.registration_service = RegistrationService(
             users=configured_user_repository,
-            password_hasher=password_hasher or Argon2PasswordHasher(),
+            password_hasher=configured_password_hasher,
+        )
+        application.state.authentication_service = AuthenticationService(
+            repository=configured_authentication_repository,
+            password_hasher=configured_password_hasher,
+            session_lifetime=timedelta(
+                minutes=application_settings.session_lifetime_minutes
+            ),
         )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
@@ -88,6 +116,13 @@ def create_app(
                 window_seconds=(
                     application_settings.registration_rate_limit_window_seconds
                 ),
+            )
+        )
+        application.state.login_rate_limiter = (
+            login_rate_limiter
+            or InMemoryRateLimiter(
+                max_attempts=application_settings.login_rate_limit_attempts,
+                window_seconds=application_settings.login_rate_limit_window_seconds,
             )
         )
 
@@ -101,8 +136,9 @@ def create_app(
         title="NewsFlow AI API",
         summary="Backend API for the NewsFlow AI application.",
         description=(
-            "Provides health checks, secure user registration, NewsFlow AI "
-            "business logic, persistence, and authorised external integrations."
+            "Provides health checks, secure registration and authentication, "
+            "NewsFlow AI business logic, persistence, and authorised external "
+            "integrations."
         ),
         version="0.1.0",
         docs_url="/docs",
@@ -110,27 +146,56 @@ def create_app(
         openapi_url="/openapi.json",
         lifespan=lifespan,
     )
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[application_settings.frontend_origin],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-CSRF-Token"],
+    )
 
     @application.middleware("http")
-    async def limit_registration_attempts(
+    async def limit_authentication_attempts(
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
-        """Rate limit every registration request before body validation."""
+        """Rate limit credential endpoints before request-body validation."""
 
-        if request.method == "POST" and request.url.path == "/api/v1/auth/register":
-            limiter: InMemoryRateLimiter | None = getattr(
-                request.app.state,
+        limited_endpoint = {
+            ("POST", "/api/v1/auth/register"): (
                 "registration_rate_limiter",
-                None,
+                "registration_unavailable",
+                "Registration is temporarily unavailable.",
+                "registration_rate_limited",
+                "Too many registration attempts. Please try again later.",
+            ),
+            ("POST", "/api/v1/auth/login"): (
+                "login_rate_limiter",
+                "authentication_unavailable",
+                "Authentication is temporarily unavailable.",
+                "login_rate_limited",
+                "Too many login attempts. Please try again later.",
+            ),
+        }.get((request.method, request.url.path))
+
+        if limited_endpoint is not None:
+            (
+                limiter_attribute,
+                unavailable_code,
+                unavailable_message,
+                limited_code,
+                limited_message,
+            ) = limited_endpoint
+            limiter: InMemoryRateLimiter | None = getattr(
+                request.app.state, limiter_attribute, None
             )
             if limiter is None:
                 return JSONResponse(
                     status_code=503,
                     content={
                         "error": {
-                            "code": "registration_unavailable",
-                            "message": "Registration is temporarily unavailable.",
+                            "code": unavailable_code,
+                            "message": unavailable_message,
                         }
                     },
                 )
@@ -143,11 +208,8 @@ def create_app(
                     status_code=429,
                     content={
                         "error": {
-                            "code": "registration_rate_limited",
-                            "message": (
-                                "Too many registration attempts. "
-                                "Please try again later."
-                            ),
+                            "code": limited_code,
+                            "message": limited_message,
                         }
                     },
                     headers={"Retry-After": str(exc.retry_after_seconds)},
@@ -156,6 +218,10 @@ def create_app(
         return await call_next(request)
 
     register_exception_handlers(application)
+    application.state.session_cookie_secure = application_settings.session_cookie_secure
+    application.state.session_cookie_max_age_seconds = (
+        application_settings.session_lifetime_minutes * 60
+    )
     application.include_router(health_router)
     application.include_router(auth_router)
     return application

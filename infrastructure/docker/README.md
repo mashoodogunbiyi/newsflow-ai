@@ -18,6 +18,8 @@ Docker Compose creates a private network automatically. Containers use their ser
 - Server-side frontend code can connect to FastAPI at `http://backend:8000`.
 - Browser code uses `http://localhost:8000` because the browser runs outside Docker.
 
+FastAPI accepts credentialed browser requests only from `FRONTEND_ORIGIN`, which defaults to `http://localhost:3000`. This exact-origin CORS rule permits cookies and the NFA-23 CSRF header without allowing untrusted origins.
+
 The frontend waits for a healthy backend, and the backend waits for a healthy database. This ordering avoids starting a dependent service before the service it needs is ready.
 
 ## First-time setup
@@ -111,6 +113,8 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 ```
 
 The seed command is safe to repeat. It contains only fictional content, creates no usable account, and refuses staging or production environments. Do not place `SEED_DATA_ENABLED=true` permanently in committed Compose configuration.
+
+Migration `20261025_0002` adds the NFA-23 CSRF session control and session lookup indexes. It invalidates any pre-release session rows because older rows cannot provide valid CSRF proof. After applying it, existing development users can log in again normally.
 
 Show the current revision or migration history:
 
