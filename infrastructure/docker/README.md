@@ -96,6 +96,31 @@ docker compose exec frontend node -e "fetch('http://backend:8000/health').then(a
 
 A successful response is HTTP `200` with `{"status":"ok"}`. The backend `/ready` endpoint separately proves that FastAPI can reach PostgreSQL.
 
+## Create the schema and load development fixtures
+
+After the database and backend are healthy, apply every pending Alembic migration:
+
+```bash
+docker compose exec backend alembic upgrade head
+```
+
+Load the optional synthetic development records:
+
+```bash
+docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.seed
+```
+
+The seed command is safe to repeat. It contains only fictional content, creates no usable account, and refuses staging or production environments. Do not place `SEED_DATA_ENABLED=true` permanently in committed Compose configuration.
+
+Show the current revision or migration history:
+
+```bash
+docker compose exec backend alembic current
+docker compose exec backend alembic history
+```
+
+`alembic downgrade -1` is available for a disposable local database, but the initial downgrade deletes all application tables and their data. Do not run it as part of normal shutdown.
+
 ## Stop the application
 
 Stop and remove the containers and private network:
@@ -120,3 +145,4 @@ That command permanently deletes the Compose-managed PostgreSQL data volume. It 
 - If the backend reports an example-placeholder error, replace the `POSTGRES_USER` and `POSTGRES_PASSWORD` values in `.env`.
 - If credentials change after PostgreSQL has initialised its volume, either restore the previous values or deliberately recreate the development volume. PostgreSQL applies its initial user, password, and database settings only when the data directory is first created.
 - Use `docker compose ps` for health state and `docker compose logs SERVICE_NAME` for startup errors.
+- If the API is healthy but application tables are missing, run `docker compose exec backend alembic upgrade head`.
