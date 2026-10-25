@@ -1,6 +1,7 @@
 import { BrandMark } from "@/components/brand-mark";
 import { ProductPreview } from "@/components/product-preview";
 import { WorkflowStep } from "@/components/workflow-step";
+import Link from "next/link";
 
 const workflowSteps = [
   {
@@ -71,19 +72,25 @@ export default function Home() {
             >
               Guardrails
             </a>
-            <a
-              className="rounded-full border border-emerald-950/15 bg-white/60 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white"
-              href="#status"
+            <Link
+              className="text-sm font-medium text-emerald-950/65 transition hover:text-emerald-950"
+              href="/login"
             >
-              Project status
-            </a>
+              Sign in
+            </Link>
+            <Link
+              className="rounded-full border border-emerald-950/15 bg-white/60 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white"
+              href="/register"
+            >
+              Create account
+            </Link>
           </nav>
-          <a
+          <Link
             className="rounded-full border border-emerald-950/15 bg-white/70 px-3.5 py-2 text-xs font-semibold text-emerald-950 md:hidden"
-            href="#workflow"
+            href="/register"
           >
-            Explore
-          </a>
+            Get started
+          </Link>
         </header>
 
         <div className="mx-auto grid w-full max-w-7xl gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-18 lg:px-12 lg:pb-28 lg:pt-20">
@@ -104,21 +111,21 @@ export default function Home() {
               kept in view.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <a
+              <Link
                 className="inline-flex min-h-12 items-center justify-center rounded-full bg-emerald-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-900"
-                href="#workflow"
+                href="/register"
               >
-                Explore the workflow
+                Create your account
                 <span aria-hidden="true" className="ml-2">
-                  ↓
+                  →
                 </span>
-              </a>
-              <a
+              </Link>
+              <Link
                 className="inline-flex min-h-12 items-center justify-center rounded-full border border-emerald-950/15 bg-white/60 px-6 py-3 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white"
-                href="#principles"
+                href="/login"
               >
-                See the guardrails
-              </a>
+                Sign in
+              </Link>
             </div>
 
             <dl className="mt-12 grid max-w-xl grid-cols-3 border-y border-emerald-950/10 py-5">
@@ -237,6 +244,12 @@ export default function Home() {
                   </span>
                   Approved governance guardrails
                 </li>
+                <li className="flex gap-3">
+                  <span aria-hidden="true" className="text-emerald-700">
+                    ✓
+                  </span>
+                  Secure accounts and sessions
+                </li>
               </ul>
             </div>
             <div className="border-t border-emerald-950/10 bg-emerald-950 p-7 text-white sm:border-l sm:border-t-0 sm:p-8">
@@ -244,7 +257,6 @@ export default function Home() {
                 Coming next
               </p>
               <ul className="mt-6 space-y-4 text-sm text-white/70">
-                <li>Authentication and user workspace</li>
                 <li>Article dashboard and generation controls</li>
                 <li>Review, save, copy, and export tools</li>
                 <li>Live sources only after formal approval</li>
