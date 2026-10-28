@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration. NFA-23 adds login, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration. NFA-23 adds login, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting. NFA-25 adds object-level authorisation for private saved content.
 
 ## Requirements
 
@@ -202,6 +202,14 @@ Delete `cookies.txt` after the check because it contains local session credentia
 
 Login is limited to five attempts per client per 60 seconds by default. As with registration, a deployed multi-instance application must also enforce abuse controls at a trusted proxy, API gateway, or shared rate-limit store. Configure trusted proxy handling before relying on a client IP supplied through deployment infrastructure.
 
+## Access private saved content
+
+NFA-25 provides owner-scoped endpoints under `/api/v1/library/items` for creating, listing, reading, renaming, soft-deleting, and exporting saved content. An endpoint never trusts an owner supplied by a browser. The owner comes from the active session, and repository queries match both the resource ID and session user ID.
+
+Read and export requests require the HTTP-only session cookie. Create, update, and delete requests also require the matching `newsflow_csrf` value in the `X-CSRF-Token` header. A missing item and another user's item both produce the same safe HTTP `404` response. This prevents record identifiers from revealing private data.
+
+The API request schemas do not contain `user_id`, and unexpected fields are rejected. The original NFA-20 migration already includes the composite ownership foreign key, so this feature does not add or change a database migration. See [the object-level authorisation guide](../../docs/authorization.md) for the complete rules and evidence.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -256,7 +264,7 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest
 ```
 
-The normal test suite uses a database test double, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, and the seed safety gates.
+The normal test suite uses database test doubles, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, and blocked cross-user read, update, delete, and export attempts.
 
 To prove the connection against your configured local PostgreSQL database, run the opt-in integration test without placing the URL in Git:
 
@@ -307,7 +315,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, and rate limiting.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, and cross-user object-level authorisation.
 
 ## Project structure
 
@@ -318,18 +326,24 @@ apps/api/
 |-- app/
 |   |-- api/routes/health.py    # GET /health
 |   |-- api/routes/auth.py      # Register, login, current-user, and logout APIs
+|   |-- api/routes/library.py   # Owner-scoped saved-content APIs
+|   |-- api/dependencies.py     # Shared session and CSRF route protection
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- database/connection.py  # PostgreSQL connection check
 |   |-- database/seed.py        # Repeatable synthetic development fixtures
 |   |-- database/sqlalchemy.py  # Async SQLAlchemy sessions
-|   |-- database/tables.py      # Migration-backed users and sessions mappings
+|   |-- database/tables.py      # Migration-backed application table mappings
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
+|   |-- models/library.py       # Private saved-content API schemas
 |   |-- repositories/authentication.py # Login and session persistence
+|   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
 |   |-- security/               # Argon2id and authentication rate limiting
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
+|   |-- services/authorization.py # Reusable owned-resource rule
+|   |-- services/library.py     # Private saved-content workflow
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
@@ -337,6 +351,7 @@ apps/api/
 |-- tests/test_api.py           # API and readiness tests
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
+|-- tests/test_authorization.py # Cross-user ownership and safe-error tests
 |-- tests/test_config.py        # Environment and secret-safety tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test

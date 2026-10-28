@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation and account implementation in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 provide secure registration, login, expiring server-managed sessions, CSRF-protected logout, and authentication rate limiting. NFA-24 adds the responsive registration and login pages, protected dashboard, authentication-state restoration, and frontend authentication tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation, accounts, and private-resource protection are in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 provide secure registration, login, expiring server-managed sessions, CSRF-protected logout, and authentication rate limiting. NFA-24 adds the responsive authentication interface. NFA-25 adds owner-scoped saved-content APIs, reusable authorisation checks, safe cross-user failures, and automated cross-user tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -53,6 +53,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [PROJECT_PLAN.md](PROJECT_PLAN.md) - end-to-end delivery plan organised as Epics and Tasks.
 - [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) - Jira setup, workflow, issue templates, roadmap, and operating rules.
 - [docs/development-setup.md](docs/development-setup.md) - complete beginner-friendly installation, configuration, startup, testing, verification, and troubleshooting guide.
+- [docs/authorization.md](docs/authorization.md) - NFA-25 ownership rules, protected endpoints, safe failure behaviour, reusable implementation pattern, and automated evidence.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -85,6 +86,7 @@ newsflow-ai/
 │   ├── database/            # Future hosted database, backup, and restore configuration
 │   └── docker/              # Container and local-service configuration
 ├── docs/
+│   ├── authorization.md     # Object-level authorisation rules and evidence
 │   ├── development-setup.md # Complete local development guide
 │   ├── architecture/        # Architecture Decision Records and design notes
 │   └── jira/                # Jira task deliverables and approved baselines
@@ -97,7 +99,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 and NFA-23 provide the backend account lifecycle, and NFA-24 connects that lifecycle to a responsive frontend. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 and NFA-23 provide the backend account lifecycle, NFA-24 connects that lifecycle to a responsive frontend, and NFA-25 protects user-owned saved content. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -110,6 +112,7 @@ The frontend and backend directories contain working application foundations. Po
 | `infrastructure/database` | Future hosted database, backup, and restore configuration |
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
+| `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `docs/development-setup.md` | Software requirements, setup, configuration, testing, verification, and troubleshooting |
 | `tests` | Cross-application, integration, and end-to-end tests |
@@ -167,6 +170,8 @@ The seed loader runs only in development or test, contains fictional data on the
 NFA-22 adds `POST /api/v1/auth/register`. It validates and normalises the email address, enforces the documented password policy, stores only an Argon2id hash, relies on PostgreSQL uniqueness for race-safe duplicate prevention, and never returns the password or hash. The interactive contract and example request are available at `http://127.0.0.1:8000/docs` while the backend is running.
 
 NFA-23 adds `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, and `POST /api/v1/auth/logout`. A successful login verifies the Argon2id password hash, creates an absolute-expiry PostgreSQL session, and sends a random session identifier in an HTTP-only cookie. PostgreSQL stores only its SHA-256 hash. The current-user endpoint rejects missing, expired, revoked, and disabled-user sessions. Logout requires a session-specific CSRF token, revokes the server record, and expires the browser cookies. Login attempts are rate limited, invalid credentials use one generic response, and deployment cookies automatically require HTTPS in staging and production.
+
+NFA-25 adds private content-library endpoints under `/api/v1/library/items`. Every create, list, read, update, delete, and export operation derives its owner from the active session and includes that owner in the persistence query. Request bodies cannot set `user_id`. State changes require CSRF proof, private responses are not cacheable, and missing resources look identical to another user's resources. The complete rules and test evidence are in [the object-level authorisation guide](docs/authorization.md).
 
 ### Secure local configuration
 
@@ -255,7 +260,7 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-24 registration page, login page, protected dashboard, logout flow, responsive layout, accessibility behaviour, and automated test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The application now provides a full user-facing account journey, but it does not yet make OpenAI API requests or connect to a live news source.
+Review the NFA-25 object-level authorisation implementation, protected content-library endpoints, documentation, and cross-user test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The application now provides a user-facing account journey and backend ownership controls, but it does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 

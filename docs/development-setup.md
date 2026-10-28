@@ -353,7 +353,7 @@ ruff format --check .
 pytest
 ```
 
-The normal backend tests use a database test double. They do not need PostgreSQL, real database credentials, or an OpenAI API key.
+The normal backend tests use database test doubles. They do not need PostgreSQL, real database credentials, or an OpenAI API key. The NFA-25 authorisation tests create two synthetic users and prove that neither user can read, change, delete, or export the other user's saved content.
 
 Migration verification uses a separate disposable PostgreSQL database because the test deliberately upgrades, seeds twice, rolls back, and rebuilds the schema:
 
@@ -406,6 +406,8 @@ A working environment meets this checklist:
 - POST http://localhost:8000/api/v1/auth/login sets an HTTP-only session cookie and returns no credential or token data.
 - GET http://localhost:8000/api/v1/auth/me returns the logged-in user's ID and email.
 - POST http://localhost:8000/api/v1/auth/logout requires CSRF proof and invalidates the session.
+- Protected `/api/v1/library/items` operations use the session user as owner and reject cross-user record identifiers.
+- Saved-content creates, updates, and deletes require the session-specific CSRF token.
 - http://localhost:3000/register creates an account and offers a route to sign in.
 - http://localhost:3000/login authenticates the account and redirects to the dashboard.
 - http://localhost:3000/dashboard restores a valid session after refresh and redirects an unauthenticated visitor.
@@ -484,6 +486,7 @@ Current health checks, the fixture homepage, and normal tests do not need an Ope
 - [Project overview](../README.md)
 - [Frontend guide](../apps/web/README.md)
 - [Backend guide](../apps/api/README.md)
+- [Object-level authorisation](authorization.md)
 - [Docker guide](../infrastructure/docker/README.md)
 - [Project plan](../PROJECT_PLAN.md)
 - [Project management workflow](../PROJECT_MANAGEMENT.md)

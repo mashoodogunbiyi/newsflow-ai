@@ -12,13 +12,16 @@ from starlette.responses import JSONResponse, Response
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
+from app.api.routes.library import router as library_router
 from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.database import DatabaseConnection, DatabaseConnectionError, PostgresDatabase
 from app.database.sqlalchemy import SqlAlchemyDatabase
 from app.repositories import (
     AuthenticationRepository,
+    SavedContentRepository,
     SqlAlchemyAuthenticationRepository,
+    SqlAlchemySavedContentRepository,
     SqlAlchemyUserRepository,
     UserRepository,
 )
@@ -28,7 +31,7 @@ from app.security import (
     PasswordHasher,
     RateLimitExceeded,
 )
-from app.services import AuthenticationService, RegistrationService
+from app.services import AuthenticationService, RegistrationService, SavedContentService
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +45,7 @@ def create_app(
     registration_rate_limiter: InMemoryRateLimiter | None = None,
     authentication_repository: AuthenticationRepository | None = None,
     login_rate_limiter: InMemoryRateLimiter | None = None,
+    saved_content_repository: SavedContentRepository | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
 
@@ -77,9 +81,11 @@ def create_app(
         sqlalchemy_database = None
         configured_user_repository = user_repository
         configured_authentication_repository = authentication_repository
+        configured_saved_content_repository = saved_content_repository
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
+            or configured_saved_content_repository is None
         ):
             database_url = database_url or application_settings.require_database_url()
             sqlalchemy_database = SqlAlchemyDatabase(
@@ -96,6 +102,10 @@ def create_app(
                 configured_authentication_repository = (
                     SqlAlchemyAuthenticationRepository(sqlalchemy_database)
                 )
+            if configured_saved_content_repository is None:
+                configured_saved_content_repository = SqlAlchemySavedContentRepository(
+                    sqlalchemy_database
+                )
 
         configured_password_hasher = password_hasher or Argon2PasswordHasher()
         application.state.registration_service = RegistrationService(
@@ -108,6 +118,9 @@ def create_app(
             session_lifetime=timedelta(
                 minutes=application_settings.session_lifetime_minutes
             ),
+        )
+        application.state.saved_content_service = SavedContentService(
+            configured_saved_content_repository
         )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
@@ -150,7 +163,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=[application_settings.frontend_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-CSRF-Token"],
     )
 
@@ -224,6 +237,7 @@ def create_app(
     )
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(library_router)
     return application
 
 
