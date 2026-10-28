@@ -7,6 +7,13 @@ from app.repositories.authentication import (
     AuthenticationRepositoryError,
     SqlAlchemyAuthenticationRepository,
 )
+from app.repositories.library import (
+    SavedContent,
+    SavedContentConflictError,
+    SavedContentRepository,
+    SavedContentRepositoryError,
+    SqlAlchemySavedContentRepository,
+)
 from app.repositories.users import (
     DuplicateUserEmailError,
     RegisteredUser,
@@ -22,7 +29,12 @@ __all__ = [
     "AuthenticationRepositoryError",
     "DuplicateUserEmailError",
     "RegisteredUser",
+    "SavedContent",
+    "SavedContentConflictError",
+    "SavedContentRepository",
+    "SavedContentRepositoryError",
     "SqlAlchemyAuthenticationRepository",
+    "SqlAlchemySavedContentRepository",
     "SqlAlchemyUserRepository",
     "UserRepository",
     "UserRepositoryError",

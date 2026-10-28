@@ -3,8 +3,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Header, Request, Response, Security, status
-from fastapi.security import APIKeyCookie
 
+from app.api.dependencies import (
+    CSRF_COOKIE_NAME,
+    SESSION_COOKIE_NAME,
+    authentication_service,
+    session_cookie_scheme,
+)
 from app.core.errors import ApplicationError
 from app.models.auth import (
     AuthenticatedUserResponse,
@@ -20,7 +25,6 @@ from app.repositories import (
 )
 from app.services import (
     AuthenticationRequiredError,
-    AuthenticationService,
     CsrfValidationError,
     InvalidCredentialsError,
     LoginSession,
@@ -28,14 +32,6 @@ from app.services import (
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
-SESSION_COOKIE_NAME = "newsflow_session"
-CSRF_COOKIE_NAME = "newsflow_csrf"
-session_cookie_scheme = APIKeyCookie(
-    name=SESSION_COOKIE_NAME,
-    scheme_name="SessionCookie",
-    description="HTTP-only server-managed session cookie created by login.",
-    auto_error=False,
-)
 
 
 def _registration_service(request: Request) -> RegistrationService:
@@ -49,21 +45,6 @@ def _registration_service(request: Request) -> RegistrationService:
             status_code=503,
             code="registration_unavailable",
             message="Registration is temporarily unavailable.",
-        )
-    return service
-
-
-def _authentication_service(request: Request) -> AuthenticationService:
-    service: AuthenticationService | None = getattr(
-        request.app.state,
-        "authentication_service",
-        None,
-    )
-    if service is None:
-        raise ApplicationError(
-            status_code=503,
-            code="authentication_unavailable",
-            message="Authentication is temporarily unavailable.",
         )
     return service
 
@@ -190,7 +171,7 @@ async def login_user(
     """Authenticate one account and issue securely configured cookies."""
 
     try:
-        login_session = await _authentication_service(request).login(
+        login_session = await authentication_service(request).login(
             email=str(payload.email),
             password=payload.password,
         )
@@ -235,7 +216,7 @@ async def get_authenticated_user(
     """Return public identity fields for the current active session."""
 
     try:
-        active_session = await _authentication_service(request).authenticate(
+        active_session = await authentication_service(request).authenticate(
             session_token=session_token
         )
     except AuthenticationRequiredError as exc:
@@ -275,7 +256,7 @@ async def logout_user(
     """Require CSRF proof, revoke the session, and expire its cookies."""
 
     try:
-        await _authentication_service(request).logout(
+        await authentication_service(request).logout(
             session_token=session_token,
             csrf_token=x_csrf_token,
         )

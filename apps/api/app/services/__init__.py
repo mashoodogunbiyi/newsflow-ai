@@ -8,6 +8,11 @@ from app.services.authentication import (
     LoginSession,
     hash_session_token,
 )
+from app.services.authorization import (
+    PrivateResourceNotFoundError,
+    require_owned_resource,
+)
+from app.services.library import SavedContentService
 from app.services.registration import RegistrationService
 
 __all__ = [
@@ -16,6 +21,9 @@ __all__ = [
     "CsrfValidationError",
     "InvalidCredentialsError",
     "LoginSession",
+    "PrivateResourceNotFoundError",
     "RegistrationService",
+    "SavedContentService",
     "hash_session_token",
+    "require_owned_resource",
 ]

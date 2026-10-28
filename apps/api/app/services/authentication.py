@@ -115,6 +115,22 @@ class AuthenticationService:
             raise AuthenticationRequiredError("Authentication is required.")
         return active_session
 
+    async def authenticate_with_csrf(
+        self,
+        *,
+        session_token: str | None,
+        csrf_token: str | None,
+    ) -> AuthenticatedSession:
+        """Require both an active session and its matching CSRF proof."""
+
+        active_session = await self.authenticate(session_token=session_token)
+        if not csrf_token or not secrets.compare_digest(
+            hash_session_token(csrf_token),
+            active_session.csrf_token_hash,
+        ):
+            raise CsrfValidationError("The CSRF token is missing or invalid.")
+        return active_session
+
     async def logout(
         self,
         *,
@@ -123,12 +139,10 @@ class AuthenticationService:
     ) -> None:
         """Validate CSRF proof and revoke the current server-side session."""
 
-        active_session = await self.authenticate(session_token=session_token)
-        if not csrf_token or not secrets.compare_digest(
-            hash_session_token(csrf_token),
-            active_session.csrf_token_hash,
-        ):
-            raise CsrfValidationError("The CSRF token is missing or invalid.")
+        await self.authenticate_with_csrf(
+            session_token=session_token,
+            csrf_token=csrf_token,
+        )
 
         revoked = await self._repository.revoke_session(
             token_hash=hash_session_token(session_token or ""),
