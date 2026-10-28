@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, accounts, and private-resource protection are in progress. NFA-12 to NFA-18 provide the working frontend, backend, PostgreSQL connection, secure configuration, Docker environment, quality checks, tests, and local development guide. NFA-20 and NFA-21 provide the approved schema, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 provide secure registration, login, expiring server-managed sessions, CSRF-protected logout, and authentication rate limiting. NFA-24 adds the responsive authentication interface. NFA-25 adds owner-scoped saved-content APIs, reusable authorisation checks, safe cross-user failures, and automated cross-user tests. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation, accounts, private-resource protection, and automated account-security testing are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-25 provide registration, sessions, the responsive authentication interface, and object-level authorisation. NFA-26 adds reusable isolated security fixtures, full account-lifecycle regression tests, a PostgreSQL ownership proof, and automatic pull-request quality checks. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
 
 ## Product workflow
 
@@ -54,6 +54,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) - Jira setup, workflow, issue templates, roadmap, and operating rules.
 - [docs/development-setup.md](docs/development-setup.md) - complete beginner-friendly installation, configuration, startup, testing, verification, and troubleshooting guide.
 - [docs/authorization.md](docs/authorization.md) - NFA-25 ownership rules, protected endpoints, safe failure behaviour, reusable implementation pattern, and automated evidence.
+- [docs/testing.md](docs/testing.md) - NFA-26 test strategy, coverage map, isolated fixtures, local commands, PostgreSQL safety gates, and GitHub quality workflow.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -77,6 +78,7 @@ The README and the related project document should be staged and committed toget
 
 ```text
 newsflow-ai/
+├── .github/workflows/      # Automated pull-request and main-branch quality checks
 ├── compose.yaml             # Frontend, backend, and PostgreSQL development stack
 ├── apps/
 │   ├── api/                 # FastAPI application, Alembic migrations, seed data, and Dockerfile
@@ -88,6 +90,7 @@ newsflow-ai/
 ├── docs/
 │   ├── authorization.md     # Object-level authorisation rules and evidence
 │   ├── development-setup.md # Complete local development guide
+│   ├── testing.md           # Automated test strategy and commands
 │   ├── architecture/        # Architecture Decision Records and design notes
 │   └── jira/                # Jira task deliverables and approved baselines
 ├── tests/                   # Cross-service and end-to-end tests
@@ -113,6 +116,7 @@ The frontend and backend directories contain working application foundations. Po
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
+| `docs/testing.md` | Account-security test layers, coverage, isolation, commands, and CI behaviour |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `docs/development-setup.md` | Software requirements, setup, configuration, testing, verification, and troubleshooting |
 | `tests` | Cross-application, integration, and end-to-end tests |
@@ -240,6 +244,8 @@ pytest
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) for coverage, isolation rules, and targeted commands.
+
 ## Key delivery gates
 
 - **CNN access gate:** document a written, authorised feed, API, licensed service, or other permitted route before connecting the ingestion service to live CNN content. CNN International Commercial provides a route for licensing enquiries, and its published terms restrict unapproved reuse.
@@ -260,7 +266,7 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 ## Current next step
 
-Review the NFA-25 object-level authorisation implementation, protected content-library endpoints, documentation, and cross-user test evidence. Commit and merge the implementation through the normal GitHub workflow, then record the pull-request, implementation-commit, and merge-commit links in Jira. The application now provides a user-facing account journey and backend ownership controls, but it does not yet make OpenAI API requests or connect to a live news source.
+Review the NFA-26 account-security tests, reusable fixtures, PostgreSQL safety gate, documentation, and GitHub quality workflow. Commit and merge the implementation through the normal workflow, confirm both GitHub quality jobs pass, and record the evidence links in Jira. The application does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 

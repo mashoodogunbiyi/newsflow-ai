@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 establishes the application foundation. NFA-14 adds PostgreSQL connectivity and readiness checking. NFA-15 adds validated environment-based configuration and secure credential loading. NFA-17 adds Ruff linting and formatting while retaining Pytest as the backend test framework. NFA-21 adds SQLAlchemy and Alembic for version-controlled PostgreSQL migrations plus repeatable synthetic development seed data. NFA-22 adds secure PostgreSQL-backed user registration. NFA-23 adds login, expiring server-managed sessions, protected current-user access, CSRF-protected logout, and authentication rate limiting. NFA-25 adds object-level authorisation for private saved content.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 add secure registration and server-managed sessions. NFA-25 adds object-level authorisation for private saved content. NFA-26 adds reusable account-security fixtures, full lifecycle regression coverage, a disposable PostgreSQL ownership test, and automated pull-request checks.
 
 ## Requirements
 
@@ -266,6 +266,14 @@ pytest
 
 The normal test suite uses database test doubles, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, and blocked cross-user read, update, delete, and export attempts.
 
+NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
+
+```bash
+pytest tests/test_account_security_regression.py
+```
+
+Every test receives fresh synthetic accounts, sessions, cookies, resources, and repository state. No normal test contacts a live service or modifies the development database.
+
 To prove the connection against your configured local PostgreSQL database, run the opt-in integration test without placing the URL in Git:
 
 ```bash
@@ -298,6 +306,16 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_authentication_integration.py
 ```
 
+The NFA-26 ownership integration test requires a separate disposable database whose name contains `newsflow_account_security_test`. It proves owner filtering and cross-user denial through the real SQLAlchemy and PostgreSQL repositories:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_account_security_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_account_security_integration.py
+```
+
+See the [complete testing guide](../../docs/testing.md) before running any destructive integration test.
+
 ## Code quality
 
 Install the development dependencies, including Ruff and Pytest, with `python -m pip install -e ".[dev]"`. Run the backend checks from `apps/api`:
@@ -315,7 +333,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, and cross-user object-level authorisation.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, and the NFA-26 account-security regression journey.
 
 ## Project structure
 
@@ -349,6 +367,10 @@ apps/api/
 |-- migrations/                 # Alembic environment and revision files
 |-- alembic.ini                 # Credential-free migration configuration
 |-- tests/test_api.py           # API and readiness tests
+|-- tests/conftest.py           # Reusable isolated security and PostgreSQL fixtures
+|-- tests/support/              # Synthetic repositories and test safety helpers
+|-- tests/test_account_security_regression.py # Full fast security journey
+|-- tests/test_account_security_integration.py # Opt-in PostgreSQL ownership proof
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests

@@ -353,7 +353,13 @@ ruff format --check .
 pytest
 ```
 
-The normal backend tests use database test doubles. They do not need PostgreSQL, real database credentials, or an OpenAI API key. The NFA-25 authorisation tests create two synthetic users and prove that neither user can read, change, delete, or export the other user's saved content.
+The normal backend tests use fresh function-scoped database test doubles. They do not need PostgreSQL, real database credentials, or an OpenAI API key. NFA-26 combines registration, login, sessions, logout, and private-content access in a repeatable account-security regression journey.
+
+Run only the NFA-26 fast regression suite:
+
+```bash
+pytest tests/test_account_security_regression.py
+```
 
 Migration verification uses a separate disposable PostgreSQL database because the test deliberately upgrades, seeds twice, rolls back, and rebuilds the schema:
 
@@ -380,6 +386,16 @@ TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_authentica
 ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_authentication_integration.py
 ```
+
+Run the NFA-26 SQL ownership test only against a separate disposable database:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_account_security_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_account_security_integration.py
+```
+
+Pull requests and updates to `main` run the normal backend and frontend checks through `.github/workflows/quality.yml`. Destructive PostgreSQL integration tests remain deliberately opt-in. See the [testing guide](testing.md) for the full coverage map and database safety rules.
 
 Apply formatting when needed:
 
@@ -487,6 +503,7 @@ Current health checks, the fixture homepage, and normal tests do not need an Ope
 - [Frontend guide](../apps/web/README.md)
 - [Backend guide](../apps/api/README.md)
 - [Object-level authorisation](authorization.md)
+- [Automated testing guide](testing.md)
 - [Docker guide](../infrastructure/docker/README.md)
 - [Project plan](../PROJECT_PLAN.md)
 - [Project management workflow](../PROJECT_MANAGEMENT.md)
