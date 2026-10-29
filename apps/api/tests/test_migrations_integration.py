@@ -107,6 +107,19 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         index["name"] for index in sa.inspect(engine).get_indexes("article_sync_jobs")
     }
     assert "uq_article_sync_jobs_active_provider" in sync_indexes
+    assert {
+        "ix_article_sync_jobs_created_at",
+        "ix_article_sync_jobs_status_created",
+    } <= sync_indexes
+    sync_columns = {
+        column["name"] for column in sa.inspect(engine).get_columns("article_sync_jobs")
+    }
+    assert {
+        "provider_duration_ms",
+        "provider_failures",
+        "error_category",
+        "failed_stage",
+    } <= sync_columns
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
     }

@@ -1,6 +1,8 @@
 """NFA-33 reusable article synchronisation workflow tests."""
 
 import asyncio
+import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -9,6 +11,7 @@ import pytest
 
 from app.models.article_sync import (
     SyncCheckpoint,
+    SyncErrorCategory,
     SyncJobRecord,
     SyncJobStatus,
     SyncStatistics,
@@ -22,7 +25,7 @@ from app.providers.models import (
     ProviderCapabilities,
     ProviderPage,
 )
-from app.repositories.article_sync import ActiveSyncJobError
+from app.repositories.article_sync import ActiveSyncJobError, ArticleSyncRepositoryError
 from app.repositories.articles import (
     ArticleIdentityConflictError,
     ArticleIngestionAction,
@@ -214,6 +217,8 @@ class InMemorySyncRepository:
         completed_at: datetime,
         error_code: str | None,
         error_summary: str | None,
+        error_category: SyncErrorCategory | None,
+        failed_stage: str | None,
     ) -> SyncJobRecord | None:
         job = self.jobs.get(job_id)
         if job is None or job.status != SyncJobStatus.RUNNING:
@@ -228,6 +233,8 @@ class InMemorySyncRepository:
                 "lease_expires_at": None,
                 "error_code": error_code,
                 "error_summary": error_summary,
+                "error_category": error_category,
+                "failed_stage": failed_stage,
                 "updated_at": completed_at,
             }
         )
@@ -277,6 +284,7 @@ def make_service(
     repository: InMemorySyncRepository | None = None,
     max_retries: int = 2,
     sleeps: list[float] | None = None,
+    timer: Callable[[], float] | None = None,
 ) -> tuple[
     ArticleSyncService,
     RecordingProvider,
@@ -302,6 +310,7 @@ def make_service(
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW,
         sleeper=sleeper,
+        timer=timer or (lambda: 0.0),
     )
     return service, active_provider, active_ingestion, active_repository
 
@@ -338,6 +347,24 @@ def test_sync_processes_pages_and_records_accurate_statistics() -> None:
     )
 
 
+def test_success_completion_event_includes_job_correlation(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    service, _, _, _ = make_service()
+
+    with caplog.at_level(logging.INFO, logger="app.services.article_sync"):
+        result = start_and_run(service)
+
+    completion = next(
+        record
+        for record in caplog.records
+        if getattr(record, "event", None) == "article_sync_completed"
+    )
+    assert completion.job_id == str(result.id)
+    assert completion.counts["retrieved"] == 3
+    assert completion.provider_duration_ms == 0
+
+
 def test_repeated_sync_is_incremental_and_does_not_duplicate_articles() -> None:
     service, provider, ingestion, repository = make_service()
     first = start_and_run(service)
@@ -367,6 +394,15 @@ def test_temporary_provider_failure_uses_bounded_exponential_retry() -> None:
     assert sleeps == [0.25, 0.5]
 
 
+def test_provider_request_duration_is_recorded() -> None:
+    moments = iter([0.0, 0.012, 0.012, 0.032])
+    service, _, _, _ = make_service(timer=lambda: next(moments))
+
+    result = start_and_run(service)
+
+    assert result.statistics.provider_duration_ms == 32
+
+
 def test_permanent_provider_failure_is_not_retried_or_checkpointed() -> None:
     provider = RecordingProvider(failures=[SourceNotAuthorisedError()])
     service, _, _, repository = make_service(provider=provider)
@@ -380,7 +416,29 @@ def test_permanent_provider_failure_is_not_retried_or_checkpointed() -> None:
     assert repository.checkpoint is None
 
 
-def test_rejected_article_makes_job_partial_and_keeps_old_checkpoint() -> None:
+def test_unexpected_provider_failure_is_stored_and_logged_safely(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    secret = "restricted-provider-payload-and-password"
+    provider = RecordingProvider(failures=[RuntimeError(secret)])
+    service, _, _, _ = make_service(provider=provider)
+
+    with caplog.at_level(logging.INFO, logger="app.services.article_sync"):
+        result = start_and_run(service)
+
+    assert result.status == SyncJobStatus.FAILED
+    assert result.error_code == "UNEXPECTED_SYNC_FAILURE"
+    assert result.error_category == SyncErrorCategory.INTERNAL_PIPELINE
+    assert result.failed_stage == "pipeline"
+    assert secret not in caplog.text
+    assert "article_sync_started" in caplog.text
+    assert "article_sync_provider_request_failed" in caplog.text
+    assert "article_sync_failed" in caplog.text
+
+
+def test_rejected_article_makes_job_partial_and_keeps_old_checkpoint(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     provider = RecordingProvider()
     rejected_id = (
         run(provider.fetch_articles(ArticleQuery(limit=1))).items[0].source_item_id
@@ -398,11 +456,37 @@ def test_rejected_article_makes_job_partial_and_keeps_old_checkpoint() -> None:
         repository=repository,
     )
 
-    result = start_and_run(service)
+    with caplog.at_level(logging.INFO, logger="app.services.article_sync"):
+        result = start_and_run(service)
 
     assert result.status == SyncJobStatus.PARTIALLY_COMPLETED
     assert result.statistics.rejected == 1
     assert repository.checkpoint == old_checkpoint
+    assert "article_sync_partially_completed" in caplog.text
+
+
+def test_database_write_failure_emits_safe_operational_event(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class FailingRepository(InMemorySyncRepository):
+        async def finish_job(self, **kwargs):  # type: ignore[no-untyped-def]
+            del kwargs
+            raise ArticleSyncRepositoryError("database password=do-not-log")
+
+    service, _, _, _ = make_service(repository=FailingRepository())
+
+    with caplog.at_level(logging.INFO, logger="app.services.article_sync"):
+        with pytest.raises(ArticleSyncRepositoryError):
+            start_and_run(service)
+
+    assert "do-not-log" not in caplog.text
+    record = next(
+        item
+        for item in caplog.records
+        if getattr(item, "event", None) == "article_sync_failure_record_unavailable"
+    )
+    assert record.error_category == "database_error"
+    assert record.failed_stage == "database"
 
 
 def test_conflicting_job_is_rejected_and_stale_job_can_be_recovered() -> None:

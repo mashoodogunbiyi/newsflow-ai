@@ -17,6 +17,7 @@ from app.database.tables import (
 )
 from app.models.article_sync import (
     SyncCheckpoint,
+    SyncErrorCategory,
     SyncJobRecord,
     SyncJobStatus,
     SyncStatistics,
@@ -79,9 +80,25 @@ class ArticleSyncRepository(Protocol):
         completed_at: datetime,
         error_code: str | None,
         error_summary: str | None,
+        error_category: SyncErrorCategory | None,
+        failed_stage: str | None,
     ) -> SyncJobRecord | None: ...
 
     async def get_job(self, job_id: UUID) -> SyncJobRecord | None: ...
+
+    async def list_recent_jobs(
+        self,
+        *,
+        limit: int,
+        provider_id: str | None = None,
+    ) -> list[SyncJobRecord]: ...
+
+    async def list_jobs_since(
+        self,
+        *,
+        since: datetime,
+        limit: int,
+    ) -> list[SyncJobRecord]: ...
 
     async def get_checkpoint(self, provider_id: str) -> SyncCheckpoint | None: ...
 
@@ -122,9 +139,15 @@ def _job_record(row: ArticleSyncJobTable) -> SyncJobRecord:
             skipped=row.articles_skipped,
             rejected=row.articles_rejected,
             provider_attempts=row.provider_attempts,
+            provider_failures=row.provider_failures,
+            provider_duration_ms=row.provider_duration_ms,
         ),
         error_code=row.error_code,
         error_summary=row.error_summary,
+        error_category=(
+            SyncErrorCategory(row.error_category) if row.error_category else None
+        ),
+        failed_stage=row.failed_stage,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -187,6 +210,8 @@ class SqlAlchemyArticleSyncRepository:
                             error_summary=(
                                 "The previous worker stopped before completing."
                             ),
+                            error_category=SyncErrorCategory.INTERNAL_PIPELINE.value,
+                            failed_stage="worker",
                             updated_at=checked_at,
                         )
                     )
@@ -311,6 +336,8 @@ class SqlAlchemyArticleSyncRepository:
         completed_at: datetime,
         error_code: str | None,
         error_summary: str | None,
+        error_category: SyncErrorCategory | None,
+        failed_stage: str | None,
     ) -> SyncJobRecord | None:
         try:
             async with self._database.session() as session:
@@ -333,8 +360,14 @@ class SqlAlchemyArticleSyncRepository:
                             articles_skipped=statistics.skipped,
                             articles_rejected=statistics.rejected,
                             provider_attempts=statistics.provider_attempts,
+                            provider_failures=statistics.provider_failures,
+                            provider_duration_ms=statistics.provider_duration_ms,
                             error_code=error_code,
                             error_summary=error_summary,
+                            error_category=(
+                                error_category.value if error_category else None
+                            ),
+                            failed_stage=failed_stage,
                             updated_at=completed_at,
                         )
                         .returning(ArticleSyncJobTable)
@@ -358,6 +391,52 @@ class SqlAlchemyArticleSyncRepository:
                 "The synchronisation job could not be read."
             ) from exc
         return None if row is None else _job_record(row)
+
+    async def list_recent_jobs(
+        self,
+        *,
+        limit: int,
+        provider_id: str | None = None,
+    ) -> list[SyncJobRecord]:
+        statement = select(ArticleSyncJobTable).order_by(
+            ArticleSyncJobTable.created_at.desc(),
+            ArticleSyncJobTable.id.desc(),
+        )
+        if provider_id is not None:
+            statement = statement.where(ArticleSyncJobTable.provider_id == provider_id)
+        statement = statement.limit(limit)
+        try:
+            async with self._database.session() as session:
+                rows = (await session.scalars(statement)).all()
+        except SQLAlchemyError as exc:
+            raise ArticleSyncRepositoryError(
+                "Recent synchronisation jobs could not be read."
+            ) from exc
+        return [_job_record(row) for row in rows]
+
+    async def list_jobs_since(
+        self,
+        *,
+        since: datetime,
+        limit: int,
+    ) -> list[SyncJobRecord]:
+        statement = (
+            select(ArticleSyncJobTable)
+            .where(ArticleSyncJobTable.created_at >= since)
+            .order_by(
+                ArticleSyncJobTable.created_at.desc(),
+                ArticleSyncJobTable.id.desc(),
+            )
+            .limit(limit)
+        )
+        try:
+            async with self._database.session() as session:
+                rows = (await session.scalars(statement)).all()
+        except SQLAlchemyError as exc:
+            raise ArticleSyncRepositoryError(
+                "Synchronisation metrics could not be read."
+            ) from exc
+        return [_job_record(row) for row in rows]
 
     async def get_checkpoint(self, provider_id: str) -> SyncCheckpoint | None:
         try:

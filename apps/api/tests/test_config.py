@@ -126,3 +126,11 @@ def test_article_sync_settings_have_bounded_defaults() -> None:
     assert settings.article_sync_lease_seconds == 300
     assert settings.manual_sync_rate_limit_attempts == 2
     assert settings.manual_sync_rate_limit_window_seconds == 60
+    assert settings.log_level == "INFO"
+    assert settings.log_format == "json"
+    assert settings.ingestion_metrics_enabled is True
+    assert settings.ingestion_metrics_window_hours == 24
+    assert settings.ingestion_failure_threshold == 3
+    assert settings.ingestion_success_stale_seconds == 21_600
+    assert settings.ingestion_long_running_seconds == 600
+    assert settings.ingestion_rejection_rate_percent == 25

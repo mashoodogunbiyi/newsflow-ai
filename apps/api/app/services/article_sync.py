@@ -2,11 +2,14 @@
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from app.core.logging_config import log_event
 from app.models.article_sync import (
+    SyncErrorCategory,
     SyncJobRecord,
     SyncJobStatus,
     SyncStatistics,
@@ -70,6 +73,7 @@ class ArticleSyncService:
         lease_duration: timedelta = timedelta(minutes=5),
         clock: Callable[[], datetime] | None = None,
         sleeper: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        timer: Callable[[], float] = time.perf_counter,
     ) -> None:
         if not 1 <= page_size <= 100:
             raise ValueError("page_size must be between 1 and 100.")
@@ -89,6 +93,7 @@ class ArticleSyncService:
         self._lease_duration = lease_duration
         self._clock = clock or (lambda: datetime.now(UTC))
         self._sleeper = sleeper
+        self._timer = timer
 
     @property
     def provider_id(self) -> str:
@@ -142,6 +147,16 @@ class ArticleSyncService:
                 raise ArticleSyncLeaseLostError
             return existing
 
+        log_event(
+            logger,
+            logging.INFO,
+            "article_sync_started",
+            job_id=str(job.id),
+            provider_id=job.provider_id,
+            trigger_type=job.trigger_type.value,
+            status=job.status.value,
+        )
+
         checkpoint_from: datetime | None = None
         counters = {
             "retrieved": 0,
@@ -150,6 +165,8 @@ class ArticleSyncService:
             "skipped": 0,
             "rejected": 0,
             "provider_attempts": 0,
+            "provider_failures": 0,
+            "provider_duration_ms": 0,
         }
         checkpoint_candidate = checkpoint_from
 
@@ -173,6 +190,7 @@ class ArticleSyncService:
                         published_after=checkpoint_from,
                     ),
                     counters=counters,
+                    job_id=job_id,
                 )
                 if page.provider_id != self.provider_id:
                     raise ArticleSyncPipelineError(
@@ -195,12 +213,14 @@ class ArticleSyncService:
                         ArticleStorageNotPermittedError,
                     ):
                         counters["rejected"] += 1
-                        logger.warning(
-                            "article_sync_item_rejected job_id=%s provider_id=%s "
-                            "source_item_id=%s",
-                            job_id,
-                            self.provider_id,
-                            article.source_item_id,
+                        log_event(
+                            logger,
+                            logging.WARNING,
+                            "article_sync_item_rejected",
+                            job_id=str(job_id),
+                            provider_id=self.provider_id,
+                            error_category=(SyncErrorCategory.ARTICLE_VALIDATION.value),
+                            failed_stage="validation",
                         )
                         continue
 
@@ -241,6 +261,12 @@ class ArticleSyncService:
                     if statistics.rejected
                     else None
                 ),
+                error_category=(
+                    SyncErrorCategory.ARTICLE_VALIDATION
+                    if statistics.rejected
+                    else None
+                ),
+                failed_stage=("validation" if statistics.rejected else None),
             )
             if completed is None:
                 raise ArticleSyncLeaseLostError
@@ -252,10 +278,14 @@ class ArticleSyncService:
                         completed_at=completed_at,
                     )
                 except ArticleSyncRepositoryError:
-                    logger.error(
-                        "article_sync_checkpoint_deferred job_id=%s provider_id=%s",
-                        job_id,
-                        self.provider_id,
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "article_sync_checkpoint_deferred",
+                        job_id=str(job_id),
+                        provider_id=self.provider_id,
+                        error_category=SyncErrorCategory.DATABASE.value,
+                        failed_stage="checkpoint",
                     )
             self._log_completion(completed)
             return completed
@@ -265,6 +295,16 @@ class ArticleSyncService:
             ArticleSyncRepositoryError,
             ArticleSyncPipelineError,
         ) as exc:
+            return await self._record_failure(
+                job_id=job_id,
+                counters=counters,
+                checkpoint_from=checkpoint_from,
+                checkpoint_candidate=checkpoint_candidate,
+                error=exc,
+            )
+        except ArticleSyncLeaseLostError:
+            raise
+        except Exception as exc:
             return await self._record_failure(
                 job_id=job_id,
                 counters=counters,
@@ -301,26 +341,77 @@ class ArticleSyncService:
         query: ArticleQuery,
         *,
         counters: dict[str, int],
+        job_id: UUID,
     ) -> ProviderPage:
         attempts = 0
         while True:
             attempts += 1
             counters["provider_attempts"] += 1
+            request_started = self._timer()
             try:
-                return await self._provider.fetch_articles(query)
+                page = await self._provider.fetch_articles(query)
+                elapsed_ms = max(0, int((self._timer() - request_started) * 1000))
+                counters["provider_duration_ms"] += elapsed_ms
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "article_sync_provider_request_completed",
+                    job_id=str(job_id),
+                    provider_id=self.provider_id,
+                    attempt=attempts,
+                    duration_ms=elapsed_ms,
+                )
+                return page
             except ProviderError as exc:
+                counters["provider_failures"] += 1
+                elapsed_ms = max(0, int((self._timer() - request_started) * 1000))
+                counters["provider_duration_ms"] += elapsed_ms
+                category, stage = _classify_sync_error(exc)
+                log_event(
+                    logger,
+                    logging.WARNING,
+                    "article_sync_provider_request_failed",
+                    job_id=str(job_id),
+                    provider_id=self.provider_id,
+                    attempt=attempts,
+                    duration_ms=elapsed_ms,
+                    error_code=exc.code.value,
+                    error_category=category.value,
+                    failed_stage=stage,
+                )
                 if not exc.retryable or attempts > self._max_retries:
                     raise
                 delay = self._retry_base_seconds * (2 ** (attempts - 1))
-                logger.warning(
-                    "article_sync_provider_retry provider_id=%s code=%s "
-                    "attempt=%s delay_seconds=%s",
-                    self.provider_id,
-                    exc.code.value,
-                    attempts,
-                    delay,
+                log_event(
+                    logger,
+                    logging.WARNING,
+                    "article_sync_provider_retry",
+                    job_id=str(job_id),
+                    provider_id=self.provider_id,
+                    error_code=exc.code.value,
+                    error_category=category.value,
+                    failed_stage=stage,
+                    attempt=attempts,
+                    delay_seconds=delay,
                 )
                 await self._sleeper(delay)
+            except Exception:
+                counters["provider_failures"] += 1
+                elapsed_ms = max(0, int((self._timer() - request_started) * 1000))
+                counters["provider_duration_ms"] += elapsed_ms
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "article_sync_provider_request_failed",
+                    job_id=str(job_id),
+                    provider_id=self.provider_id,
+                    attempt=attempts,
+                    duration_ms=elapsed_ms,
+                    error_code="UNEXPECTED_PROVIDER_FAILURE",
+                    error_category=SyncErrorCategory.INTERNAL_PIPELINE.value,
+                    failed_stage="provider_request",
+                )
+                raise
 
     async def _renew_lease(self, job_id: UUID) -> None:
         renewed = await self._repository.renew_lease(
@@ -354,28 +445,61 @@ class ArticleSyncService:
         elif isinstance(error, ArticleRepositoryError):
             code = "ARTICLE_STORAGE_FAILED"
             summary = "Article storage failed safely."
-        else:
+        elif isinstance(error, ArticleSyncRepositoryError):
             code = "SYNC_PERSISTENCE_FAILED"
             summary = "Synchronisation persistence failed safely."
+        else:
+            code = "UNEXPECTED_SYNC_FAILURE"
+            summary = "Synchronisation failed safely."
+        error_category, failed_stage = _classify_sync_error(error)
         statistics = SyncStatistics(**counters)
-        completed = await self._repository.finish_job(
-            job_id=job_id,
-            status=status,
-            statistics=statistics,
-            checkpoint_from=checkpoint_from,
-            checkpoint_candidate=checkpoint_candidate,
-            completed_at=self._now(),
-            error_code=code,
-            error_summary=summary,
-        )
+        try:
+            completed = await self._repository.finish_job(
+                job_id=job_id,
+                status=status,
+                statistics=statistics,
+                checkpoint_from=checkpoint_from,
+                checkpoint_candidate=checkpoint_candidate,
+                completed_at=self._now(),
+                error_code=code,
+                error_summary=summary,
+                error_category=error_category,
+                failed_stage=failed_stage,
+            )
+        except ArticleSyncRepositoryError:
+            log_event(
+                logger,
+                logging.ERROR,
+                "article_sync_failure_record_unavailable",
+                job_id=str(job_id),
+                provider_id=self.provider_id,
+                status=status.value,
+                error_code="SYNC_PERSISTENCE_FAILED",
+                error_category=SyncErrorCategory.DATABASE.value,
+                failed_stage="database",
+                provider_duration_ms=statistics.provider_duration_ms,
+                counts=_statistics_counts(statistics),
+            )
+            raise
         if completed is None:
             raise ArticleSyncLeaseLostError from error
-        logger.warning(
-            "article_sync_failed job_id=%s provider_id=%s status=%s code=%s",
-            job_id,
-            self.provider_id,
-            status.value,
-            code,
+        log_event(
+            logger,
+            logging.WARNING,
+            (
+                "article_sync_partially_completed"
+                if status == SyncJobStatus.PARTIALLY_COMPLETED
+                else "article_sync_failed"
+            ),
+            job_id=str(job_id),
+            provider_id=self.provider_id,
+            status=status.value,
+            error_code=code,
+            error_category=error_category.value,
+            failed_stage=failed_stage,
+            provider_duration_ms=statistics.provider_duration_ms,
+            duration_ms=_job_duration_ms(completed),
+            counts=_statistics_counts(statistics),
         )
         return completed
 
@@ -387,18 +511,72 @@ class ArticleSyncService:
 
     @staticmethod
     def _log_completion(job: SyncJobRecord) -> None:
-        logger.info(
-            "article_sync_completed job_id=%s provider_id=%s status=%s "
-            "retrieved=%s created=%s updated=%s skipped=%s rejected=%s",
-            job.id,
-            job.provider_id,
-            job.status.value,
-            job.statistics.retrieved,
-            job.statistics.created,
-            job.statistics.updated,
-            job.statistics.skipped,
-            job.statistics.rejected,
+        log_event(
+            logger,
+            (
+                logging.WARNING
+                if job.status == SyncJobStatus.PARTIALLY_COMPLETED
+                else logging.INFO
+            ),
+            (
+                "article_sync_partially_completed"
+                if job.status == SyncJobStatus.PARTIALLY_COMPLETED
+                else "article_sync_completed"
+            ),
+            job_id=str(job.id),
+            provider_id=job.provider_id,
+            trigger_type=job.trigger_type.value,
+            status=job.status.value,
+            duration_ms=_job_duration_ms(job),
+            provider_duration_ms=job.statistics.provider_duration_ms,
+            error_code=job.error_code,
+            error_category=(
+                job.error_category.value if job.error_category is not None else None
+            ),
+            failed_stage=job.failed_stage,
+            counts=_statistics_counts(job.statistics),
         )
+
+
+def _statistics_counts(statistics: SyncStatistics) -> dict[str, int]:
+    return {
+        "retrieved": statistics.retrieved,
+        "created": statistics.created,
+        "updated": statistics.updated,
+        "skipped": statistics.skipped,
+        "rejected": statistics.rejected,
+        "provider_attempts": statistics.provider_attempts,
+        "provider_failures": statistics.provider_failures,
+    }
+
+
+def _job_duration_ms(job: SyncJobRecord) -> int | None:
+    if job.started_at is None or job.completed_at is None:
+        return None
+    return max(0, int((job.completed_at - job.started_at).total_seconds() * 1000))
+
+
+def _classify_sync_error(error: Exception) -> tuple[SyncErrorCategory, str]:
+    if isinstance(error, ProviderError):
+        code = error.code.value.upper()
+        if "TIMEOUT" in code:
+            return SyncErrorCategory.PROVIDER_TIMEOUT, "provider_request"
+        if "AUTH" in code and code != "SOURCE_NOT_AUTHORISED":
+            return SyncErrorCategory.PROVIDER_AUTHENTICATION, "provider_request"
+        if "RATE" in code:
+            return SyncErrorCategory.PROVIDER_RATE_LIMIT, "provider_request"
+        if code == "SOURCE_NOT_AUTHORISED":
+            return SyncErrorCategory.SOURCE_AUTHORISATION, "authorisation"
+        if code in {"PROVIDER_DATA_INVALID", "INVALID_PROVIDER_CURSOR"}:
+            return SyncErrorCategory.ARTICLE_VALIDATION, "provider_validation"
+        return SyncErrorCategory.PROVIDER_CONNECTION, "provider_request"
+    if isinstance(error, ArticleRepositoryError | ArticleSyncRepositoryError):
+        return SyncErrorCategory.DATABASE, "database"
+    if isinstance(error, ArticleSyncPipelineError):
+        if error.code in {"REPEATED_PROVIDER_CURSOR", "PROVIDER_ID_MISMATCH"}:
+            return SyncErrorCategory.SYNCHRONISATION_CONFLICT, "synchronisation"
+        return SyncErrorCategory.INTERNAL_PIPELINE, "pipeline"
+    return SyncErrorCategory.INTERNAL_PIPELINE, "pipeline"
 
 
 class ArticleSyncScheduler:
