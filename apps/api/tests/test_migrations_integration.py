@@ -19,6 +19,8 @@ API_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TABLES = {
     "alembic_version",
     "article_snapshots",
+    "article_provenance_events",
+    "article_rights_versions",
     "articles",
     "generated_images",
     "generated_posts",
@@ -38,6 +40,8 @@ EXPECTED_SEED_COUNTS = {
     "source_profiles": 1,
     "articles": 1,
     "article_snapshots": 1,
+    "article_provenance_events": 1,
+    "article_rights_versions": 1,
     "generated_posts": 1,
     "generation_runs": 1,
     "generation_facts": 2,
