@@ -41,6 +41,11 @@ class UserTable(Base):
         nullable=False,
         server_default=text("'active'"),
     )
+    role: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default=text("'user'"),
+    )
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -326,6 +331,90 @@ class ArticleRightsVersionTable(Base):
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class ArticleSyncCheckpointTable(Base):
+    """Durable incremental and schedule position for one provider."""
+
+    __tablename__ = "article_sync_checkpoints"
+
+    provider_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    last_successful_publication_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_successful_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class ArticleSyncJobTable(Base):
+    """Durable status, lease, and statistics for one sync attempt."""
+
+    __tablename__ = "article_sync_jobs"
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    provider_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    trigger_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    requested_by_user_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    checkpoint_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    checkpoint_candidate: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    scheduled_for: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    articles_retrieved: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    articles_created: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    articles_updated: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    articles_skipped: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    articles_rejected: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    provider_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    error_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 

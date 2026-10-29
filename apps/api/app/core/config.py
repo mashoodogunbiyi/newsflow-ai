@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     login_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
     login_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     session_lifetime_minutes: int = Field(default=60, ge=5, le=10_080)
+    article_sync_interval_seconds: int = Field(default=14_400, ge=60, le=86_400)
+    article_sync_page_size: int = Field(default=50, ge=1, le=100)
+    article_sync_max_retries: int = Field(default=2, ge=0, le=5)
+    article_sync_retry_base_seconds: float = Field(default=1.0, ge=0, le=60)
+    article_sync_lease_seconds: int = Field(default=300, ge=30, le=3600)
+    manual_sync_rate_limit_attempts: int = Field(default=2, ge=1, le=20)
+    manual_sync_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     openai_api_key: SecretStr | None = None
     seed_data_enabled: bool = False
 
