@@ -74,6 +74,10 @@ jobs:
         working-directory: apps/web
         run: npm run format:check
 
+      - name: Generate Next.js types
+        working-directory: apps/web
+        run: npx next typegen
+
       - name: Check frontend types
         working-directory: apps/web
         run: npm run typecheck
