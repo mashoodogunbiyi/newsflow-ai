@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 adds the reusable news-source interface and synthetic fixture provider. NFA-29 adds a tested disabled CNN adapter boundary, while ADR-001 continues to block all live CNN access.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 adds the reusable news-source interface and synthetic fixture provider. NFA-29 adds a tested disabled CNN adapter boundary. NFA-30 adds rights-aware article normalisation, validation, and sanitisation, while ADR-001 continues to block all live CNN access.
 
 ## Product workflow
 
@@ -57,6 +57,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/testing.md](docs/testing.md) - NFA-26 test strategy, coverage map, isolated fixtures, local commands, PostgreSQL safety gates, and GitHub quality workflow.
 - [docs/source-provider-interface.md](docs/source-provider-interface.md) - NFA-28 provider contract, normalised article model, pagination, safe errors, synthetic adapter, and future authorised-provider instructions.
 - [docs/cnn-adapter.md](docs/cnn-adapter.md) - NFA-29 disabled CNN adapter, No-Go enforcement, acceptance status, test evidence, and future activation gates.
+- [docs/article-normalisation.md](docs/article-normalisation.md) - NFA-30 field allowlist, rights policy, normalisation, validation, sanitisation, safe errors, and automated evidence.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -91,6 +92,7 @@ newsflow-ai/
 │   └── docker/              # Container and local-service configuration
 ├── docs/
 │   ├── authorization.md     # Object-level authorisation rules and evidence
+│   ├── article-normalisation.md # Rights-aware article processing rules and tests
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
 │   ├── development-setup.md # Complete local development guide
 │   ├── source-provider-interface.md # Provider-neutral news boundary
@@ -106,7 +108,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 to NFA-26 provide the tested secure account lifecycle, NFA-28 provides a swappable fixture-first news-source boundary, and NFA-29 proves live CNN access fails closed. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 to NFA-26 provide the tested secure account lifecycle, NFA-28 provides a swappable fixture-first news-source boundary, NFA-29 proves live CNN access fails closed, and NFA-30 validates permitted article data before application use. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -119,6 +121,7 @@ The frontend and backend directories contain working application foundations. Po
 | `infrastructure/database` | Future hosted database, backup, and restore configuration |
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
+| `docs/article-normalisation.md` | NFA-30 rights-aware mapping, validation, sanitisation, error rules, and tests |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
 | `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
@@ -187,6 +190,8 @@ NFA-28 adds a provider-neutral `NewsProvider` interface in the FastAPI backend. 
 
 NFA-29 adds `CnnSourceAdapter` as a disabled implementation of the same provider interface. Both discovery and detail retrieval raise `SOURCE_NOT_AUTHORISED` before an HTTP client can be called. The configuration still rejects a `cnn` mode, and the code contains no CNN endpoint, credential, provider response, or network logic. The [CNN adapter record](docs/cnn-adapter.md) explains why the live acceptance criteria remain blocked.
 
+NFA-30 sends each synthetic provider record through a rights-aware `ArticleNormalisationService` before the fixture provider returns it. The service reads only approved input fields, maps provider-specific names, normalises Unicode, whitespace, UTC timestamps, categories, and canonical URLs, and rejects unsafe markup, invalid data, unapproved hosts, or prohibited rights states. Trusted attribution and provenance come from the source policy rather than the untrusted record. See the [article normalisation guide](docs/article-normalisation.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -254,7 +259,7 @@ pytest
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
-NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 adds isolated provider-contract tests, and NFA-29 adds tests proving CNN access is rejected before networking. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md), [source-provider guide](docs/source-provider-interface.md), and [CNN adapter record](docs/cnn-adapter.md) for targeted commands.
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 adds isolated provider-contract tests, NFA-29 adds tests proving CNN access is rejected before networking, and NFA-30 adds article mapping, rights, text, date, URL, prohibited-field, and safe-error tests. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md), [source-provider guide](docs/source-provider-interface.md), [CNN adapter record](docs/cnn-adapter.md), and [article normalisation guide](docs/article-normalisation.md) for targeted commands.
 
 ## Key delivery gates
 
@@ -276,7 +281,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review and merge the NFA-29 disabled adapter and record the evidence in Jira. Keep NFA-29 Blocked after the safe skeleton is merged because no authorised CNN method or Go decision exists. Continue permitted development with synthetic fixtures. The application does not yet make OpenAI API requests or connect to a live news source.
+Review and merge the NFA-30 article normalisation work and record its evidence in Jira. Continue permitted development with synthetic fixtures. Live CNN access remains blocked because no authorised method or Go decision exists. The application does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 

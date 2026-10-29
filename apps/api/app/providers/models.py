@@ -1,5 +1,6 @@
 """Provider-neutral models for permitted news information."""
 
+import html
 import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
@@ -16,7 +17,7 @@ from pydantic import (
 )
 
 SOURCE_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+$")
-HTML_TAG_PATTERN = re.compile(r"<\s*/?\s*[A-Za-z][^>]*>")
+HTML_TAG_PATTERN = re.compile(r"<\s*/?\s*[A-Za-z]")
 
 
 def _normalise_plain_text(value: object) -> object:
@@ -24,7 +25,7 @@ def _normalise_plain_text(value: object) -> object:
 
     if not isinstance(value, str):
         return value
-    cleaned = unicodedata.normalize("NFC", value).strip()
+    cleaned = unicodedata.normalize("NFC", html.unescape(value)).strip()
     if HTML_TAG_PATTERN.search(cleaned):
         raise ValueError("Provider text must be plain text.")
     if any(

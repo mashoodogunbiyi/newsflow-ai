@@ -4,8 +4,6 @@ import base64
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, ValidationError
-
 from app.providers.exceptions import (
     ArticleNotFoundError,
     InvalidProviderCursorError,
@@ -14,29 +12,15 @@ from app.providers.exceptions import (
 )
 from app.providers.models import (
     SOURCE_ID_PATTERN,
-    ArticleCategory,
     ArticleQuery,
     NewsArticle,
     ProviderCapabilities,
     ProviderPage,
 )
-
-
-class _FixtureRecord(BaseModel):
-    """Deliberately provider-specific shape translated at the boundary."""
-
-    record_key: str = Field(min_length=1, max_length=200)
-    headline: str = Field(min_length=1, max_length=300)
-    link: HttpUrl
-    published_at: str
-    topic: str = Field(min_length=1, max_length=100)
-    summary: str | None
-    body: str = Field(min_length=1, max_length=20_000)
-    collected_at: str
-    changed_at: str | None
-
-    model_config = ConfigDict(extra="forbid")
-
+from app.providers.normalisation import (
+    ArticleNormalisationError,
+    ArticleNormalisationService,
+)
 
 DEFAULT_FIXTURES: tuple[Mapping[str, Any], ...] = (
     {
@@ -86,14 +70,6 @@ DEFAULT_FIXTURES: tuple[Mapping[str, Any], ...] = (
     },
 )
 
-CATEGORY_MAP = {
-    "technology": ArticleCategory.TECHNOLOGY,
-    "business": ArticleCategory.BUSINESS,
-    "world": ArticleCategory.WORLD_NEWS,
-    "world news": ArticleCategory.WORLD_NEWS,
-    "science": ArticleCategory.SCIENCE,
-}
-
 
 class FixtureNewsProvider:
     """Return original synthetic records through the common provider contract."""
@@ -103,9 +79,13 @@ class FixtureNewsProvider:
         fixtures: Sequence[Mapping[str, Any]] | None = None,
         *,
         simulated_error: ProviderError | None = None,
+        normalisation_service: ArticleNormalisationService | None = None,
     ) -> None:
         self._fixtures = tuple(fixtures) if fixtures is not None else DEFAULT_FIXTURES
         self._simulated_error = simulated_error
+        self._normalisation_service = (
+            normalisation_service or ArticleNormalisationService()
+        )
 
     @property
     def provider_id(self) -> str:
@@ -156,50 +136,8 @@ class FixtureNewsProvider:
             else None
         )
         try:
-            fixture = _FixtureRecord.model_validate(raw)
-            category = CATEGORY_MAP.get(
-                fixture.topic.strip().lower(), ArticleCategory.OTHER
-            )
-            return NewsArticle.model_validate(
-                {
-                    "contract_version": "1.0",
-                    "source_profile": "fixture-v1",
-                    "source_item_id": fixture.record_key,
-                    "source_name": "NewsFlow AI synthetic fixture",
-                    "title": fixture.headline,
-                    "publication_date": fixture.published_at,
-                    "category": category,
-                    "description": fixture.summary,
-                    "url": fixture.link,
-                    "permitted_content": {
-                        "status": "available",
-                        "content_type": "synthetic",
-                        "text": fixture.body,
-                        "ai_processing_allowed": True,
-                        "derivative_output_allowed": True,
-                    },
-                    "attribution": {
-                        "display_name": "NewsFlow AI synthetic fixture",
-                        "canonical_url": fixture.link,
-                        "attribution_text": (
-                            "Source: NewsFlow AI synthetic fixture - not live news"
-                        ),
-                        "byline": None,
-                        "copyright_notice": None,
-                    },
-                    "rights": {
-                        "decision_id": "NFA-SRC-AUTH-001",
-                        "access_method": "fixture",
-                        "storage_allowed": True,
-                        "display_allowed": True,
-                        "expires_at": None,
-                        "retention_rule": "fixture-until-replaced-or-deleted",
-                    },
-                    "retrieved_at": fixture.collected_at,
-                    "modified_at": fixture.changed_at,
-                }
-            )
-        except ValidationError as exc:
+            return self._normalisation_service.normalise(raw)
+        except ArticleNormalisationError as exc:
             raise ProviderDataError(safe_item_id) from exc
 
     def _encode_cursor(self, offset: int) -> str:
