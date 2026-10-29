@@ -3,7 +3,18 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, LargeBinary, String, Text, text
+from sqlalchemy import (
+    CHAR,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -87,6 +98,139 @@ class SessionTable(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=text("now()"),
+    )
+
+
+class SourceProfileTable(Base):
+    """Application mapping for an approved source configuration."""
+
+    __tablename__ = "source_profiles"
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    profile_key: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    source_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    profile_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    authorisation_decision_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    access_method: Mapped[str] = mapped_column(String(50), nullable=False)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class ArticleTable(Base):
+    """Stable article identity whose mutable data lives in snapshots."""
+
+    __tablename__ = "articles"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_profile_id",
+            "source_item_id",
+            name="uq_articles_source_identity",
+        ),
+        UniqueConstraint("canonical_url", name="uq_articles_canonical_url"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    source_profile_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("source_profiles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_item_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    canonical_url: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'active'")
+    )
+    current_snapshot_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class ArticleSnapshotTable(Base):
+    """Immutable permitted article data for one accepted source version."""
+
+    __tablename__ = "article_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "snapshot_number",
+            name="uq_article_snapshot_number",
+        ),
+        UniqueConstraint(
+            "id",
+            "article_id",
+            name="uq_article_snapshots_id_article",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    article_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    snapshot_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    publication_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    canonical_url: Mapped[str] = mapped_column(Text, nullable=False)
+    permitted_content_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    permitted_content_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    permitted_content_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    storage_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    display_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    ai_processing_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    derivative_output_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    rights_decision_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    access_method: Mapped[str] = mapped_column(String(50), nullable=False)
+    retention_rule: Mapped[str] = mapped_column(String(100), nullable=False)
+    rights_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    attribution_display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    attribution_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    byline: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    copyright_notice: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    source_modified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    content_fingerprint: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
 

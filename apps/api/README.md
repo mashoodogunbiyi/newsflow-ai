@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity and atomic deduplication.
 
 ## Requirements
 
@@ -275,6 +275,28 @@ pytest tests/test_source_provider.py tests/test_cnn_adapter.py
 
 See the [complete article normalisation guide](../../docs/article-normalisation.md) for the allowlist, processing rules, errors, tests, and future-provider requirements.
 
+### Persist articles without duplicates
+
+NFA-31 applies identity after NFA-30 has normalised the article. A stable provider item ID is preferred. If the provider ID is missing, the synthetic profile creates a deterministic `fixture-url-` identifier from the SHA-256 hash of the canonical URL. Titles are never used as identity.
+
+`SqlAlchemyArticleRepository` persists one stable `articles` row and immutable `article_snapshots` rows. It uses the existing NFA-20 uniqueness constraints for `(source_profile_id, source_item_id)` and `canonical_url`. Atomic PostgreSQL conflict handling prevents two concurrent workers from creating duplicates.
+
+An ingestion operation reports:
+
+- `created` when a new article and first snapshot are inserted.
+- `updated` when permitted metadata changes and a new snapshot becomes current.
+- `skipped` when the normalised permitted content already matches the current snapshot.
+
+Updates preserve the stable article ID and every earlier snapshot, including snapshots linked to generated content. A later retrieval timestamp by itself is skipped. Conflicting identifiers and URLs fail safely instead of being merged automatically.
+
+Run the fast NFA-31 tests:
+
+```bash
+pytest tests/test_article_deduplication.py
+```
+
+See the [article identity and deduplication guide](../../docs/article-identity-and-deduplication.md) for the complete strategy, transaction flow, constraints, test evidence, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -379,6 +401,14 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_account_security_integration.py
 ```
 
+The NFA-31 integration test requires a separate disposable database whose name contains `newsflow_article_deduplication_test`. It verifies the existing article uniqueness constraints, idempotent ingestion, immutable metadata updates, preserved snapshot relationships, similar titles, and concurrent insert protection:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_article_deduplication_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_article_deduplication_integration.py
+```
+
 See the [complete testing guide](../../docs/testing.md) before running any destructive integration test.
 
 ## Code quality
@@ -398,7 +428,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, the NFA-29 fail-closed CNN boundary, and the NFA-30 article normalisation and sanitisation rules.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, the NFA-29 fail-closed CNN boundary, NFA-30 article normalisation, and NFA-31 identity and deduplication.
 
 ## Project structure
 
@@ -421,11 +451,14 @@ apps/api/
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
+|   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
 |   |-- security/               # Argon2id and authentication rate limiting
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
+|   |-- services/article_deduplication.py # Idempotent article ingestion workflow
+|   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
 |   |-- services/registration.py # Registration workflow
@@ -438,6 +471,8 @@ apps/api/
 |-- tests/test_account_security_regression.py # Full fast security journey
 |-- tests/test_account_security_integration.py # Opt-in PostgreSQL ownership proof
 |-- tests/test_article_normalisation.py # Article mapping, validation, sanitisation, and rights tests
+|-- tests/test_article_deduplication.py # Fast identity, update, conflict, and concurrency tests
+|-- tests/test_article_deduplication_integration.py # Opt-in PostgreSQL deduplication proof
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests
