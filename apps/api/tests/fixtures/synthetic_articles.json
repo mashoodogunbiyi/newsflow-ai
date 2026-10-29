@@ -1,0 +1,87 @@
+{
+  "valid": [
+    {
+      "record_key": "fixture-pipeline-technology-001",
+      "headline": "Synthetic research group tests lower-energy computing equipment",
+      "link": "https://example.invalid/newsflow-ai/pipeline-technology-001",
+      "published_at": "2026-10-20T09:00:00Z",
+      "topic": "technology",
+      "summary": "A fictional research group completed a controlled computing-efficiency trial.",
+      "body": "This original synthetic report exists only to test NewsFlow AI. It is not based on live or licensed news content.",
+      "collected_at": "2026-10-20T09:05:00Z",
+      "changed_at": null
+    },
+    {
+      "record_key": "fixture-pipeline-business-001",
+      "headline": "Imaginary cooperative reports results from a reusable packaging pilot",
+      "link": "https://example.invalid/newsflow-ai/pipeline-business-001",
+      "published_at": "2026-10-21T10:00:00Z",
+      "topic": "business",
+      "summary": "A fictional cooperative measured packaging reuse during a synthetic pilot.",
+      "body": "This fictional business record was written for automated pipeline testing and contains no third-party reporting.",
+      "collected_at": "2026-10-21T10:04:00Z",
+      "changed_at": null
+    },
+    {
+      "record_key": "fixture-pipeline-science-001",
+      "headline": "Fictional university publishes coastal sensor trial data",
+      "link": "https://example.invalid/newsflow-ai/pipeline-science-001",
+      "published_at": "2026-10-22T11:00:00Z",
+      "topic": "science",
+      "summary": null,
+      "body": "This original synthetic science fixture tests optional descriptions, attribution, and catalogue display.",
+      "collected_at": "2026-10-22T11:03:00Z",
+      "changed_at": null
+    }
+  ],
+  "updated": [
+    {
+      "record_key": "fixture-pipeline-technology-001",
+      "headline": "Synthetic research group publishes updated lower-energy computing results",
+      "link": "https://example.invalid/newsflow-ai/pipeline-technology-001",
+      "published_at": "2026-10-23T09:00:00Z",
+      "topic": "technology",
+      "summary": "The fictional research group added permitted results to its synthetic trial record.",
+      "body": "This revised synthetic report remains original test content and is not based on live or licensed news content.",
+      "collected_at": "2026-10-23T09:05:00Z",
+      "changed_at": "2026-10-23T09:02:00Z"
+    }
+  ],
+  "duplicates": [
+    {
+      "record_key": "fixture-pipeline-duplicate-001",
+      "headline": "Synthetic duplicate identity example",
+      "link": "https://example.invalid/newsflow-ai/pipeline-duplicate-001",
+      "published_at": "2026-10-24T12:00:00Z",
+      "topic": "technology",
+      "summary": "A fictional record used to verify idempotent storage.",
+      "body": "Original synthetic content for duplicate and concurrency testing.",
+      "collected_at": "2026-10-24T12:05:00Z",
+      "changed_at": null
+    },
+    {
+      "record_key": "fixture-pipeline-duplicate-001",
+      "headline": "Synthetic duplicate identity example",
+      "link": "https://example.invalid/newsflow-ai/pipeline-duplicate-001",
+      "published_at": "2026-10-24T12:00:00Z",
+      "topic": "technology",
+      "summary": "A fictional record used to verify idempotent storage.",
+      "body": "Original synthetic content for duplicate and concurrency testing.",
+      "collected_at": "2026-10-24T12:05:00Z",
+      "changed_at": null
+    }
+  ],
+  "database_failure": [
+    {
+      "record_key": "fixture-pipeline-database-failure-001",
+      "headline": "Synthetic record for controlled database failure testing",
+      "link": "https://example.invalid/newsflow-ai/pipeline-database-failure-001",
+      "published_at": "2026-10-25T13:00:00Z",
+      "topic": "business",
+      "summary": "This fictional record is never persisted during the failure scenario.",
+      "body": "Original synthetic content used only to verify transaction and checkpoint safety.",
+      "collected_at": "2026-10-25T13:05:00Z",
+      "changed_at": null
+    }
+  ]
+}
