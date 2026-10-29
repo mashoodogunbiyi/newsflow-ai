@@ -36,6 +36,7 @@ This separation prevents CNN-specific field names or response formats from sprea
 | `apps/api/app/providers/models.py` | Defines strict provider-neutral requests, pages, article fields, attribution, and rights data. |
 | `apps/api/app/providers/exceptions.py` | Defines stable and safe errors for callers. |
 | `apps/api/app/providers/fixture_provider.py` | Maps original synthetic records into the approved NFA-6 contract. |
+| `apps/api/app/providers/cnn_adapter.py` | Provides the NFA-29 disabled CNN boundary required by the active No-Go decision. |
 | `apps/api/app/providers/factory.py` | Enables only the provider selected through validated configuration. |
 | `apps/api/app/providers/service.py` | Demonstrates a consumer that depends only on the interface. |
 | `apps/api/tests/test_source_provider.py` | Verifies mapping, validation, errors, pagination, replacement, and authorisation controls. |
@@ -119,6 +120,8 @@ A developer must not add a live provider until NFA-5, NFA-6, and ADR-001 are for
 
 The `ArticleDiscoveryService` will continue to work without provider-specific changes because it depends only on `NewsProvider`.
 
+NFA-29 adds a disabled `CnnSourceAdapter` while the No-Go decision remains active. It implements the interface but raises `SOURCE_NOT_AUTHORISED` before networking. It does not contain an endpoint, credential mechanism, guessed CNN response, or live mode. See the [disabled CNN adapter record](cnn-adapter.md).
+
 ## Running the tests
 
 From `apps/api` with the virtual environment active:
@@ -139,4 +142,4 @@ These tests use synthetic in-memory data. They require no live provider, network
 - Project-plan task: T3.1 - Define a source-provider interface
 - Active implementation: synthetic fixture provider
 - Live CNN integration: not authorised and not implemented
-- Next implementation task: an authorised live adapter only after the access decision changes
+- NFA-29 status: disabled safety skeleton implemented; live adapter remains blocked

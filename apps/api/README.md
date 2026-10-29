@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision.
 
 ## Requirements
 
@@ -235,6 +235,20 @@ Run the focused tests from `apps/api`:
 pytest tests/test_source_provider.py
 ```
 
+### Disabled CNN adapter
+
+`CnnSourceAdapter` implements the provider protocol but does not implement a live service. Its list and detail methods immediately raise `SOURCE_NOT_AUTHORISED`. It has no endpoint, HTTP client, authentication mechanism, credentials, response parser, pagination rules, timeout, or retry configuration because none has been authorised or documented.
+
+The adapter records the non-secret NFA-5 authorisation decision and NFA-8 architecture decision. Automated tests replace the HTTP request method with a failure and prove that it is never called. A `cnn` source mode remains invalid, and proposed CNN environment variables are ignored rather than enabling access.
+
+Run the focused safety tests:
+
+```bash
+pytest tests/test_cnn_adapter.py
+```
+
+See the [NFA-29 CNN adapter record](../../docs/cnn-adapter.md) for the blocked acceptance criteria and future activation requirements.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -358,7 +372,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, and the NFA-28 provider contract.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, and the NFA-29 fail-closed CNN boundary.
 
 ## Project structure
 
@@ -380,7 +394,7 @@ apps/api/
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
-|   |-- providers/              # Provider protocol, models, errors, fixture, and factory
+|   |-- providers/              # Provider protocol, fixture, and disabled CNN boundary
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
@@ -401,6 +415,7 @@ apps/api/
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests
 |-- tests/test_config.py        # Environment and secret-safety tests
+|-- tests/test_cnn_adapter.py   # Disabled CNN access and no-network tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test
 |-- tests/test_passwords.py      # Argon2id hashing tests
