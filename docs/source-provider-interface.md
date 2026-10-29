@@ -70,6 +70,8 @@ The `NewsArticle` model implements the approved NFA-6 fixture-first contract. It
 
 NFA-30 adds an explicit allowlist and normalisation service before this final model. It reads only the fields approved by the active source policy, maps provider names, normalises text and timezone-aware timestamps, validates HTTPS URLs against an approved host list, and supplies trusted attribution and provenance. Pydantic then rejects missing required values, unknown output fields, unsafe URLs, invalid timestamps, HTML-like markup, inconsistent permission states, and mismatched attribution URLs. Provider-specific data never passes directly into the database, frontend, or future OpenAI integration. See the [article normalisation guide](article-normalisation.md) for the complete rules and tests.
 
+NFA-31 applies stable provider-scoped identity after URL normalisation. It prefers the permitted provider item ID and uses a deterministic hash of the canonical URL only when that ID is absent. PostgreSQL then prevents duplicates through source-identity and canonical-URL constraints. See the [article identity and deduplication guide](article-identity-and-deduplication.md).
+
 ## Pagination and incremental retrieval
 
 `ArticleQuery` accepts:
@@ -145,3 +147,5 @@ These tests use synthetic in-memory data. They require no live provider, network
 - Active implementation: synthetic fixture provider
 - Live CNN integration: not authorised and not implemented
 - NFA-29 status: disabled safety skeleton implemented; live adapter remains blocked
+- NFA-30 status: fixture normalisation and sanitisation implemented
+- NFA-31 status: fixture identity and deduplication implemented; live use remains blocked

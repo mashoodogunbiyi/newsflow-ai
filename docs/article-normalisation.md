@@ -48,7 +48,7 @@ The synthetic fixture policy reads only these provider fields:
 
 | Provider field | Standard use | Required |
 |---|---|---:|
-| `record_key` | Source item identifier | Yes |
+| `record_key` | Preferred source item identifier | Preferred |
 | `headline` | Article title | Yes |
 | `link` | Canonical article URL | Yes |
 | `published_at` | Publication timestamp | Yes |
@@ -59,6 +59,8 @@ The synthetic fixture policy reads only these provider fields:
 | `changed_at` | Optional modification timestamp | No |
 
 Other keys are not copied into the `NewsArticle` model. For example, a provider image, internal note, or unlicensed full-text field is ignored and cannot appear in the normalised result.
+
+When `record_key` is absent or blank, NFA-31 derives the approved fixture fallback from the already normalised canonical URL. The resulting identifier starts with `fixture-url-` followed by a SHA-256 digest. It does not use or invent an article title. See the [article identity and deduplication guide](article-identity-and-deduplication.md).
 
 The policy checks storage and display permission before reading article fields. The source name, decision identifier, access method, attribution wording, retention rule, content type, and AI permissions come from the trusted policy. A provider record cannot replace those values.
 
@@ -131,6 +133,7 @@ The focused tests cover:
 
 - A valid record with whitespace, Unicode, URL, and UTC normalisation.
 - A differently shaped provider record with an explicit mapping.
+- A missing provider identifier that receives a deterministic canonical-URL fallback.
 - Invalid and timezone-free publication dates.
 - Missing required titles, URLs, and categories.
 - Raw, encoded, and incomplete HTML-like content.
@@ -164,5 +167,5 @@ All automated records are synthetic and require no live news provider, network r
 - The active implementation is fixture-only.
 - Live CNN access remains blocked by NFA-5 and ADR-001.
 - No provider URL is fetched by the normalisation service.
-- Normalised articles are not yet persisted through an ingestion repository or exposed through an article API endpoint.
+- NFA-31 can persist normalised articles through an idempotent repository, but it is not yet connected to a synchronisation job or article API endpoint.
 - A future authorised source must receive a separate reviewed policy instead of changing the fixture policy into a guessed live contract.

@@ -18,6 +18,7 @@ from app.providers.models import (
     ContentType,
     NewsArticle,
 )
+from app.services.article_identity import ArticleIdentityError, ArticleIdentityService
 
 UNSAFE_MARKUP_PATTERN = re.compile(r"<\s*/?\s*[A-Za-z]")
 CATEGORY_TEXT_PATTERN = re.compile(r"\s+")
@@ -96,6 +97,7 @@ class ArticleNormalisationPolicy:
     attribution_text: str
     retention_rule: str
     allowed_hosts: frozenset[str]
+    fallback_identity_prefix: str
     category_mapping: Mapping[str, ArticleCategory] = field(default_factory=dict)
     content_type: ContentType = ContentType.SYNTHETIC
     storage_allowed: bool = True
@@ -125,6 +127,7 @@ FIXTURE_NORMALISATION_POLICY = ArticleNormalisationPolicy(
     attribution_text="Source: NewsFlow AI synthetic fixture - not live news",
     retention_rule="fixture-until-replaced-or-deleted",
     allowed_hosts=frozenset({"example.invalid"}),
+    fallback_identity_prefix="fixture-url-",
     category_mapping={
         "technology": ArticleCategory.TECHNOLOGY,
         "business": ArticleCategory.BUSINESS,
@@ -141,8 +144,10 @@ class ArticleNormalisationService:
     def __init__(
         self,
         policy: ArticleNormalisationPolicy = FIXTURE_NORMALISATION_POLICY,
+        identity_service: ArticleIdentityService | None = None,
     ) -> None:
         self._policy = policy
+        self._identity_service = identity_service or ArticleIdentityService()
 
     @property
     def permitted_input_fields(self) -> frozenset[str]:
@@ -161,11 +166,6 @@ class ArticleNormalisationService:
         self._require_permitted_rights()
 
         mapping = self._policy.field_mapping
-        source_item_id = self._required_text(
-            record,
-            mapping.source_item_id,
-            collapse_whitespace=True,
-        )
         title = self._required_text(
             record,
             mapping.title,
@@ -174,6 +174,11 @@ class ArticleNormalisationService:
         canonical_url = self._normalise_url(
             self._required_text(record, mapping.url, collapse_whitespace=True),
             field_name=mapping.url,
+        )
+        source_item_id = self._normalise_identity(
+            record,
+            field_name=mapping.source_item_id,
+            canonical_url=canonical_url,
         )
         publication_date = self._normalise_datetime(
             self._required_value(record, mapping.publication_date),
@@ -376,6 +381,35 @@ class ArticleNormalisationService:
         if value is None:
             return None
         return self._normalise_datetime(value, field_name=field_name)
+
+    def _normalise_identity(
+        self,
+        record: Mapping[str, Any],
+        *,
+        field_name: str,
+        canonical_url: str,
+    ) -> str:
+        value = record.get(field_name)
+        if value is not None and not isinstance(value, str):
+            raise ArticleNormalisationError(
+                code=ArticleNormalisationErrorCode.INVALID_RECORD,
+                message="An article field has an invalid type.",
+                field_name=field_name,
+            )
+        try:
+            identity = self._identity_service.resolve(
+                provider_id=self._policy.source_profile,
+                external_article_id=value,
+                canonical_url=canonical_url,
+                fallback_prefix=self._policy.fallback_identity_prefix,
+            )
+        except ArticleIdentityError as exc:
+            raise ArticleNormalisationError(
+                code=ArticleNormalisationErrorCode.INVALID_RECORD,
+                message="The article identity is invalid.",
+                field_name=field_name,
+            ) from exc
+        return identity.external_article_id
 
     def _normalise_url(self, value: str, *, field_name: str) -> str:
         try:
