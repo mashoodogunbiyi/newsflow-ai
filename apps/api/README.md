@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 and NFA-23 add secure registration and server-managed sessions. NFA-25 adds object-level authorisation for private saved content. NFA-26 adds reusable account-security fixtures, full lifecycle regression coverage, a disposable PostgreSQL ownership test, and automated pull-request checks.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider.
 
 ## Requirements
 
@@ -60,7 +60,7 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | Variable | Required | Sensitive | Purpose |
 |---|---|---|---|
 | `APP_ENV` | No | No | Selects `development`, `test`, `staging`, or `production`; defaults to `development`. |
-| `NEWS_SOURCE_MODE` | No | No | Remains `fixture` while live CNN access is not authorised. |
+| `NEWS_SOURCE_MODE` | No | No | Defaults to `disabled`; local development explicitly selects the approved `fixture` provider. |
 | `FRONTEND_ORIGIN` | No | No | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
@@ -210,6 +210,31 @@ Read and export requests require the HTTP-only session cookie. Create, update, a
 
 The API request schemas do not contain `user_id`, and unexpected fields are rejected. The original NFA-20 migration already includes the composite ownership foreign key, so this feature does not add or change a database migration. See [the object-level authorisation guide](../../docs/authorization.md) for the complete rules and evidence.
 
+## Use the news-source provider interface
+
+NFA-28 defines a typed `NewsProvider` protocol with two asynchronous operations:
+
+- `fetch_articles(query)` discovers a validated page of permitted articles.
+- `fetch_article(source_item_id)` retrieves one validated article.
+
+The common `NewsArticle` model follows the approved NFA-6 contract. It contains article metadata, permitted content, attribution, rights, and provenance rather than allowing provider-specific response fields into application services.
+
+The current `FixtureNewsProvider` maps original synthetic records with internal names such as `headline` and `published_at` into the common model. It makes no network requests and uses only `example.invalid` URLs. It supports opaque cursor pagination and a `published_after` filter.
+
+Select the fixture provider explicitly through local configuration:
+
+```dotenv
+NEWS_SOURCE_MODE=fixture
+```
+
+If no source mode is supplied directly to `Settings`, it defaults to `disabled`. The provider factory then raises `SOURCE_NOT_AUTHORISED` without attempting access. No live or CNN setting exists. See the [complete provider integration guide](../../docs/source-provider-interface.md).
+
+Run the focused tests from `apps/api`:
+
+```bash
+pytest tests/test_source_provider.py
+```
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -333,7 +358,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, and the NFA-26 account-security regression journey.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, and the NFA-28 provider contract.
 
 ## Project structure
 
@@ -355,6 +380,7 @@ apps/api/
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
+|   |-- providers/              # Provider protocol, models, errors, fixture, and factory
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
@@ -382,6 +408,7 @@ apps/api/
 |-- tests/test_registration.py   # Registration API tests
 |-- tests/test_registration_integration.py # Opt-in PostgreSQL registration test
 |-- tests/test_seed.py          # Seed safety and fixture tests
+|-- tests/test_source_provider.py # Provider mapping, errors, pagination, and replacement
 |-- .python-version             # Recommended Python runtime
 |-- pyproject.toml              # Application and development dependencies
 `-- README.md                   # Backend setup and operating guide

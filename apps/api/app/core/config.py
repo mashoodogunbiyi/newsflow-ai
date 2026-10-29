@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "staging", "production"] = "development"
-    news_source_mode: Literal["fixture"] = "fixture"
+    news_source_mode: Literal["disabled", "fixture"] = "disabled"
     frontend_origin: str = Field(
         default="http://localhost:3000",
         pattern=r"^https?://[^/]+$",
