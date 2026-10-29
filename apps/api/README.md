@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service for future E4 generation workflows.
 
 ## Requirements
 
@@ -63,10 +63,14 @@ INGESTION_SUCCESS_STALE_SECONDS=21600
 INGESTION_LONG_RUNNING_SECONDS=600
 INGESTION_REJECTION_RATE_PERCENT=25
 OPENAI_API_KEY=your_real_openai_api_key
+OPENAI_MODEL=your_approved_openai_model
+OPENAI_REQUEST_TIMEOUT=30
+OPENAI_MAX_OUTPUT_TOKENS=800
+OPENAI_MAX_RETRIES=2
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-`DATABASE_URL` is required when the API starts. `OPENAI_API_KEY` is loaded and validated by the backend but is required only when an OpenAI-powered feature runs. This keeps the current non-AI API usable while its OpenAI integration is developed. Empty values and the committed example placeholders produce clear errors without printing secret values.
+`DATABASE_URL` is required when the API starts. `OPENAI_API_KEY` and `OPENAI_MODEL` are loaded and validated by the backend but are required only when an OpenAI-powered feature runs. This keeps the non-AI API usable without provider credentials. Empty values and the committed example placeholders produce clear errors without printing secret values.
 
 Do not add real credentials to `.env.example`, source code, browser code, documentation, Jira, screenshots, commits, or pull requests. The repository `.gitignore` excludes `.env` files while retaining the safe `.env.example` template. The OpenAI API key is server-side only and must never use a `NEXT_PUBLIC_` name because Next.js exposes variables with that prefix to browser code. This follows [OpenAI's API authentication guidance](https://developers.openai.com/api/reference/overview), which says API keys must be loaded from an environment variable or key management service on the server.
 
@@ -101,6 +105,10 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `INGESTION_REJECTION_RATE_PERCENT` | No | No | Recent rejection-rate warning threshold; defaults to 25 percent. |
 | `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
+| `OPENAI_MODEL` | Yes for OpenAI features | No | Selects an approved model without hard-coding it in service code. |
+| `OPENAI_REQUEST_TIMEOUT` | No | No | OpenAI request timeout from 1 to 300 seconds; defaults to 30. |
+| `OPENAI_MAX_OUTPUT_TOKENS` | No | No | Maximum generated output from 1 to 100000 tokens; defaults to 800. |
+| `OPENAI_MAX_RETRIES` | No | No | Extra SDK attempts for eligible temporary failures from 0 to 5; defaults to 2. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
 
 Operating rules:
@@ -400,6 +408,14 @@ GET /api/admin/sync/health
 
 The health response detects repeated failures, stale successful synchronisation, long-running jobs, and high rejection rates using environment-configured thresholds. Use `LOG_FORMAT=json` for log collection or `LOG_FORMAT=console` for readable local output. See the [ingestion observability guide](../../docs/ingestion-observability.md) for fields, metrics, configuration, operational response, tests, and limitations.
 
+### Generate text through the OpenAI service
+
+NFA-38 adds `OpenAIService` as the single backend boundary for future text generation. It uses the official asynchronous OpenAI Python SDK and the Responses API. The model, request timeout, maximum output tokens, and bounded SDK retry budget come from validated environment settings.
+
+The service returns generated text, model and request identifiers, and available token usage through provider-neutral Pydantic models. It maps authentication, rate-limit, timeout, connection, service, request, incomplete-response, and output-limit failures to safe application errors. Logs exclude API keys, prompts, instructions, generated output, raw responses, and provider error details.
+
+No public FastAPI generation endpoint is included in NFA-38. A later E4 workflow must authenticate and authorise the user, apply NFA-32 rights checks, supply only permitted article information, enforce user-level limits, and then call this internal service. See the [OpenAI integration guide](../../docs/openai-integration.md) for configuration, usage, error policy, security controls, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -454,7 +470,13 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
-The normal test suite uses database test doubles, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, and blocked cross-user read, update, delete, and export attempts.
+The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, and the NFA-38 OpenAI success, usage, cost-control, error, retry, and redaction behaviours.
+
+Run the focused NFA-38 tests with:
+
+```bash
+pytest tests/test_config.py tests/test_openai_service.py
+```
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
 
@@ -557,7 +579,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, and the NFA-36 complete synthetic pipeline. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, and the mocked NFA-38 OpenAI boundary. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
 
 ## Project structure
 
@@ -573,6 +595,7 @@ apps/api/
 |   |-- api/routes/ingestion_observability.py # Protected jobs, metrics, and health APIs
 |   |-- api/routes/articles.py  # Authenticated article list and detail APIs
 |   |-- api/dependencies.py     # Shared session and CSRF route protection
+|   |-- core/ai_config.py       # Validated OpenAI settings object
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- core/logging_config.py  # Structured formatting and credential redaction
@@ -587,6 +610,7 @@ apps/api/
 |   |-- models/article_sync.py  # Job, checkpoint, status, and statistics models
 |   |-- models/ingestion_observability.py # Metrics and health response schemas
 |   |-- models/article_catalogue.py # Catalogue query and public response schemas
+|   |-- models/ai.py            # Masked generation input and structured result
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
@@ -606,6 +630,7 @@ apps/api/
 |   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
+|   |-- services/openai_service.py # Secure reusable Responses API boundary
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
@@ -635,6 +660,7 @@ apps/api/
 |-- tests/test_cnn_adapter.py   # Disabled CNN access and no-network tests
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test
+|-- tests/test_openai_service.py # Mocked OpenAI success, failure, usage, and security tests
 |-- tests/test_passwords.py      # Argon2id hashing tests
 |-- tests/test_rate_limit.py     # Registration abuse-control tests
 |-- tests/test_registration.py   # Registration API tests

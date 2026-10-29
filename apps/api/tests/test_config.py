@@ -20,13 +20,23 @@ def test_settings_load_secrets_from_environment(
 ) -> None:
     database_url = "postgresql://test-user:test-password@localhost:5432/newsflow"
     openai_api_key = "test-openai-key-loaded-from-environment"
+    openai_model = "test-openai-model"
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setenv("OPENAI_API_KEY", openai_api_key)
+    monkeypatch.setenv("OPENAI_MODEL", openai_model)
+    monkeypatch.setenv("OPENAI_REQUEST_TIMEOUT", "45")
+    monkeypatch.setenv("OPENAI_MAX_OUTPUT_TOKENS", "600")
+    monkeypatch.setenv("OPENAI_MAX_RETRIES", "1")
 
     settings = Settings(_env_file=None)
 
     assert settings.require_database_url().get_secret_value() == database_url
     assert settings.require_openai_api_key().get_secret_value() == openai_api_key
+    openai_configuration = settings.require_openai_configuration()
+    assert openai_configuration.model == openai_model
+    assert openai_configuration.request_timeout == 45
+    assert openai_configuration.max_output_tokens == 600
+    assert openai_configuration.max_retries == 1
 
 
 def test_secret_values_are_masked_in_settings_representation() -> None:
@@ -68,6 +78,42 @@ def test_openai_api_key_placeholder_is_rejected() -> None:
         match="example placeholder",
     ):
         settings.require_openai_api_key()
+
+
+def test_missing_openai_model_produces_clear_safe_error() -> None:
+    settings = Settings(
+        _env_file=None,
+        openai_api_key="test-openai-key",
+        openai_model=None,
+    )
+
+    with pytest.raises(
+        OpenAIConfigurationError,
+        match="OPENAI_MODEL must be set",
+    ):
+        settings.require_openai_configuration()
+
+
+def test_openai_model_placeholder_is_rejected() -> None:
+    settings = Settings(
+        _env_file=None,
+        openai_api_key="test-openai-key",
+        openai_model="your_approved_openai_model_here",
+    )
+
+    with pytest.raises(
+        OpenAIConfigurationError,
+        match="OPENAI_MODEL still contains the example placeholder",
+    ):
+        settings.require_openai_configuration()
+
+
+def test_openai_settings_have_bounded_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.openai_request_timeout == 30
+    assert settings.openai_max_output_tokens == 800
+    assert settings.openai_max_retries == 2
 
 
 def test_database_url_placeholder_is_rejected() -> None:

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, and the NFA-36 complete synthetic pipeline suite.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, and the mocked NFA-38 OpenAI integration.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -10,7 +10,7 @@ The test suite is designed to detect security regressions before a pull request 
 
 | Layer | Location | Purpose |
 |---|---|---|
-| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, CSRF, safe errors, and authorisation. |
+| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
@@ -131,6 +131,28 @@ pytest tests/test_article_sync.py \
 
 The full strategy, exact disposable-database command, results, and limitations are recorded in [the NFA-36 pipeline testing guide](article-pipeline-testing.md).
 
+## NFA-38 OpenAI integration coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Successful structured generation result | `test_openai_service.py` |
+| Official SDK client configuration | `test_openai_service.py` |
+| Missing key and model handling | `test_config.py` and `test_openai_service.py` |
+| Configurable timeout, output cap, and retry budget | `test_config.py` and `test_openai_service.py` |
+| Authentication, rate-limit, timeout, and unavailable errors | `test_openai_service.py` |
+| Incomplete and empty response handling | `test_openai_service.py` |
+| Token-usage capture and missing usage | `test_openai_service.py` |
+| Prompt, credential, and provider-detail log protection | `test_openai_service.py` |
+| No live or billable request | Fake SDK client injected by every service test |
+
+Run the focused NFA-38 tests from `apps/api`:
+
+```bash
+pytest tests/test_config.py tests/test_openai_service.py
+```
+
+The tests construct real OpenAI SDK exception types around synthetic HTTP responses, but all generation responses and client behaviour are mocked. No test reads a real API key or contacts OpenAI.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -147,7 +169,7 @@ Run only the NFA-26 security regression tests:
 pytest tests/test_account_security_regression.py
 ```
 
-Normal tests do not need PostgreSQL, Docker, an OpenAI key, live news content, real user information, or production credentials. External services are not contacted.
+Normal tests do not need PostgreSQL, Docker, an OpenAI key, live news content, real user information, or production credentials. OpenAI responses are mocked and external services are not contacted.
 
 ## Run the frontend authentication suite
 
@@ -219,14 +241,15 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 169 tests and safely skipped 11 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 77 percent, above the enforced 75 percent floor.
+- The normal backend run passed 185 tests and safely skipped 11 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 80.36 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applied all migrations through `20261029_0006` and rolled the disposable schema back afterwards.
-- No test used live CNN content, real user data, or production credentials.
+- The focused NFA-38 configuration and OpenAI service run passed 27 tests.
+- No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issue: NFA-36
+- Jira issues covered: NFA-36 and NFA-38
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
