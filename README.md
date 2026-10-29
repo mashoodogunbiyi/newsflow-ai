@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 adds the reusable news-source interface and synthetic fixture provider. NFA-29 adds a tested disabled CNN adapter boundary. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity, atomic deduplication, immutable metadata updates, and idempotent ingestion, while ADR-001 continues to block all live CNN access.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 adds the reusable news-source interface and synthetic fixture provider. NFA-29 adds a tested disabled CNN adapter boundary. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity and atomic deduplication. NFA-32 adds immutable provenance events, versioned rights metadata, and fail-closed permission checks, while ADR-001 continues to block all live CNN access.
 
 ## Product workflow
 
@@ -59,6 +59,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/cnn-adapter.md](docs/cnn-adapter.md) - NFA-29 disabled CNN adapter, No-Go enforcement, acceptance status, test evidence, and future activation gates.
 - [docs/article-normalisation.md](docs/article-normalisation.md) - NFA-30 field allowlist, rights policy, normalisation, validation, sanitisation, safe errors, and automated evidence.
 - [docs/article-identity-and-deduplication.md](docs/article-identity-and-deduplication.md) - NFA-31 identity strategy, canonical URL fallback, PostgreSQL constraints, atomic ingestion, safe updates, and tests.
+- [docs/article-provenance-and-rights.md](docs/article-provenance-and-rights.md) - NFA-32 provenance events, versioned rights, attribution, retention, fail-closed checks, and automated evidence.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -95,6 +96,7 @@ newsflow-ai/
 │   ├── authorization.md     # Object-level authorisation rules and evidence
 │   ├── article-identity-and-deduplication.md # Stable identity and atomic ingestion rules
 │   ├── article-normalisation.md # Rights-aware article processing rules and tests
+│   ├── article-provenance-and-rights.md # Provenance and versioned permission rules
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
 │   ├── development-setup.md # Complete local development guide
 │   ├── source-provider-interface.md # Provider-neutral news boundary
@@ -110,7 +112,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 to NFA-26 provide the tested secure account lifecycle, NFA-28 provides a swappable fixture-first news-source boundary, NFA-29 proves live CNN access fails closed, NFA-30 validates permitted article data, and NFA-31 prevents duplicate article records while preserving immutable update history. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 to NFA-26 provide the tested secure account lifecycle, NFA-28 provides a swappable fixture-first news-source boundary, NFA-29 proves live CNN access fails closed, NFA-30 validates permitted article data, NFA-31 prevents duplicate article records, and NFA-32 preserves retrieval provenance and enforces current rights before use. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -125,6 +127,7 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/article-identity-and-deduplication.md` | NFA-31 identity, deduplication, atomic ingestion, update, and test rules |
 | `docs/article-normalisation.md` | NFA-30 rights-aware mapping, validation, sanitisation, error rules, and tests |
+| `docs/article-provenance-and-rights.md` | NFA-32 provenance, versioned permissions, fail-closed checks, and tests |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
 | `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
@@ -197,6 +200,8 @@ NFA-30 sends each synthetic provider record through a rights-aware `ArticleNorma
 
 NFA-31 prefers the permitted provider item ID and derives a deterministic canonical-URL hash only when that ID is unavailable. The PostgreSQL repository uses the existing source-identity and canonical-URL uniqueness constraints with atomic conflict handling. Repeated records are skipped, permitted metadata changes create a new immutable snapshot, and the stable article ID and earlier snapshot relationships are preserved. See the [article identity and deduplication guide](docs/article-identity-and-deduplication.md).
 
+NFA-32 records an immutable provenance event for every created, updated, or skipped ingestion and stores permissions as versioned PostgreSQL rights records. The reusable rights service denies missing, unverified, revoked, expired, disabled-source, or ungranted operations by default. AI generation requires both AI-processing and derivative-output permission, and required attribution remains available with the decision. See the [article provenance and rights guide](docs/article-provenance-and-rights.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -264,7 +269,7 @@ pytest
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
-NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 adds isolated provider-contract tests, NFA-29 adds tests proving CNN access is rejected before networking, NFA-30 adds article normalisation and sanitisation tests, and NFA-31 adds identity, idempotency, safe-update, conflict, concurrency, and optional PostgreSQL tests. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md), [source-provider guide](docs/source-provider-interface.md), [CNN adapter record](docs/cnn-adapter.md), [article normalisation guide](docs/article-normalisation.md), and [article identity guide](docs/article-identity-and-deduplication.md) for targeted commands.
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 adds isolated provider-contract tests, NFA-29 adds tests proving CNN access is rejected before networking, NFA-30 adds article normalisation and sanitisation tests, NFA-31 adds identity and concurrency tests, and NFA-32 adds provenance, rights-state, expiry, update, attribution, and safe-logging tests. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
 
 ## Key delivery gates
 
@@ -286,7 +291,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review and merge the NFA-31 article identity and deduplication work and record its evidence in Jira. Continue permitted development with synthetic fixtures. Live CNN access remains blocked because no authorised method or Go decision exists. The ingestion repository is not yet connected to a scheduler or public article API, and the application does not yet make OpenAI API requests.
+Review and merge the NFA-32 provenance and rights-metadata work and record its evidence in Jira. Continue permitted development with synthetic fixtures. Live CNN access remains blocked because no authorised method or Go decision exists. Future catalogue and AI-generation flows must use the rights service before every restricted operation. The application does not yet make OpenAI API requests.
 
 ## Licence
 

@@ -25,6 +25,8 @@ SEED_IDS = {
     "post_claim_1": "10000000-0000-4000-8000-000000000010",
     "post_claim_2": "10000000-0000-4000-8000-000000000011",
     "saved_content": "10000000-0000-4000-8000-000000000012",
+    "article_rights": "10000000-0000-4000-8000-000000000013",
+    "article_provenance": "10000000-0000-4000-8000-000000000014",
 }
 
 SEED_USER_EMAIL = "developer@example.invalid"
@@ -187,9 +189,90 @@ def _execute_seed(connection: Connection[Any]) -> None:
         )
         cursor.execute(
             """
+            INSERT INTO article_rights_versions (
+                id,
+                article_id,
+                version_number,
+                verification_status,
+                storage_allowed,
+                display_allowed,
+                ai_processing_allowed,
+                derivative_output_allowed,
+                redistribution_allowed,
+                attribution_required,
+                attribution_text,
+                retention_rule,
+                authorisation_reference,
+                source_contract_version,
+                rights_last_verified_at,
+                effective_from
+            )
+            VALUES (
+                %(article_rights)s,
+                %(article)s,
+                1,
+                'verified',
+                true,
+                true,
+                true,
+                true,
+                false,
+                true,
+                'Synthetic content created for NewsFlow AI development.',
+                'development-only',
+                'NFA-SRC-AUTH-001',
+                '1.0',
+                '2026-10-25T00:00:00Z',
+                '2026-10-25T00:00:00Z'
+            )
+            ON CONFLICT (id) DO NOTHING
+            """,
+            values,
+        )
+        cursor.execute(
+            """
+            INSERT INTO article_provenance_events (
+                id,
+                article_id,
+                source_profile_id,
+                source_item_id,
+                canonical_url,
+                publication_date,
+                retrieved_at,
+                source_integration_ref,
+                source_contract_version,
+                authorisation_reference,
+                ingestion_action
+            )
+            VALUES (
+                %(article_provenance)s,
+                %(article)s,
+                %(source_profile)s,
+                'synthetic-clean-energy-001',
+                %(article_url)s,
+                '2026-10-20T09:00:00Z',
+                '2026-10-20T10:00:00Z',
+                'fixture-v1',
+                '1.0',
+                'NFA-SRC-AUTH-001',
+                'created'
+            )
+            ON CONFLICT (id) DO NOTHING
+            """,
+            values,
+        )
+        cursor.execute(
+            """
             UPDATE articles
-            SET current_snapshot_id = %(article_snapshot)s
-            WHERE id = %(article)s AND current_snapshot_id IS NULL
+            SET current_snapshot_id = COALESCE(
+                    current_snapshot_id,
+                    %(article_snapshot)s
+                ),
+                current_rights_version_id = COALESCE(
+                    current_rights_version_id,
+                    %(article_rights)s
+                )
+            WHERE id = %(article)s
             """,
             values,
         )
@@ -420,6 +503,8 @@ def _seed_counts(connection: Connection[Any]) -> dict[str, int]:
         "source_profiles": [SEED_IDS["source_profile"]],
         "articles": [SEED_IDS["article"]],
         "article_snapshots": [SEED_IDS["article_snapshot"]],
+        "article_rights_versions": [SEED_IDS["article_rights"]],
+        "article_provenance_events": [SEED_IDS["article_provenance"]],
         "generated_posts": [SEED_IDS["generated_post"]],
         "generation_runs": [SEED_IDS["generation_run"]],
         "generation_facts": [

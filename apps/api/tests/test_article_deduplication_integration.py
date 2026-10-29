@@ -11,12 +11,15 @@ from alembic import command
 from pydantic import SecretStr
 
 from app.database.sqlalchemy import SqlAlchemyDatabase
+from app.models.article_rights import ArticleUseOperation, RightsDecisionReason
 from app.providers.normalisation import ArticleNormalisationService
+from app.repositories.article_rights import SqlAlchemyArticleRightsRepository
 from app.repositories.articles import (
     ArticleIngestionAction,
     SqlAlchemyArticleRepository,
 )
 from app.services.article_deduplication import ArticleDeduplicationService
+from app.services.article_rights import ArticleRightsService
 from tests.support.postgres import (
     DisposablePostgres,
     postgres_resources,
@@ -127,6 +130,28 @@ def test_postgresql_deduplicates_updates_and_preserves_snapshots(
             assert repeated.article_id == created.article_id
             assert repeated.snapshot_id == created.snapshot_id
 
+            rights_service = ArticleRightsService(
+                SqlAlchemyArticleRightsRepository(database)
+            )
+            display_decision = await rights_service.can_use_article(
+                article_id=created.article_id,
+                operation=ArticleUseOperation.DISPLAY_METADATA,
+            )
+            export_decision = await rights_service.can_use_article(
+                article_id=created.article_id,
+                operation=ArticleUseOperation.EXPORT_SOURCE_INFORMATION,
+            )
+            provenance = await rights_service.provenance_for_article(created.article_id)
+
+            assert display_decision.allowed is True
+            assert display_decision.attribution_text
+            assert export_decision.allowed is False
+            assert export_decision.reason == RightsDecisionReason.OPERATION_RESTRICTED
+            assert [event.ingestion_action for event in provenance] == [
+                "created",
+                "skipped",
+            ]
+
             async with database.session() as session:
                 async with session.begin():
                     await session.execute(
@@ -233,10 +258,26 @@ def test_postgresql_deduplicates_updates_and_preserves_snapshots(
                     ),
                     {"post_id": generated_post_id},
                 )
+                provenance_count = await session.scalar(
+                    sa.text(
+                        "SELECT count(*) FROM article_provenance_events "
+                        "WHERE article_id = :article_id"
+                    ),
+                    {"article_id": created.article_id},
+                )
+                rights_count = await session.scalar(
+                    sa.text(
+                        "SELECT count(*) FROM article_rights_versions "
+                        "WHERE article_id = :article_id"
+                    ),
+                    {"article_id": created.article_id},
+                )
 
             assert article_count == 3
             assert original_snapshot_count == 2
             assert linked_snapshot_id == created.snapshot_id
+            assert provenance_count == 3
+            assert rights_count == 1
         finally:
             await database.close()
 

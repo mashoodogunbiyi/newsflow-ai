@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity and atomic deduplication.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity and atomic deduplication. NFA-32 adds immutable provenance, versioned rights metadata, and fail-closed usage checks.
 
 ## Requirements
 
@@ -297,6 +297,20 @@ pytest tests/test_article_deduplication.py
 
 See the [article identity and deduplication guide](../../docs/article-identity-and-deduplication.md) for the complete strategy, transaction flow, constraints, test evidence, and limitations.
 
+### Verify article provenance and rights
+
+NFA-32 extends ingestion so every created, updated, and skipped article retrieval writes an immutable provenance event. It records the source profile, permitted external identifier, canonical URL, publication and retrieval times, data-contract version, integration reference, and non-secret authorisation reference.
+
+Article permissions are stored as immutable versions. The `articles.current_rights_version_id` pointer selects the policy used for new checks without deleting earlier audit evidence. `ArticleRightsService` checks display, storage, AI generation, export, and retention operations. It denies missing, unverified, revoked, expired, disabled-source, or ungranted use by default. AI generation requires both AI-processing and derivative-output permission.
+
+Run the focused tests:
+
+```bash
+pytest tests/test_article_rights.py tests/test_article_deduplication.py
+```
+
+See the [article provenance and rights guide](../../docs/article-provenance-and-rights.md) for the model, constraints, update rules, integration-test command, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -322,7 +336,7 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. Because sessions created before this migration cannot have valid CSRF proof, the migration invalidates any pre-release session rows. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events, versioned rights metadata, the current-rights pointer, and database constraints. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
@@ -428,7 +442,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, the NFA-29 fail-closed CNN boundary, NFA-30 article normalisation, and NFA-31 identity and deduplication.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the provider boundary, normalisation, identity, deduplication, provenance, and fail-closed rights decisions.
 
 ## Project structure
 
@@ -450,14 +464,17 @@ apps/api/
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
+|   |-- models/article_rights.py # Provenance, rights policy, and decision models
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
+|   |-- repositories/article_rights.py # Rights versions and provenance queries
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
 |   |-- security/               # Argon2id and authentication rate limiting
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
 |   |-- services/article_deduplication.py # Idempotent article ingestion workflow
+|   |-- services/article_rights.py # Fail-closed permission checks and updates
 |   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
