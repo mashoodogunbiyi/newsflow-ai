@@ -91,6 +91,13 @@ def test_seed_data_is_disabled_by_default() -> None:
     assert settings.seed_data_enabled is False
 
 
+def test_news_source_is_disabled_unless_fixture_mode_is_explicit() -> None:
+    assert Settings(_env_file=None).news_source_mode == "disabled"
+    assert Settings(_env_file=None, news_source_mode="fixture").news_source_mode == (
+        "fixture"
+    )
+
+
 def test_registration_rate_limit_has_safe_defaults() -> None:
     settings = Settings(_env_file=None)
 

@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, accounts, private-resource protection, and automated account-security testing are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-25 provide registration, sessions, the responsive authentication interface, and object-level authorisation. NFA-26 adds reusable isolated security fixtures, full account-lifecycle regression tests, a PostgreSQL ownership proof, and automatic pull-request quality checks. ADR-001 continues to block live CNN integration, so development uses original static demonstration content.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 adds the reusable news-source interface, strict NFA-6 article models, safe provider errors, cursor-based discovery, and a synthetic fixture provider. ADR-001 continues to block live CNN integration.
 
 ## Product workflow
 
@@ -55,6 +55,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/development-setup.md](docs/development-setup.md) - complete beginner-friendly installation, configuration, startup, testing, verification, and troubleshooting guide.
 - [docs/authorization.md](docs/authorization.md) - NFA-25 ownership rules, protected endpoints, safe failure behaviour, reusable implementation pattern, and automated evidence.
 - [docs/testing.md](docs/testing.md) - NFA-26 test strategy, coverage map, isolated fixtures, local commands, PostgreSQL safety gates, and GitHub quality workflow.
+- [docs/source-provider-interface.md](docs/source-provider-interface.md) - NFA-28 provider contract, normalised article model, pagination, safe errors, synthetic adapter, and future authorised-provider instructions.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -90,6 +91,7 @@ newsflow-ai/
 ├── docs/
 │   ├── authorization.md     # Object-level authorisation rules and evidence
 │   ├── development-setup.md # Complete local development guide
+│   ├── source-provider-interface.md # Provider-neutral news boundary
 │   ├── testing.md           # Automated test strategy and commands
 │   ├── architecture/        # Architecture Decision Records and design notes
 │   └── jira/                # Jira task deliverables and approved baselines
@@ -102,7 +104,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 and NFA-23 provide the backend account lifecycle, NFA-24 connects that lifecycle to a responsive frontend, and NFA-25 protects user-owned saved content. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 defines the approved database model, NFA-21 provides its migrations and seed process, NFA-22 to NFA-26 provide the tested secure account lifecycle, and NFA-28 provides a swappable fixture-first news-source boundary. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -116,6 +118,7 @@ The frontend and backend directories contain working application foundations. Po
 | `infrastructure/docker` | Docker and local dependency configuration |
 | `docs/architecture` | Architecture decisions and technical design records |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
+| `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
 | `docs/testing.md` | Account-security test layers, coverage, isolation, commands, and CI behaviour |
 | `docs/jira` | Approved Jira deliverables and project-governance evidence |
 | `docs/development-setup.md` | Software requirements, setup, configuration, testing, verification, and troubleshooting |
@@ -176,6 +179,8 @@ NFA-22 adds `POST /api/v1/auth/register`. It validates and normalises the email 
 NFA-23 adds `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, and `POST /api/v1/auth/logout`. A successful login verifies the Argon2id password hash, creates an absolute-expiry PostgreSQL session, and sends a random session identifier in an HTTP-only cookie. PostgreSQL stores only its SHA-256 hash. The current-user endpoint rejects missing, expired, revoked, and disabled-user sessions. Logout requires a session-specific CSRF token, revokes the server record, and expires the browser cookies. Login attempts are rate limited, invalid credentials use one generic response, and deployment cookies automatically require HTTPS in staging and production.
 
 NFA-25 adds private content-library endpoints under `/api/v1/library/items`. Every create, list, read, update, delete, and export operation derives its owner from the active session and includes that owner in the persistence query. Request bodies cannot set `user_id`. State changes require CSRF proof, private responses are not cacheable, and missing resources look identical to another user's resources. The complete rules and test evidence are in [the object-level authorisation guide](docs/authorization.md).
+
+NFA-28 adds a provider-neutral `NewsProvider` interface in the FastAPI backend. The bundled provider maps original synthetic records into the approved NFA-6 article structure, including provenance, attribution, rights, permitted content, timestamps, and safe HTTPS URLs. Provider pages support opaque cursors and incremental publication-date filtering. Application services receive the interface through dependency injection, so a future authorised adapter can replace the fixture provider without spreading provider-specific field names through the application. Live CNN access remains unavailable. See the [source-provider interface guide](docs/source-provider-interface.md).
 
 ### Secure local configuration
 
@@ -244,7 +249,7 @@ pytest
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
-NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) for coverage, isolation rules, and targeted commands.
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 adds isolated provider-contract tests covering mapping, invalid data, safe errors, cursor pagination, incremental filtering, provider replacement, and explicit fixture-mode selection. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and [source-provider guide](docs/source-provider-interface.md) for targeted commands.
 
 ## Key delivery gates
 
@@ -266,7 +271,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review the NFA-26 account-security tests, reusable fixtures, PostgreSQL safety gate, documentation, and GitHub quality workflow. Commit and merge the implementation through the normal workflow, confirm both GitHub quality jobs pass, and record the evidence links in Jira. The application does not yet make OpenAI API requests or connect to a live news source.
+Review the NFA-28 source-provider models, interface, fixture adapter, error handling, pagination tests, and documentation. Commit and merge the implementation through the normal workflow, confirm the GitHub quality jobs pass, and record the evidence links in Jira. The application does not yet make OpenAI API requests or connect to a live news source.
 
 ## Licence
 
