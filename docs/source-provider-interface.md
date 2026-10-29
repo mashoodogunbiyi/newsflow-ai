@@ -34,12 +34,14 @@ This separation prevents CNN-specific field names or response formats from sprea
 |---|---|
 | `apps/api/app/providers/base.py` | Defines the typed `NewsProvider` protocol. |
 | `apps/api/app/providers/models.py` | Defines strict provider-neutral requests, pages, article fields, attribution, and rights data. |
+| `apps/api/app/providers/normalisation.py` | Maps approved provider fields and applies NFA-30 rights, text, date, category, and URL rules. |
 | `apps/api/app/providers/exceptions.py` | Defines stable and safe errors for callers. |
 | `apps/api/app/providers/fixture_provider.py` | Maps original synthetic records into the approved NFA-6 contract. |
 | `apps/api/app/providers/cnn_adapter.py` | Provides the NFA-29 disabled CNN boundary required by the active No-Go decision. |
 | `apps/api/app/providers/factory.py` | Enables only the provider selected through validated configuration. |
 | `apps/api/app/providers/service.py` | Demonstrates a consumer that depends only on the interface. |
 | `apps/api/tests/test_source_provider.py` | Verifies mapping, validation, errors, pagination, replacement, and authorisation controls. |
+| `apps/api/tests/test_article_normalisation.py` | Verifies valid, invalid, unsafe, prohibited, and differently shaped article records. |
 
 ## Provider agreement
 
@@ -66,7 +68,7 @@ The `NewsArticle` model implements the approved NFA-6 fixture-first contract. It
 - Rights decision, access method, storage permission, display permission, expiry, and retention rule.
 - Retrieval and modification timestamps.
 
-Pydantic rejects missing required values, unknown fields, unsafe URLs, invalid timestamps, HTML-like markup, inconsistent permission states, and mismatched attribution URLs. Provider-specific data never passes directly into the database, frontend, or future OpenAI integration.
+NFA-30 adds an explicit allowlist and normalisation service before this final model. It reads only the fields approved by the active source policy, maps provider names, normalises text and timezone-aware timestamps, validates HTTPS URLs against an approved host list, and supplies trusted attribution and provenance. Pydantic then rejects missing required values, unknown output fields, unsafe URLs, invalid timestamps, HTML-like markup, inconsistent permission states, and mismatched attribution URLs. Provider-specific data never passes directly into the database, frontend, or future OpenAI integration. See the [article normalisation guide](article-normalisation.md) for the complete rules and tests.
 
 ## Pagination and incremental retrieval
 

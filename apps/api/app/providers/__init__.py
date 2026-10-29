@@ -23,17 +23,31 @@ from app.providers.models import (
     ProviderPage,
     RightsMetadata,
 )
+from app.providers.normalisation import (
+    FIXTURE_NORMALISATION_POLICY,
+    ArticleFieldMapping,
+    ArticleNormalisationError,
+    ArticleNormalisationErrorCode,
+    ArticleNormalisationPolicy,
+    ArticleNormalisationService,
+)
 from app.providers.service import ArticleDiscoveryService
 
 __all__ = [
     "ArticleCategory",
     "ArticleDiscoveryService",
+    "ArticleFieldMapping",
+    "ArticleNormalisationError",
+    "ArticleNormalisationErrorCode",
+    "ArticleNormalisationPolicy",
+    "ArticleNormalisationService",
     "ArticleNotFoundError",
     "ArticleQuery",
     "Attribution",
     "CnnAdapterDecision",
     "CnnSourceAdapter",
     "FixtureNewsProvider",
+    "FIXTURE_NORMALISATION_POLICY",
     "InvalidProviderCursorError",
     "NewsArticle",
     "NewsProvider",

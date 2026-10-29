@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation.
 
 ## Requirements
 
@@ -249,6 +249,32 @@ pytest tests/test_cnn_adapter.py
 
 See the [NFA-29 CNN adapter record](../../docs/cnn-adapter.md) for the blocked acceptance criteria and future activation requirements.
 
+### Normalise provider article data
+
+NFA-30 sends every synthetic fixture record through `ArticleNormalisationService` before the provider returns a `NewsArticle`. The service works at the provider boundary, before future database storage or application use.
+
+The active policy:
+
+- Reads only the approved synthetic fixture fields.
+- Maps provider-specific names such as `headline` and `link` into the standard article model.
+- Converts timezone-aware timestamps to UTC.
+- Normalises Unicode and whitespace without inventing missing facts.
+- Rejects raw, encoded, or incomplete HTML-like markup and unsupported control characters.
+- Accepts only HTTPS URLs on the policy's approved `example.invalid` host.
+- Supplies attribution, provenance, and rights values from trusted policy configuration.
+- Returns stable, safe errors without repeating restricted provider content.
+
+The final Pydantic `NewsArticle` model provides a second contract-validation layer. Extra provider fields, such as images, internal notes, or unlicensed full text, are not copied into that model.
+
+Run the focused tests:
+
+```bash
+pytest tests/test_article_normalisation.py
+pytest tests/test_source_provider.py tests/test_cnn_adapter.py
+```
+
+See the [complete article normalisation guide](../../docs/article-normalisation.md) for the allowlist, processing rules, errors, tests, and future-provider requirements.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -372,7 +398,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, and the NFA-29 fail-closed CNN boundary.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the NFA-26 account-security regression journey, the NFA-28 provider contract, the NFA-29 fail-closed CNN boundary, and the NFA-30 article normalisation and sanitisation rules.
 
 ## Project structure
 
@@ -394,7 +420,7 @@ apps/api/
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
-|   |-- providers/              # Provider protocol, fixture, and disabled CNN boundary
+|   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
@@ -411,6 +437,7 @@ apps/api/
 |-- tests/support/              # Synthetic repositories and test safety helpers
 |-- tests/test_account_security_regression.py # Full fast security journey
 |-- tests/test_account_security_integration.py # Opt-in PostgreSQL ownership proof
+|-- tests/test_article_normalisation.py # Article mapping, validation, sanitisation, and rights tests
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests
