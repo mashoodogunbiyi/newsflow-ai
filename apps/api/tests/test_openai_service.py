@@ -12,7 +12,7 @@ from pydantic import SecretStr, ValidationError
 
 from app.core.ai_config import OpenAIServiceConfiguration
 from app.core.config import OpenAIConfigurationError, Settings
-from app.models.ai import AITextGenerationRequest
+from app.models.ai import AIJsonSchemaFormat, AITextGenerationRequest
 from app.services.openai_service import (
     OpenAIAuthenticationFailure,
     OpenAIInvalidResponseError,
@@ -124,6 +124,38 @@ def test_successful_generation_returns_structured_result_and_usage() -> None:
             "instructions": "Write a factual professional draft.",
         }
     ]
+
+
+def test_strict_json_schema_is_forwarded_to_responses_api() -> None:
+    client = FakeClient(successful_response(output_text='{"status":"ready"}'))
+    service = OpenAIService(configuration=configuration(), client=client)
+    schema = {
+        "type": "object",
+        "properties": {"status": {"type": "string"}},
+        "required": ["status"],
+        "additionalProperties": False,
+    }
+
+    run(
+        service.generate_text(
+            AITextGenerationRequest(
+                input_text="Synthetic authorised input.",
+                json_schema_format=AIJsonSchemaFormat(
+                    name="test_response",
+                    schema_definition=schema,
+                ),
+            )
+        )
+    )
+
+    assert client.responses.calls[0]["text"] == {
+        "format": {
+            "type": "json_schema",
+            "name": "test_response",
+            "strict": True,
+            "schema": schema,
+        }
+    }
 
 
 def test_sdk_client_receives_secret_timeout_and_bounded_retry_configuration() -> None:

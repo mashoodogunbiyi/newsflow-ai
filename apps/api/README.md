@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence.
 
 ## Requirements
 
@@ -56,6 +56,8 @@ ARTICLE_SYNC_RETRY_BASE_SECONDS=1
 ARTICLE_SYNC_LEASE_SECONDS=300
 MANUAL_SYNC_RATE_LIMIT_ATTEMPTS=2
 MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS=60
+GENERATION_RATE_LIMIT_ATTEMPTS=10
+GENERATION_RATE_LIMIT_WINDOW_SECONDS=60
 INGESTION_METRICS_ENABLED=true
 INGESTION_METRICS_WINDOW_HOURS=24
 INGESTION_FAILURE_THRESHOLD=3
@@ -97,6 +99,8 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `ARTICLE_SYNC_LEASE_SECONDS` | No | No | Active worker lease duration; defaults to 300 seconds. |
 | `MANUAL_SYNC_RATE_LIMIT_ATTEMPTS` | No | No | Manual triggers per administrator and window; defaults to 2. |
 | `MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS` | No | No | Manual trigger rate-limit window; defaults to 60 seconds. |
+| `GENERATION_RATE_LIMIT_ATTEMPTS` | No | No | LinkedIn generation requests per authenticated user and window; defaults to 10. |
+| `GENERATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | LinkedIn generation rate-limit window; defaults to 60 seconds. |
 | `INGESTION_METRICS_ENABLED` | No | No | Enables ingestion aggregate calculation; defaults to `true`. |
 | `INGESTION_METRICS_WINDOW_HOURS` | No | No | Default metrics window from 1 to 168 hours; defaults to 24. |
 | `INGESTION_FAILURE_THRESHOLD` | No | No | Consecutive failures before critical health; defaults to 3. |
@@ -424,6 +428,21 @@ The builder puts static application policy and validated preference wording in t
 
 The initial `linkedin_post_v1` template supports professional, conversational, and analytical tones plus short, medium, and long length bands. It requires JSON output, prohibits invented facts, statistics, quotations, names, dates, and events, and defines an insufficiency response. The [LinkedIn prompting guide](../../docs/linkedin-prompting.md) records the full contract, version history, evaluation cases, security controls, tests, and limitations.
 
+### Generate and retrieve private LinkedIn drafts
+
+NFA-40 provides these authenticated endpoints:
+
+```text
+POST /api/v1/linkedin-drafts
+GET  /api/v1/linkedin-drafts/{draft_id}
+```
+
+The POST endpoint requires the HTTP-only session cookie, CSRF proof, an article ID, and validated tone and length choices. It loads the current PostgreSQL snapshot, verifies current AI-processing and derivative-output rights, builds the NFA-39 prompt, calls the NFA-38 OpenAI service, validates strict JSON and configured word limits, and stores a private draft. The result always has `status = "draft"` and `review_required = true`; nothing is published automatically.
+
+The optional `Idempotency-Key` header prevents repeated storage for one completed request. Per-user generation requests are limited to 10 per 60 seconds by default. The GET endpoint includes the authenticated owner in its database query, so a missing draft and another user's draft share the same HTTP 404 response.
+
+The OpenAI key remains server-side. Prompt text is not persisted, and logs exclude article text and generated prose. PostgreSQL records the source snapshot, exact rights version, prompt version, model identifier, provider request reference, and available token usage. See the [LinkedIn generation service guide](../../docs/linkedin-generation-service.md) for the complete workflow, API examples, errors, controls, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -449,13 +468,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261029_0006`, this command removes the NFA-35 observability fields and indexes. A second downgrade removes the NFA-34 catalogue ordering index, and a third removes the NFA-33 synchronisation tables and administrator-role column. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261029_0007`, this command removes the NFA-40 rights-version generation evidence column and index. A second downgrade removes the NFA-35 observability fields and indexes. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -478,7 +497,7 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
-The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, and NFA-39 grounding, field filtering, rights, preferences, insufficiency, injection protection, versioning, and evaluation examples.
+The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, NFA-39 grounding and prompt controls, and NFA-40 authenticated orchestration, rights gates, strict output validation, limits, idempotency, and private draft access.
 
 Run the focused NFA-38 tests with:
 
@@ -490,6 +509,15 @@ Run the focused NFA-39 tests with:
 
 ```bash
 pytest tests/test_prompt_builder.py
+```
+
+Run the focused NFA-40 tests with:
+
+```bash
+pytest tests/test_openai_service.py \
+  tests/test_prompt_builder.py \
+  tests/test_linkedin_generation_service.py \
+  tests/test_linkedin_generation_api.py
 ```
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
@@ -626,6 +654,7 @@ apps/api/
 |   |-- models/article_catalogue.py # Catalogue query and public response schemas
 |   |-- models/ai.py            # Masked generation input and structured result
 |   |-- models/generation_preferences.py # LinkedIn choices, references, and prompt package
+|   |-- models/linkedin_generation.py # Generation request, model output, draft, and API schemas
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- prompts/linkedin_post.py # Versioned trusted LinkedIn instructions and limits
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
@@ -635,6 +664,7 @@ apps/api/
 |   |-- repositories/article_catalogue.py # Rights-aware article catalogue queries
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
+|   |-- repositories/linkedin_generation.py # Current article read and private draft persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
 |   |-- security/               # Argon2id and authentication rate limiting
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
@@ -648,6 +678,7 @@ apps/api/
 |   |-- services/library.py     # Private saved-content workflow
 |   |-- services/openai_service.py # Secure reusable Responses API boundary
 |   |-- services/prompt_builder.py # Rights-aware grounded prompt construction
+|   |-- services/linkedin_generation.py # Authenticated generation orchestration
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
@@ -679,6 +710,8 @@ apps/api/
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test
 |-- tests/test_openai_service.py # Mocked OpenAI success, failure, usage, and security tests
 |-- tests/test_prompt_builder.py # Grounding, rights, preference, injection, and version tests
+|-- tests/test_linkedin_generation_service.py # Generation workflow, output, rights, and isolation tests
+|-- tests/test_linkedin_generation_api.py # Authenticated API, validation, and rate-limit tests
 |-- tests/test_passwords.py      # Argon2id hashing tests
 |-- tests/test_rate_limit.py     # Registration abuse-control tests
 |-- tests/test_registration.py   # Registration API tests

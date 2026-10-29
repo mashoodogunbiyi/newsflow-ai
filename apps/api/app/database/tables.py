@@ -432,19 +432,76 @@ class GeneratedPostTable(Base):
 
     __tablename__ = "generated_posts"
 
-    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
-    user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
-    article_snapshot_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), nullable=False
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
-    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    article_snapshot_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("article_snapshots.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'draft'")
+    )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class GenerationRunTable(Base):
+    """Application mapping for one bounded AI generation attempt."""
+
+    __tablename__ = "generation_runs"
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    generated_post_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generated_posts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    article_rights_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("article_rights_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    generation_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_template_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    prompt_text: Mapped[str] = mapped_column(Text, nullable=False)
+    provider_request_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    attempt_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("1")
+    )
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    safe_error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -454,16 +511,61 @@ class PostVersionTable(Base):
 
     __tablename__ = "post_versions"
 
-    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
-    generated_post_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), nullable=False
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
+    generated_post_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generated_posts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    generation_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generation_runs.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    previous_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    origin: Mapped[str] = mapped_column(String(20), nullable=False)
+    tone: Mapped[str] = mapped_column(String(30), nullable=False)
+    length_option: Mapped[str] = mapped_column(String(20), nullable=False)
+    audience: Mapped[str] = mapped_column(String(40), nullable=False)
+    hook: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    insight: Mapped[str | None] = mapped_column(Text, nullable=True)
+    call_to_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     rendered_text: Mapped[str] = mapped_column(Text, nullable=False)
     source_attribution: Mapped[str] = mapped_column(String(500), nullable=False)
-    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_current: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
     )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class PostVersionHashtagTable(Base):
+    """Application mapping for ordered hashtags attached to a post version."""
+
+    __tablename__ = "post_version_hashtags"
+
+    post_version_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("post_versions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    hashtag: Mapped[str] = mapped_column(String(100), nullable=False)
 
 
 class GeneratedImageTable(Base):

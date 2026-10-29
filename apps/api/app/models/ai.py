@@ -1,6 +1,21 @@
 """Internal structured requests and results for AI text generation."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+
+
+class AIJsonSchemaFormat(BaseModel):
+    """Application-owned strict JSON schema requested from the AI provider."""
+
+    name: str = Field(
+        min_length=1,
+        max_length=64,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    )
+    schema_definition: dict[str, Any]
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class AITextGenerationRequest(BaseModel):
@@ -18,6 +33,7 @@ class AITextGenerationRequest(BaseModel):
         description="Optional sensitive instructions for this generation.",
     )
     max_output_tokens: int | None = Field(default=None, ge=1, le=100_000)
+    json_schema_format: AIJsonSchemaFormat | None = None
 
     @field_validator("input_text", "instructions")
     @classmethod

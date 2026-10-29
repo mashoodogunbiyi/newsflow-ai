@@ -120,6 +120,14 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         "error_category",
         "failed_stage",
     } <= sync_columns
+    generation_columns = {
+        column["name"] for column in sa.inspect(engine).get_columns("generation_runs")
+    }
+    assert "article_rights_version_id" in generation_columns
+    generation_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("generation_runs")
+    }
+    assert "ix_generation_runs_article_rights_version" in generation_indexes
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
     }

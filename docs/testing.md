@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, and NFA-39 grounded prompt construction.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, and NFA-40 private LinkedIn draft generation.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -10,7 +10,7 @@ The test suite is designed to detect security regressions before a pull request 
 
 | Layer | Location | Purpose |
 |---|---|---|
-| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, CSRF, safe errors, and authorisation. |
+| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, generation orchestration, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
@@ -178,6 +178,34 @@ pytest tests/test_prompt_builder.py
 
 The tests construct prompts from original synthetic fixture data. They do not call OpenAI, use a real credential, or evaluate live CNN information.
 
+## NFA-40 LinkedIn generation coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Article, rights, prompt, OpenAI, validation, and persistence orchestration | `test_linkedin_generation_service.py` |
+| Authentication and validated tone and length input | `test_linkedin_generation_api.py` |
+| Missing article and denied or missing rights | `test_linkedin_generation_service.py` |
+| Insufficient permitted source information | `test_linkedin_generation_service.py` |
+| Strict Responses API JSON Schema forwarding | `test_openai_service.py` and `test_linkedin_generation_service.py` |
+| Empty, malformed, contradictory, and out-of-range output rejection | `test_linkedin_generation_service.py` |
+| OpenAI timeout and safe failure handling | Service and API tests |
+| Per-user rate limit and retry delay | `test_linkedin_generation_api.py` |
+| Idempotent completed requests | `test_linkedin_generation_service.py` |
+| Exact source and rights-version preservation | `test_linkedin_generation_service.py` |
+| Owner-only private draft retrieval | `test_linkedin_generation_service.py` |
+| Human review and no automatic publication | Service and API response tests |
+
+Run the focused NFA-40 tests from `apps/api`:
+
+```bash
+pytest tests/test_openai_service.py \
+  tests/test_prompt_builder.py \
+  tests/test_linkedin_generation_service.py \
+  tests/test_linkedin_generation_api.py
+```
+
+The OpenAI client, model result, article, rights decision, and users are synthetic. No focused or normal test makes a live OpenAI request, accesses live CNN information, or requires a real credential.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -266,16 +294,17 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 203 tests and safely skipped 11 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 80.95 percent, above the enforced 75 percent floor.
+- The normal backend run passed 216 tests and safely skipped 11 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 78.28 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
-- Each NFA-36 test applied all migrations through `20261029_0006` and rolled the disposable schema back afterwards.
+- Each NFA-36 test applied all migrations through `20261029_0007` and rolled the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
+- The focused NFA-40 generation run passed 58 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, and NFA-39
+- Jira issues covered: NFA-36, NFA-38, NFA-39, and NFA-40
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

@@ -137,6 +137,15 @@ class OpenAIService:
         }
         if request.instructions is not None:
             arguments["instructions"] = request.instructions.get_secret_value()
+        if request.json_schema_format is not None:
+            arguments["text"] = {
+                "format": {
+                    "type": "json_schema",
+                    "name": request.json_schema_format.name,
+                    "strict": True,
+                    "schema": request.json_schema_format.schema_definition,
+                }
+            }
 
         try:
             response = await self._client.responses.create(**arguments)
