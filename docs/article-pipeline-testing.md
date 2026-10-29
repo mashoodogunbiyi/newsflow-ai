@@ -138,7 +138,7 @@ Verified locally on 29 October 2026:
 - Normal backend suite: 169 passed and 11 safety-gated PostgreSQL tests skipped.
 - Measured backend coverage: 77 percent with branch coverage enabled.
 - NFA-36 isolated PostgreSQL suite: 3 passed.
-- NFA-36 database schema: all migrations through `20261029_0006` applied for each test and rolled back afterwards.
+- Current database schema: all migrations through `20261029_0007` applied for each test and rolled back afterwards.
 - Live CNN requests made: 0.
 - Real news content, production credentials, and real personal data used: 0.
 

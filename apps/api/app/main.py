@@ -18,6 +18,7 @@ from app.api.routes.ingestion_observability import (
     router as ingestion_observability_router,
 )
 from app.api.routes.library import router as library_router
+from app.api.routes.linkedin_generation import router as linkedin_generation_router
 from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging_config import configure_logging
@@ -36,11 +37,19 @@ from app.repositories.article_catalogue import (
     ArticleCatalogueRepository,
     SqlAlchemyArticleCatalogueRepository,
 )
+from app.repositories.article_rights import (
+    ArticleRightsRepository,
+    SqlAlchemyArticleRightsRepository,
+)
 from app.repositories.article_sync import (
     ArticleSyncRepository,
     SqlAlchemyArticleSyncRepository,
 )
 from app.repositories.articles import SqlAlchemyArticleRepository
+from app.repositories.linkedin_generation import (
+    LinkedInGenerationRepository,
+    SqlAlchemyLinkedInGenerationRepository,
+)
 from app.security import (
     Argon2PasswordHasher,
     InMemoryRateLimiter,
@@ -50,8 +59,14 @@ from app.security import (
 from app.services import AuthenticationService, RegistrationService, SavedContentService
 from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
+from app.services.article_rights import ArticleRightsService
 from app.services.article_sync import ArticleSyncService
 from app.services.ingestion_observability import IngestionObservabilityService
+from app.services.linkedin_generation import (
+    AITextGeneratorFactory,
+    LinkedInGenerationService,
+)
+from app.services.openai_service import OpenAIService
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +87,11 @@ def create_app(
     article_sync_service: ArticleSyncService | None = None,
     manual_sync_rate_limiter: InMemoryRateLimiter | None = None,
     ingestion_observability_service: IngestionObservabilityService | None = None,
+    article_rights_repository: ArticleRightsRepository | None = None,
+    linkedin_generation_repository: LinkedInGenerationRepository | None = None,
+    linkedin_generation_service: LinkedInGenerationService | None = None,
+    openai_factory: AITextGeneratorFactory | None = None,
+    generation_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
 
@@ -117,11 +137,15 @@ def create_app(
         configured_article_sync_repository = article_sync_repository
         configured_article_sync_service = article_sync_service
         configured_ingestion_observability_service = ingestion_observability_service
+        configured_article_rights_repository = article_rights_repository
+        configured_linkedin_generation_repository = linkedin_generation_repository
+        configured_linkedin_generation_service = linkedin_generation_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
             or configured_saved_content_repository is None
             or configured_article_catalogue_service is None
+            or configured_linkedin_generation_service is None
             or (
                 application_settings.news_source_mode == "fixture"
                 and (
@@ -156,6 +180,25 @@ def create_app(
             if configured_article_catalogue_service is None:
                 configured_article_catalogue_service = ArticleCatalogueService(
                     configured_article_catalogue_repository
+                )
+            if configured_article_rights_repository is None:
+                configured_article_rights_repository = (
+                    SqlAlchemyArticleRightsRepository(sqlalchemy_database)
+                )
+            if configured_linkedin_generation_repository is None:
+                configured_linkedin_generation_repository = (
+                    SqlAlchemyLinkedInGenerationRepository(sqlalchemy_database)
+                )
+            if configured_linkedin_generation_service is None:
+                assert configured_article_rights_repository is not None
+                assert configured_linkedin_generation_repository is not None
+                configured_linkedin_generation_service = LinkedInGenerationService(
+                    repository=configured_linkedin_generation_repository,
+                    rights=ArticleRightsService(configured_article_rights_repository),
+                    openai_factory=(
+                        openai_factory
+                        or (lambda: OpenAIService.from_settings(application_settings))
+                    ),
                 )
             if (
                 application_settings.news_source_mode == "fixture"
@@ -230,6 +273,9 @@ def create_app(
         application.state.ingestion_observability_service = (
             configured_ingestion_observability_service
         )
+        application.state.linkedin_generation_service = (
+            configured_linkedin_generation_service
+        )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
             or InMemoryRateLimiter(
@@ -252,6 +298,15 @@ def create_app(
                 max_attempts=(application_settings.manual_sync_rate_limit_attempts),
                 window_seconds=(
                     application_settings.manual_sync_rate_limit_window_seconds
+                ),
+            )
+        )
+        application.state.generation_rate_limiter = (
+            generation_rate_limiter
+            or InMemoryRateLimiter(
+                max_attempts=application_settings.generation_rate_limit_attempts,
+                window_seconds=(
+                    application_settings.generation_rate_limit_window_seconds
                 ),
             )
         )
@@ -281,7 +336,7 @@ def create_app(
         allow_origins=[application_settings.frontend_origin],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "X-CSRF-Token"],
+        allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
     )
 
     @application.middleware("http")
@@ -358,6 +413,7 @@ def create_app(
     application.include_router(articles_router)
     application.include_router(article_sync_router)
     application.include_router(ingestion_observability_router)
+    application.include_router(linkedin_generation_router)
     return application
 
 

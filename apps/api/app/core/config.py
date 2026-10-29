@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     article_sync_lease_seconds: int = Field(default=300, ge=30, le=3600)
     manual_sync_rate_limit_attempts: int = Field(default=2, ge=1, le=20)
     manual_sync_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    generation_rate_limit_attempts: int = Field(default=10, ge=1, le=100)
+    generation_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     ingestion_metrics_enabled: bool = True
     ingestion_metrics_window_hours: int = Field(default=24, ge=1, le=168)
     ingestion_failure_threshold: int = Field(default=3, ge=1, le=20)

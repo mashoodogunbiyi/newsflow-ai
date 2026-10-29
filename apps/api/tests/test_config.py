@@ -180,3 +180,10 @@ def test_article_sync_settings_have_bounded_defaults() -> None:
     assert settings.ingestion_success_stale_seconds == 21_600
     assert settings.ingestion_long_running_seconds == 600
     assert settings.ingestion_rejection_rate_percent == 25
+
+
+def test_linkedin_generation_rate_limit_has_bounded_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.generation_rate_limit_attempts == 10
+    assert settings.generation_rate_limit_window_seconds == 60
