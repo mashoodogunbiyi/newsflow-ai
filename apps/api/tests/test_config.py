@@ -114,3 +114,15 @@ def test_authentication_settings_have_safe_defaults() -> None:
     assert settings.frontend_origin == "http://localhost:3000"
     assert settings.session_cookie_secure is False
     assert Settings(_env_file=None, app_env="production").session_cookie_secure is True
+
+
+def test_article_sync_settings_have_bounded_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.article_sync_interval_seconds == 14_400
+    assert settings.article_sync_page_size == 50
+    assert settings.article_sync_max_retries == 2
+    assert settings.article_sync_retry_base_seconds == 1
+    assert settings.article_sync_lease_seconds == 300
+    assert settings.manual_sync_rate_limit_attempts == 2
+    assert settings.manual_sync_rate_limit_window_seconds == 60

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the NFA-26 automated test strategy for account registration, authentication, session handling, frontend authentication, and object-level authorisation.
+This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -10,9 +10,9 @@ The test suite is designed to detect security regressions before a pull request 
 
 | Layer | Location | Purpose |
 |---|---|---|
-| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for validation, passwords, registration, login, sessions, CSRF, safe errors, and authorisation. |
+| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
-| PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, real constraints, password storage, sessions, and SQL owner filtering. |
+| PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, and synchronisation. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend linting, formatting, tests, type checking, and the frontend build on GitHub. |
 
@@ -47,6 +47,27 @@ The test suite is designed to detect security regressions before a pull request 
 Each fixture is function-scoped. Accounts, sessions, cookies, and private content are discarded after each test, so one test cannot affect another and repeated runs start clean.
 
 The `account_security_postgres` fixture is available only to the opt-in integration test. It requires a deliberately named disposable database, applies all Alembic migrations before the test, and removes the schema afterwards.
+
+## NFA-33 synchronisation coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Scheduled and manual workflows share one service | `test_article_sync.py` |
+| Administrator-only manual trigger and CSRF dependency | `test_admin_article_sync.py` |
+| Manual request throttling | `test_admin_article_sync.py` |
+| Pagination, statistics, and incremental checkpoint | `test_article_sync.py` and PostgreSQL sync integration |
+| Duplicate article and active-job prevention | Sync unit tests and PostgreSQL sync integration |
+| Temporary retry and permanent failure policy | `test_article_sync.py` |
+| Partial failure does not advance the checkpoint | `test_article_sync.py` |
+| Expired worker recovery | `test_article_sync.py` |
+| Live CNN remains disabled | Existing CNN adapter tests and source-profile checks |
+| Real jobs, articles, provenance, rights, and checkpoints | `test_article_sync_integration.py` |
+
+Run the fast NFA-33 tests from `apps/api`:
+
+```bash
+pytest tests/test_article_sync.py tests/test_admin_article_sync.py
+```
 
 ## Run the normal backend suite
 
@@ -100,6 +121,16 @@ The test proves against real PostgreSQL that:
 
 The other disposable database commands remain documented in the backend and local development guides.
 
+## Run the PostgreSQL synchronisation proof
+
+Create a separate disposable database whose name contains `newsflow_article_sync_test`. Never use the normal development, shared, staging, or production database.
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_article_sync_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_article_sync_integration.py
+```
+
 ## GitHub quality checks
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
@@ -113,19 +144,16 @@ Do not add real credentials to workflow files. Future CI integration databases m
 
 ## Verification record
 
-Verified locally on 28 October 2026:
+Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 61 tests and safely skipped 5 opt-in PostgreSQL tests.
-- The NFA-26 regression suite passed twice consecutively with fresh fixture state.
-- The NFA-26 PostgreSQL ownership test passed against its disposable database.
-- Frontend linting, formatting, and TypeScript checks passed.
-- All 17 frontend tests passed.
-- The Next.js production build completed successfully.
-- Workflow YAML syntax validation passed.
+- The normal backend run passed 141 tests and safely skipped 7 opt-in PostgreSQL tests.
+- The NFA-33 PostgreSQL synchronisation test passed against its disposable database.
+- The full migration, seed, rollback, and rebuild test passed through the NFA-33 migration against its disposable database.
+- No test used live CNN content, real user data, or production credentials.
 
 ## Review status
 
-- Jira issue: NFA-26
+- Jira issue: NFA-33
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

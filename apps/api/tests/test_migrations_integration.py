@@ -21,6 +21,8 @@ EXPECTED_TABLES = {
     "article_snapshots",
     "article_provenance_events",
     "article_rights_versions",
+    "article_sync_checkpoints",
+    "article_sync_jobs",
     "articles",
     "generated_images",
     "generated_posts",
@@ -97,6 +99,14 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         index["name"] for index in sa.inspect(engine).get_indexes("sessions")
     }
     assert {"ix_sessions_user_id", "ix_sessions_expires_at"} <= session_indexes
+    user_columns = {
+        column["name"] for column in sa.inspect(engine).get_columns("users")
+    }
+    assert "role" in user_columns
+    sync_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("article_sync_jobs")
+    }
+    assert "uq_article_sync_jobs_active_provider" in sync_indexes
     with engine.connect() as connection:
         assert connection.execute(sa.text("SELECT 1")).scalar_one() == 1
 

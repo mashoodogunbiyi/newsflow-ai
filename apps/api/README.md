@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 adds a reusable news-source interface and synthetic fixture provider. NFA-29 adds a disabled CNN adapter boundary enforced by the active No-Go decision. NFA-30 adds rights-aware article normalisation, validation, and sanitisation. NFA-31 adds stable article identity and atomic deduplication. NFA-32 adds immutable provenance, versioned rights metadata, and fail-closed usage checks.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds scheduled and protected manual article synchronisation with durable jobs, checkpoints, leases, statistics, and retries.
 
 ## Requirements
 
@@ -47,6 +47,13 @@ REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 LOGIN_RATE_LIMIT_ATTEMPTS=5
 LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
 SESSION_LIFETIME_MINUTES=60
+ARTICLE_SYNC_INTERVAL_SECONDS=14400
+ARTICLE_SYNC_PAGE_SIZE=50
+ARTICLE_SYNC_MAX_RETRIES=2
+ARTICLE_SYNC_RETRY_BASE_SECONDS=1
+ARTICLE_SYNC_LEASE_SECONDS=300
+MANUAL_SYNC_RATE_LIMIT_ATTEMPTS=2
+MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS=60
 OPENAI_API_KEY=your_real_openai_api_key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
@@ -69,6 +76,13 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `LOGIN_RATE_LIMIT_ATTEMPTS` | No | No | Maximum login requests per client and window; defaults to 5. |
 | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | No | Login rate-limit window; defaults to 60 seconds. |
 | `SESSION_LIFETIME_MINUTES` | No | No | Absolute authenticated-session lifetime; defaults to 60 minutes. |
+| `ARTICLE_SYNC_INTERVAL_SECONDS` | No | No | Durable scheduled interval; defaults to four hours. |
+| `ARTICLE_SYNC_PAGE_SIZE` | No | No | Provider page size from 1 to 100; defaults to 50. |
+| `ARTICLE_SYNC_MAX_RETRIES` | No | No | Extra attempts for retryable provider failures; defaults to 2. |
+| `ARTICLE_SYNC_RETRY_BASE_SECONDS` | No | No | Initial exponential-backoff delay; defaults to 1 second. |
+| `ARTICLE_SYNC_LEASE_SECONDS` | No | No | Active worker lease duration; defaults to 300 seconds. |
+| `MANUAL_SYNC_RATE_LIMIT_ATTEMPTS` | No | No | Manual triggers per administrator and window; defaults to 2. |
+| `MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS` | No | No | Manual trigger rate-limit window; defaults to 60 seconds. |
 | `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
@@ -311,6 +325,35 @@ pytest tests/test_article_rights.py tests/test_article_deduplication.py
 
 See the [article provenance and rights guide](../../docs/article-provenance-and-rights.md) for the model, constraints, update rules, integration-test command, and limitations.
 
+### Synchronise the article catalogue
+
+NFA-33 coordinates the existing provider, normalisation, deduplication, provenance, and rights components through one shared `ArticleSyncService`. PostgreSQL records every job's trigger, status, requester, lease, checkpoint, counts, safe error, and timestamps.
+
+Manual synchronisation is available only to an authenticated administrator with CSRF proof:
+
+```text
+POST /api/v1/admin/articles/sync
+GET  /api/v1/admin/articles/sync/{job_id}
+```
+
+The POST operation returns HTTP 202 with a durable job ID. It cannot bypass source enablement, active-job locking, or the manual rate limit. Ordinary users receive HTTP 403.
+
+Run the schedule-aware one-shot worker from the repository root:
+
+```bash
+docker compose exec backend python -m app.jobs.article_sync_job
+```
+
+PostgreSQL grants only one due schedule reservation and one active provider job, even when multiple processes invoke the command. Failed, partial, or interrupted jobs keep the last fully successful incremental checkpoint.
+
+Run the fast tests:
+
+```bash
+pytest tests/test_article_sync.py tests/test_admin_article_sync.py
+```
+
+See the [article synchronisation guide](../../docs/article-synchronisation.md) for administrator setup, configuration, job states, retries, recovery, scheduled deployment, testing, and troubleshooting.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -336,13 +379,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events, versioned rights metadata, the current-rights pointer, and database constraints. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261025_0002`, this command removes only the NFA-23 session additions. Downgrading all the way to `base` also runs the initial downgrade and deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261029_0004`, this command removes the synchronisation tables and administrator-role column. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -423,6 +466,14 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_article_deduplication_integration.py
 ```
 
+The NFA-33 integration test requires a separate disposable database whose name contains `newsflow_article_sync_test`. It verifies real job, administrator, checkpoint, article, provenance, rights, statistics, incremental, and active-job constraints:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_article_sync_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_article_sync_integration.py
+```
+
 See the [complete testing guide](../../docs/testing.md) before running any destructive integration test.
 
 ## Code quality
@@ -442,7 +493,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health and readiness, safe errors, secure configuration, registration, credential verification, session expiry, cookie controls, CSRF validation, logout, rate limiting, cross-user object-level authorisation, the provider boundary, normalisation, identity, deduplication, provenance, and fail-closed rights decisions.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, and NFA-33 scheduled and manual synchronisation.
 
 ## Project structure
 
@@ -454,6 +505,7 @@ apps/api/
 |   |-- api/routes/health.py    # GET /health
 |   |-- api/routes/auth.py      # Register, login, current-user, and logout APIs
 |   |-- api/routes/library.py   # Owner-scoped saved-content APIs
+|   |-- api/routes/article_sync.py # Protected manual sync and job-status APIs
 |   |-- api/dependencies.py     # Shared session and CSRF route protection
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
@@ -465,9 +517,12 @@ apps/api/
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
 |   |-- models/article_rights.py # Provenance, rights policy, and decision models
+|   |-- models/article_sync.py  # Job, checkpoint, status, and statistics models
+|   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
 |   |-- repositories/article_rights.py # Rights versions and provenance queries
+|   |-- repositories/article_sync.py # Jobs, leases, checkpoints, and admin checks
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
@@ -475,6 +530,7 @@ apps/api/
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
 |   |-- services/article_deduplication.py # Idempotent article ingestion workflow
 |   |-- services/article_rights.py # Fail-closed permission checks and updates
+|   |-- services/article_sync.py # Scheduled and manual synchronisation workflow
 |   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
@@ -490,6 +546,9 @@ apps/api/
 |-- tests/test_article_normalisation.py # Article mapping, validation, sanitisation, and rights tests
 |-- tests/test_article_deduplication.py # Fast identity, update, conflict, and concurrency tests
 |-- tests/test_article_deduplication_integration.py # Opt-in PostgreSQL deduplication proof
+|-- tests/test_article_sync.py # Fast scheduled, manual, retry, and checkpoint tests
+|-- tests/test_admin_article_sync.py # Protected manual sync API tests
+|-- tests/test_article_sync_integration.py # Opt-in PostgreSQL sync workflow proof
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests

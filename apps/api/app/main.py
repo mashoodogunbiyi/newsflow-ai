@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
+from app.api.routes.article_sync import router as article_sync_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
 from app.api.routes.library import router as library_router
@@ -17,6 +18,7 @@ from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.database import DatabaseConnection, DatabaseConnectionError, PostgresDatabase
 from app.database.sqlalchemy import SqlAlchemyDatabase
+from app.providers.factory import create_news_provider
 from app.repositories import (
     AuthenticationRepository,
     SavedContentRepository,
@@ -25,6 +27,11 @@ from app.repositories import (
     SqlAlchemyUserRepository,
     UserRepository,
 )
+from app.repositories.article_sync import (
+    ArticleSyncRepository,
+    SqlAlchemyArticleSyncRepository,
+)
+from app.repositories.articles import SqlAlchemyArticleRepository
 from app.security import (
     Argon2PasswordHasher,
     InMemoryRateLimiter,
@@ -32,6 +39,8 @@ from app.security import (
     RateLimitExceeded,
 )
 from app.services import AuthenticationService, RegistrationService, SavedContentService
+from app.services.article_deduplication import ArticleDeduplicationService
+from app.services.article_sync import ArticleSyncService
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +55,9 @@ def create_app(
     authentication_repository: AuthenticationRepository | None = None,
     login_rate_limiter: InMemoryRateLimiter | None = None,
     saved_content_repository: SavedContentRepository | None = None,
+    article_sync_repository: ArticleSyncRepository | None = None,
+    article_sync_service: ArticleSyncService | None = None,
+    manual_sync_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
 
@@ -82,10 +94,19 @@ def create_app(
         configured_user_repository = user_repository
         configured_authentication_repository = authentication_repository
         configured_saved_content_repository = saved_content_repository
+        configured_article_sync_repository = article_sync_repository
+        configured_article_sync_service = article_sync_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
             or configured_saved_content_repository is None
+            or (
+                application_settings.news_source_mode == "fixture"
+                and (
+                    configured_article_sync_repository is None
+                    or configured_article_sync_service is None
+                )
+            )
         ):
             database_url = database_url or application_settings.require_database_url()
             sqlalchemy_database = SqlAlchemyDatabase(
@@ -106,6 +127,34 @@ def create_app(
                 configured_saved_content_repository = SqlAlchemySavedContentRepository(
                     sqlalchemy_database
                 )
+            if (
+                application_settings.news_source_mode == "fixture"
+                and configured_article_sync_repository is None
+            ):
+                configured_article_sync_repository = SqlAlchemyArticleSyncRepository(
+                    sqlalchemy_database
+                )
+            if (
+                application_settings.news_source_mode == "fixture"
+                and configured_article_sync_service is None
+            ):
+                assert configured_article_sync_repository is not None
+                configured_article_sync_service = ArticleSyncService(
+                    provider=create_news_provider(application_settings),
+                    source_profile_key="fixture-v1",
+                    ingestion=ArticleDeduplicationService(
+                        SqlAlchemyArticleRepository(sqlalchemy_database)
+                    ),
+                    repository=configured_article_sync_repository,
+                    page_size=application_settings.article_sync_page_size,
+                    max_retries=application_settings.article_sync_max_retries,
+                    retry_base_seconds=(
+                        application_settings.article_sync_retry_base_seconds
+                    ),
+                    lease_duration=timedelta(
+                        seconds=application_settings.article_sync_lease_seconds
+                    ),
+                )
 
         configured_password_hasher = password_hasher or Argon2PasswordHasher()
         application.state.registration_service = RegistrationService(
@@ -122,6 +171,8 @@ def create_app(
         application.state.saved_content_service = SavedContentService(
             configured_saved_content_repository
         )
+        application.state.article_sync_repository = configured_article_sync_repository
+        application.state.article_sync_service = configured_article_sync_service
         application.state.registration_rate_limiter = (
             registration_rate_limiter
             or InMemoryRateLimiter(
@@ -136,6 +187,15 @@ def create_app(
             or InMemoryRateLimiter(
                 max_attempts=application_settings.login_rate_limit_attempts,
                 window_seconds=application_settings.login_rate_limit_window_seconds,
+            )
+        )
+        application.state.manual_sync_rate_limiter = (
+            manual_sync_rate_limiter
+            or InMemoryRateLimiter(
+                max_attempts=(application_settings.manual_sync_rate_limit_attempts),
+                window_seconds=(
+                    application_settings.manual_sync_rate_limit_window_seconds
+                ),
             )
         )
 
@@ -238,6 +298,7 @@ def create_app(
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(library_router)
+    application.include_router(article_sync_router)
     return application
 
 
