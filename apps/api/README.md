@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service for future E4 generation workflows.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction.
 
 ## Requirements
 
@@ -416,6 +416,14 @@ The service returns generated text, model and request identifiers, and available
 
 No public FastAPI generation endpoint is included in NFA-38. A later E4 workflow must authenticate and authorise the user, apply NFA-32 rights checks, supply only permitted article information, enforce user-level limits, and then call this internal service. See the [OpenAI integration guide](../../docs/openai-integration.md) for configuration, usage, error policy, security controls, tests, and limitations.
 
+### Build source-grounded LinkedIn prompts
+
+NFA-39 adds `LinkedInPromptBuilder` between the article-rights service and the OpenAI service. It accepts a validated NFA-6 article, the current NFA-32 AI-generation decision, and strict tone and length preferences. It fails closed when the decision is denied or mismatched, content is restricted, attribution is incomplete, or permitted factual content is missing.
+
+The builder puts static application policy and validated preference wording in the higher-priority instructions. It serialises only title, source name, publication date, category, description, and explicitly permitted content into separate untrusted JSON input. The canonical URL, attribution, provider item ID, and rights-version ID remain in the prompt package outside model-generated prose.
+
+The initial `linkedin_post_v1` template supports professional, conversational, and analytical tones plus short, medium, and long length bands. It requires JSON output, prohibits invented facts, statistics, quotations, names, dates, and events, and defines an insufficiency response. The [LinkedIn prompting guide](../../docs/linkedin-prompting.md) records the full contract, version history, evaluation cases, security controls, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -470,12 +478,18 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
-The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, and the NFA-38 OpenAI success, usage, cost-control, error, retry, and redaction behaviours.
+The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, and NFA-39 grounding, field filtering, rights, preferences, insufficiency, injection protection, versioning, and evaluation examples.
 
 Run the focused NFA-38 tests with:
 
 ```bash
 pytest tests/test_config.py tests/test_openai_service.py
+```
+
+Run the focused NFA-39 tests with:
+
+```bash
+pytest tests/test_prompt_builder.py
 ```
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
@@ -579,7 +593,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, and the mocked NFA-38 OpenAI boundary. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, the mocked NFA-38 OpenAI boundary, and the NFA-39 prompt builder. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
 
 ## Project structure
 
@@ -611,7 +625,9 @@ apps/api/
 |   |-- models/ingestion_observability.py # Metrics and health response schemas
 |   |-- models/article_catalogue.py # Catalogue query and public response schemas
 |   |-- models/ai.py            # Masked generation input and structured result
+|   |-- models/generation_preferences.py # LinkedIn choices, references, and prompt package
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
+|   |-- prompts/linkedin_post.py # Versioned trusted LinkedIn instructions and limits
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
 |   |-- repositories/article_rights.py # Rights versions and provenance queries
@@ -631,6 +647,7 @@ apps/api/
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
 |   |-- services/openai_service.py # Secure reusable Responses API boundary
+|   |-- services/prompt_builder.py # Rights-aware grounded prompt construction
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
 |-- migrations/                 # Alembic environment and revision files
@@ -661,6 +678,7 @@ apps/api/
 |-- tests/test_database_integration.py # Opt-in live PostgreSQL test
 |-- tests/test_migrations_integration.py # Opt-in destructive migration test
 |-- tests/test_openai_service.py # Mocked OpenAI success, failure, usage, and security tests
+|-- tests/test_prompt_builder.py # Grounding, rights, preference, injection, and version tests
 |-- tests/test_passwords.py      # Argon2id hashing tests
 |-- tests/test_rate_limit.py     # Registration abuse-control tests
 |-- tests/test_registration.py   # Registration API tests

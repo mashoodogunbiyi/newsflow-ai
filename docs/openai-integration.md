@@ -92,7 +92,7 @@ finally:
 
 `result` contains generated text, the returned or configured model, optional response and request identifiers, and any available input, output, and total token counts. The service does not automatically repeat a completed generation request.
 
-This example shows the provider boundary only. A later E4 application service must add user-level limits, article-rights checks, approved prompting, persistence, and a FastAPI endpoint before the frontend can request a draft.
+This example shows the provider boundary only. NFA-39 now supplies the versioned, rights-aware LinkedIn prompt package. A later E4 application service must still orchestrate user-level limits, current article-rights lookup, prompt construction, output validation, persistence, and a FastAPI endpoint before the frontend can request a draft.
 
 ## Failure handling and retry policy
 
@@ -154,7 +154,8 @@ Verified locally on 29 October 2026:
 - NFA-38 provides a reusable internal service, not a user-facing API endpoint.
 - No real OpenAI credential or model is committed or validated against the live service.
 - No article is sent to OpenAI in this task.
-- A later E4 task must build the generation use case, call the NFA-32 rights service first, apply user and cost limits, and persist an approved draft safely.
+- NFA-39 provides the source-grounded LinkedIn template and prompt builder described in [the LinkedIn prompting guide](linkedin-prompting.md).
+- A later E4 task must orchestrate the generation use case, validate the model's structured output, apply user and cost limits, and persist an approved draft safely.
 - Live CNN access remains blocked by ADR-001. The existence of this OpenAI service does not authorise CNN content use.
 
 ## Acceptance evidence
