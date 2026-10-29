@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "staging", "production"] = "development"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["json", "console"] = "json"
     news_source_mode: Literal["disabled", "fixture"] = "disabled"
     frontend_origin: str = Field(
         default="http://localhost:3000",
@@ -61,6 +63,16 @@ class Settings(BaseSettings):
     article_sync_lease_seconds: int = Field(default=300, ge=30, le=3600)
     manual_sync_rate_limit_attempts: int = Field(default=2, ge=1, le=20)
     manual_sync_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    ingestion_metrics_enabled: bool = True
+    ingestion_metrics_window_hours: int = Field(default=24, ge=1, le=168)
+    ingestion_failure_threshold: int = Field(default=3, ge=1, le=20)
+    ingestion_success_stale_seconds: int = Field(
+        default=21_600,
+        ge=60,
+        le=604_800,
+    )
+    ingestion_long_running_seconds: int = Field(default=600, ge=30, le=86_400)
+    ingestion_rejection_rate_percent: int = Field(default=25, ge=1, le=100)
     openai_api_key: SecretStr | None = None
     seed_data_enabled: bool = False
 

@@ -25,6 +25,20 @@ class SyncJobStatus(str, Enum):
     INTERRUPTED = "interrupted"
 
 
+class SyncErrorCategory(str, Enum):
+    """Stable failure groups suitable for dashboards and alert rules."""
+
+    PROVIDER_CONNECTION = "provider_connection_error"
+    PROVIDER_TIMEOUT = "provider_timeout"
+    PROVIDER_AUTHENTICATION = "provider_authentication_error"
+    PROVIDER_RATE_LIMIT = "provider_rate_limit_error"
+    ARTICLE_VALIDATION = "article_validation_error"
+    DATABASE = "database_error"
+    SYNCHRONISATION_CONFLICT = "synchronisation_conflict"
+    SOURCE_AUTHORISATION = "source_authorisation_error"
+    INTERNAL_PIPELINE = "internal_pipeline_error"
+
+
 TERMINAL_SYNC_STATUSES = {
     SyncJobStatus.COMPLETED,
     SyncJobStatus.FAILED,
@@ -52,6 +66,8 @@ class SyncStatistics(BaseModel):
     skipped: int = Field(default=0, ge=0)
     rejected: int = Field(default=0, ge=0)
     provider_attempts: int = Field(default=0, ge=0)
+    provider_failures: int = Field(default=0, ge=0)
+    provider_duration_ms: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def validate_processed_total(self) -> "SyncStatistics":
@@ -81,6 +97,8 @@ class SyncJobRecord(BaseModel):
     statistics: SyncStatistics = Field(default_factory=SyncStatistics)
     error_code: str | None = Field(default=None, max_length=60)
     error_summary: str | None = Field(default=None, max_length=500)
+    error_category: SyncErrorCategory | None = None
+    failed_stage: str | None = Field(default=None, max_length=40)
     created_at: datetime
     updated_at: datetime
 
@@ -143,6 +161,12 @@ class SyncJobResponse(BaseModel):
     articles_rejected: int
     error_code: str | None
     error_summary: str | None
+    error_category: SyncErrorCategory | None
+    failed_stage: str | None
+    provider_attempts: int
+    provider_failures: int
+    provider_duration_ms: int
+    duration_ms: int | None
     started_at: datetime | None
     completed_at: datetime | None
 
@@ -162,6 +186,21 @@ class SyncJobResponse(BaseModel):
             articles_rejected=record.statistics.rejected,
             error_code=record.error_code,
             error_summary=record.error_summary,
+            error_category=record.error_category,
+            failed_stage=record.failed_stage,
+            provider_attempts=record.statistics.provider_attempts,
+            provider_failures=record.statistics.provider_failures,
+            provider_duration_ms=record.statistics.provider_duration_ms,
+            duration_ms=(
+                max(
+                    0,
+                    int(
+                        (record.completed_at - record.started_at).total_seconds() * 1000
+                    ),
+                )
+                if record.started_at is not None and record.completed_at is not None
+                else None
+            ),
             started_at=record.started_at,
             completed_at=record.completed_at,
         )

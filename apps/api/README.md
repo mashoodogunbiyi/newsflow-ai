@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds authenticated, rights-aware article catalogue REST endpoints with stable pagination, search, filters, sorting, attribution, and safe public schemas.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators.
 
 ## Requirements
 
@@ -38,6 +38,8 @@ Edit only `.env` and replace the placeholders with your local values:
 
 ```dotenv
 APP_ENV=development
+LOG_LEVEL=INFO
+LOG_FORMAT=json
 NEWS_SOURCE_MODE=fixture
 FRONTEND_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
@@ -54,6 +56,12 @@ ARTICLE_SYNC_RETRY_BASE_SECONDS=1
 ARTICLE_SYNC_LEASE_SECONDS=300
 MANUAL_SYNC_RATE_LIMIT_ATTEMPTS=2
 MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS=60
+INGESTION_METRICS_ENABLED=true
+INGESTION_METRICS_WINDOW_HOURS=24
+INGESTION_FAILURE_THRESHOLD=3
+INGESTION_SUCCESS_STALE_SECONDS=21600
+INGESTION_LONG_RUNNING_SECONDS=600
+INGESTION_REJECTION_RATE_PERCENT=25
 OPENAI_API_KEY=your_real_openai_api_key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
@@ -67,6 +75,8 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | Variable | Required | Sensitive | Purpose |
 |---|---|---|---|
 | `APP_ENV` | No | No | Selects `development`, `test`, `staging`, or `production`; defaults to `development`. |
+| `LOG_LEVEL` | No | No | Minimum application level: `DEBUG`, `INFO`, `WARNING`, or `ERROR`; defaults to `INFO`. |
+| `LOG_FORMAT` | No | No | Structured `json` or readable structured `console`; defaults to `json`. |
 | `NEWS_SOURCE_MODE` | No | No | Defaults to `disabled`; local development explicitly selects the approved `fixture` provider. |
 | `FRONTEND_ORIGIN` | No | No | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
@@ -83,6 +93,12 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `ARTICLE_SYNC_LEASE_SECONDS` | No | No | Active worker lease duration; defaults to 300 seconds. |
 | `MANUAL_SYNC_RATE_LIMIT_ATTEMPTS` | No | No | Manual triggers per administrator and window; defaults to 2. |
 | `MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS` | No | No | Manual trigger rate-limit window; defaults to 60 seconds. |
+| `INGESTION_METRICS_ENABLED` | No | No | Enables ingestion aggregate calculation; defaults to `true`. |
+| `INGESTION_METRICS_WINDOW_HOURS` | No | No | Default metrics window from 1 to 168 hours; defaults to 24. |
+| `INGESTION_FAILURE_THRESHOLD` | No | No | Consecutive failures before critical health; defaults to 3. |
+| `INGESTION_SUCCESS_STALE_SECONDS` | No | No | Maximum time since a successful sync; defaults to 21600 seconds. |
+| `INGESTION_LONG_RUNNING_SECONDS` | No | No | Active-job runtime warning threshold; defaults to 600 seconds. |
+| `INGESTION_REJECTION_RATE_PERCENT` | No | No | Recent rejection-rate warning threshold; defaults to 25 percent. |
 | `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
 | `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
@@ -369,6 +385,21 @@ SQLAlchemy reads only current PostgreSQL snapshots whose article is active, sour
 
 Use Swagger UI at `http://127.0.0.1:8000/docs` to inspect the `Article catalogue` section after logging in. See the [article catalogue API guide](../../docs/article-catalogue-api.md) for the complete contract, cursor behaviour, rights rules, errors, migration, and test evidence.
 
+### Monitor article ingestion
+
+NFA-35 extends each existing synchronisation job with cumulative provider-request duration, a stable error category, and a failure stage. It emits structured start, request, retry, completion, partial-completion, and failure events without article content, provider payloads, URLs, credentials, or traceback details.
+
+Authenticated administrators can inspect ingestion operations through:
+
+```text
+GET /api/admin/sync/jobs
+GET /api/admin/sync/jobs/{job_id}
+GET /api/admin/sync/metrics
+GET /api/admin/sync/health
+```
+
+The health response detects repeated failures, stale successful synchronisation, long-running jobs, and high rejection rates using environment-configured thresholds. Use `LOG_FORMAT=json` for log collection or `LOG_FORMAT=console` for readable local output. See the [ingestion observability guide](../../docs/ingestion-observability.md) for fields, metrics, configuration, operational response, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -394,13 +425,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable publication-time and article-ID catalogue ordering index. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261029_0005`, this command removes only the catalogue ordering index. A second downgrade removes the NFA-33 synchronisation tables and administrator-role column. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261029_0006`, this command removes the NFA-35 observability fields and indexes. A second downgrade removes the NFA-34 catalogue ordering index, and a third removes the NFA-33 synchronisation tables and administrator-role column. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -516,7 +547,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, and the NFA-34 article catalogue API.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, and NFA-35 ingestion observability.
 
 ## Project structure
 
@@ -529,10 +560,12 @@ apps/api/
 |   |-- api/routes/auth.py      # Register, login, current-user, and logout APIs
 |   |-- api/routes/library.py   # Owner-scoped saved-content APIs
 |   |-- api/routes/article_sync.py # Protected manual sync and job-status APIs
+|   |-- api/routes/ingestion_observability.py # Protected jobs, metrics, and health APIs
 |   |-- api/routes/articles.py  # Authenticated article list and detail APIs
 |   |-- api/dependencies.py     # Shared session and CSRF route protection
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
+|   |-- core/logging_config.py  # Structured formatting and credential redaction
 |   |-- database/connection.py  # PostgreSQL connection check
 |   |-- database/seed.py        # Repeatable synthetic development fixtures
 |   |-- database/sqlalchemy.py  # Async SQLAlchemy sessions
@@ -542,6 +575,7 @@ apps/api/
 |   |-- models/library.py       # Private saved-content API schemas
 |   |-- models/article_rights.py # Provenance, rights policy, and decision models
 |   |-- models/article_sync.py  # Job, checkpoint, status, and statistics models
+|   |-- models/ingestion_observability.py # Metrics and health response schemas
 |   |-- models/article_catalogue.py # Catalogue query and public response schemas
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
@@ -557,6 +591,7 @@ apps/api/
 |   |-- services/article_deduplication.py # Idempotent article ingestion workflow
 |   |-- services/article_rights.py # Fail-closed permission checks and updates
 |   |-- services/article_sync.py # Scheduled and manual synchronisation workflow
+|   |-- services/ingestion_observability.py # Metrics and health derivation
 |   |-- services/article_catalogue.py # Public fields, visibility, and cursor rules
 |   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
@@ -575,6 +610,8 @@ apps/api/
 |-- tests/test_article_deduplication_integration.py # Opt-in PostgreSQL deduplication proof
 |-- tests/test_article_sync.py # Fast scheduled, manual, retry, and checkpoint tests
 |-- tests/test_admin_article_sync.py # Protected manual sync API tests
+|-- tests/test_admin_ingestion_observability.py # Protected operations API tests
+|-- tests/test_ingestion_observability.py # Logging, metrics, and health tests
 |-- tests/test_article_sync_integration.py # Opt-in PostgreSQL sync workflow proof
 |-- tests/test_article_catalogue.py # Fast authenticated catalogue API tests
 |-- tests/test_article_catalogue_integration.py # Opt-in PostgreSQL catalogue proof

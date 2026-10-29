@@ -409,8 +409,16 @@ class ArticleSyncJobTable(Base):
     provider_attempts: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
+    provider_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    provider_duration_ms: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
     error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
     error_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    failed_stage: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation and the NFA-34 article catalogue REST API.
+This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, and NFA-35 ingestion observability.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -88,6 +88,29 @@ Run the focused NFA-34 tests from `apps/api`:
 
 ```bash
 pytest tests/test_article_catalogue.py
+```
+
+## NFA-35 ingestion observability coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Structured start, request, retry, completion, partial, and failure events | `test_article_sync.py` and `test_ingestion_observability.py` |
+| Safe job IDs, counts, timings, categories, and stages | Sync and observability unit tests |
+| Credential redaction and structured-field allowlist | `test_ingestion_observability.py` |
+| Provider request and total job duration | `test_article_sync.py` and observability service tests |
+| Job and article aggregate metrics | `test_ingestion_observability.py` |
+| Provider and database failure tracking | `test_ingestion_observability.py` |
+| Repeated failure, stale success, long runtime, and rejection thresholds | `test_ingestion_observability.py` |
+| Protected recent-job, detail, metrics, and health APIs | `test_admin_ingestion_observability.py` |
+| Observability settings and safe defaults | `test_config.py` |
+| Versioned columns, constraints, indexes, rollback, and rebuild | `test_migrations_integration.py` |
+
+Run the focused NFA-35 tests from `apps/api`:
+
+```bash
+pytest tests/test_article_sync.py \
+  tests/test_ingestion_observability.py \
+  tests/test_admin_ingestion_observability.py
 ```
 
 ## Run the normal backend suite
@@ -178,15 +201,17 @@ Do not add real credentials to workflow files. Future CI integration databases m
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 151 tests and safely skipped 8 opt-in PostgreSQL tests.
-- The focused NFA-34 catalogue suite passed 10 tests.
-- The NFA-34 PostgreSQL catalogue test passed against its disposable database.
-- The full migration, seed, rollback, and rebuild test passed through migration `20261029_0005` against its disposable database.
+- The normal backend run passed 161 tests and safely skipped 8 opt-in PostgreSQL tests.
+- The focused NFA-35 observability suite passed 18 tests.
+- The NFA-33 PostgreSQL synchronisation workflow passed against its disposable database with the NFA-35 fields.
+- The full migration, seed, rollback, and rebuild test passed through migration `20261029_0006` against its disposable database.
+- Docker Compose configuration validation passed.
+- The local development database reached migration `20261029_0006`, and the backend health check remained successful.
 - Both disposable databases were removed after verification.
 - No test used live CNN content, real user data, or production credentials.
 
 ## Review status
 
-- Jira issue: NFA-34
+- Jira issue: NFA-35
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

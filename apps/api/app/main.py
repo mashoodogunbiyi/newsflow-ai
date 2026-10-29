@@ -14,9 +14,13 @@ from app.api.routes.article_sync import router as article_sync_router
 from app.api.routes.articles import router as articles_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
+from app.api.routes.ingestion_observability import (
+    router as ingestion_observability_router,
+)
 from app.api.routes.library import router as library_router
 from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
+from app.core.logging_config import configure_logging
 from app.database import DatabaseConnection, DatabaseConnectionError, PostgresDatabase
 from app.database.sqlalchemy import SqlAlchemyDatabase
 from app.providers.factory import create_news_provider
@@ -47,6 +51,7 @@ from app.services import AuthenticationService, RegistrationService, SavedConten
 from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
 from app.services.article_sync import ArticleSyncService
+from app.services.ingestion_observability import IngestionObservabilityService
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +71,15 @@ def create_app(
     article_sync_repository: ArticleSyncRepository | None = None,
     article_sync_service: ArticleSyncService | None = None,
     manual_sync_rate_limiter: InMemoryRateLimiter | None = None,
+    ingestion_observability_service: IngestionObservabilityService | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
 
     application_settings = settings or get_settings()
+    configure_logging(
+        level=application_settings.log_level,
+        log_format=application_settings.log_format,
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -106,6 +116,7 @@ def create_app(
         configured_article_catalogue_service = article_catalogue_service
         configured_article_sync_repository = article_sync_repository
         configured_article_sync_service = article_sync_service
+        configured_ingestion_observability_service = ingestion_observability_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
@@ -174,6 +185,27 @@ def create_app(
                         seconds=application_settings.article_sync_lease_seconds
                     ),
                 )
+        if (
+            configured_ingestion_observability_service is None
+            and configured_article_sync_repository is not None
+        ):
+            configured_ingestion_observability_service = IngestionObservabilityService(
+                repository=configured_article_sync_repository,
+                metrics_enabled=(application_settings.ingestion_metrics_enabled),
+                metrics_window_hours=(
+                    application_settings.ingestion_metrics_window_hours
+                ),
+                failure_threshold=(application_settings.ingestion_failure_threshold),
+                success_stale_seconds=(
+                    application_settings.ingestion_success_stale_seconds
+                ),
+                long_running_seconds=(
+                    application_settings.ingestion_long_running_seconds
+                ),
+                rejection_rate_percent=(
+                    application_settings.ingestion_rejection_rate_percent
+                ),
+            )
 
         configured_password_hasher = password_hasher or Argon2PasswordHasher()
         application.state.registration_service = RegistrationService(
@@ -195,6 +227,9 @@ def create_app(
         )
         application.state.article_sync_repository = configured_article_sync_repository
         application.state.article_sync_service = configured_article_sync_service
+        application.state.ingestion_observability_service = (
+            configured_ingestion_observability_service
+        )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
             or InMemoryRateLimiter(
@@ -322,6 +357,7 @@ def create_app(
     application.include_router(library_router)
     application.include_router(articles_router)
     application.include_router(article_sync_router)
+    application.include_router(ingestion_observability_router)
     return application
 
 
