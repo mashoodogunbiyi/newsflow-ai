@@ -1,6 +1,7 @@
 """Authorised news-source provider boundary."""
 
 from app.providers.base import NewsProvider
+from app.providers.cnn_adapter import CnnAdapterDecision, CnnSourceAdapter
 from app.providers.exceptions import (
     ArticleNotFoundError,
     InvalidProviderCursorError,
@@ -30,6 +31,8 @@ __all__ = [
     "ArticleNotFoundError",
     "ArticleQuery",
     "Attribution",
+    "CnnAdapterDecision",
+    "CnnSourceAdapter",
     "FixtureNewsProvider",
     "InvalidProviderCursorError",
     "NewsArticle",
