@@ -107,6 +107,10 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         index["name"] for index in sa.inspect(engine).get_indexes("article_sync_jobs")
     }
     assert "uq_article_sync_jobs_active_provider" in sync_indexes
+    snapshot_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
+    }
+    assert "ix_article_snapshots_publication_article" in snapshot_indexes
     with engine.connect() as connection:
         assert connection.execute(sa.text("SELECT 1")).scalar_one() == 1
 
