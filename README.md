@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API. NFA-35 adds safe structured ingestion logs, job and provider durations, operational metrics, protected status APIs, and configurable health thresholds. NFA-36 adds a complete synthetic provider-to-PostgreSQL-to-REST test suite with an enforced backend coverage floor. ADR-001 continues to block all live CNN access.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API. NFA-35 adds safe structured ingestion logs, job and provider durations, operational metrics, protected status APIs, and configurable health thresholds. NFA-36 adds a complete synthetic provider-to-PostgreSQL-to-REST test suite with an enforced backend coverage floor. NFA-38 adds a secure, reusable, bounded, and fully mocked OpenAI Responses API service in FastAPI. ADR-001 continues to block all live CNN access.
 
 ## Product workflow
 
@@ -64,6 +64,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/article-catalogue-api.md](docs/article-catalogue-api.md) - NFA-34 article list and detail endpoints, authentication, public fields, cursor pagination, rights filtering, errors, and tests.
 - [docs/ingestion-observability.md](docs/ingestion-observability.md) - NFA-35 structured logs, safe fields, metrics, administrator endpoints, health indicators, thresholds, and operational response.
 - [docs/article-pipeline-testing.md](docs/article-pipeline-testing.md) - NFA-36 pipeline test strategy, synthetic fixtures, isolated PostgreSQL environment, automation, results, and limitations.
+- [docs/openai-integration.md](docs/openai-integration.md) - NFA-38 backend-only OpenAI service, configuration, structured results, safe errors, limits, mocked tests, and next steps.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -105,6 +106,7 @@ newsflow-ai/
 │   ├── article-catalogue-api.md # Authenticated rights-aware article REST API
 │   ├── ingestion-observability.md # Ingestion logs, metrics, health, and operations
 │   ├── article-pipeline-testing.md # Complete synthetic pipeline test strategy and results
+│   ├── openai-integration.md # Secure backend OpenAI integration and test evidence
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
 │   ├── development-setup.md # Complete local development guide
 │   ├── source-provider-interface.md # Provider-neutral news boundary
@@ -120,7 +122,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 to NFA-32 provide the database, secure accounts, provider boundary, safe article ingestion, provenance, and rights controls. NFA-33 connects those components through a reusable synchronisation workflow with durable operational evidence. NFA-34 gives authenticated frontend users a rights-aware REST boundary for browsing current permitted article metadata. NFA-35 makes ingestion operations inspectable through safe structured logs, durable timing and failure dimensions, protected monitoring endpoints, and configurable health indicators. NFA-36 proves the joined pipeline with reusable synthetic records, isolated PostgreSQL, rights and failure checks, authenticated REST retrieval, and automated coverage enforcement. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 to NFA-32 provide the database, secure accounts, provider boundary, safe article ingestion, provenance, and rights controls. NFA-33 connects those components through a reusable synchronisation workflow with durable operational evidence. NFA-34 gives authenticated frontend users a rights-aware REST boundary for browsing current permitted article metadata. NFA-35 makes ingestion operations inspectable through safe structured logs, durable timing and failure dimensions, protected monitoring endpoints, and configurable health indicators. NFA-36 proves the joined pipeline with reusable synthetic records, isolated PostgreSQL, rights and failure checks, authenticated REST retrieval, and automated coverage enforcement. NFA-38 adds a server-only OpenAI SDK boundary with validated limits, structured results, safe failure mapping, usage metadata, and mocked tests. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -140,6 +142,7 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/article-catalogue-api.md` | NFA-34 REST endpoints, public schema, authentication, pagination, filtering, rights, and tests |
 | `docs/ingestion-observability.md` | NFA-35 safe logs, durations, metrics, administrator status endpoints, health thresholds, and response process |
 | `docs/article-pipeline-testing.md` | NFA-36 complete synthetic pipeline strategy, isolation, coverage, results, and limitations |
+| `docs/openai-integration.md` | NFA-38 OpenAI service architecture, configuration, security, error handling, tests, and limitations |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
 | `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
@@ -222,6 +225,8 @@ NFA-35 adds JSON or console structured logging for ingestion start, provider req
 
 NFA-36 tests that those article components work together, not only in isolation. Original synthetic fixtures pass through the provider, normalisation, deduplication, PostgreSQL, provenance, rights, synchronisation, observability, and authenticated catalogue layers. Safety-gated tests cover valid, invalid, updated, repeated, concurrent, restricted, disabled-source, and database-failure paths without live CNN access. GitHub Actions now supplies a short-lived `newsflow_pipeline_test` PostgreSQL service and enforces at least 75 percent branch-aware backend coverage. See the [article pipeline testing guide](docs/article-pipeline-testing.md).
 
+NFA-38 adds a reusable `OpenAIService` inside FastAPI. The service uses the official asynchronous OpenAI Python SDK and Responses API, reads the key and model only from backend configuration, enforces timeout, output-token, and retry limits, maps provider failures to safe application errors, and returns structured usage metadata. Its tests inject mocked SDK clients and never make a live or billable request. No public generation endpoint is included yet, and future generation workflows must enforce authentication, object ownership, and NFA-32 article rights before calling it. See the [OpenAI integration guide](docs/openai-integration.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -235,9 +240,13 @@ Add real values only to `.env`. The `.env` file is ignored by Git and must never
 ```dotenv
 DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
 OPENAI_API_KEY=your_real_openai_api_key
+OPENAI_MODEL=your_approved_openai_model
+OPENAI_REQUEST_TIMEOUT=30
+OPENAI_MAX_OUTPUT_TOKENS=800
+OPENAI_MAX_RETRIES=2
 ```
 
-The FastAPI backend loads these values through one validated settings class and stores both as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` is required only when an OpenAI feature runs; a missing value or unchanged example placeholder produces a clear error without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
+The FastAPI backend loads these values through validated settings and stores credentials as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` and `OPENAI_MODEL` are required only when the OpenAI service is initialised; missing or unchanged example values produce clear errors without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. NFA-38 bounds the request timeout, maximum output tokens, and eligible SDK retries. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
 ### Docker development environment
 
@@ -289,7 +298,7 @@ pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
-NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 to NFA-32 test the provider boundary, disabled CNN access, normalisation, identity, provenance, and rights decisions. NFA-33 adds synchronisation tests. NFA-34 adds authenticated catalogue API tests. NFA-35 adds logging safety, duration, metric, health-threshold, protected monitoring API, and migration tests. NFA-36 adds the complete isolated article pipeline suite and branch-aware coverage enforcement. GitHub automatically runs the backend, pipeline, and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 to NFA-32 test the provider boundary, disabled CNN access, normalisation, identity, provenance, and rights decisions. NFA-33 adds synchronisation tests. NFA-34 adds authenticated catalogue API tests. NFA-35 adds logging safety, duration, metric, health-threshold, protected monitoring API, and migration tests. NFA-36 adds the complete isolated article pipeline suite and branch-aware coverage enforcement. NFA-38 adds mocked OpenAI success, configuration, usage, error, cost-control, retry, and redaction tests. GitHub automatically runs the backend, pipeline, and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
 
 ## Key delivery gates
 
@@ -301,6 +310,8 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 ## Technical references
 
 - [OpenAI API overview](https://developers.openai.com/api/reference/overview)
+- [OpenAI Python SDK](https://developers.openai.com/api/reference/python)
+- [OpenAI Responses API create method](https://developers.openai.com/api/reference/python/resources/responses/methods/create)
 - [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses)
 - [OpenAI image generation](https://developers.openai.com/api/docs/guides/tools-image-generation)
 - [OpenAI production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)
@@ -311,7 +322,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review and merge the NFA-36 article pipeline test suite and record its evidence in Jira. The next task can build on a tested synthetic ingestion and catalogue foundation. Live CNN access remains blocked because no authorised method or Go decision exists. Production deployment still needs an approved external log and alert destination, durable worker deployment, and managed schedule configuration. The application does not yet make OpenAI API requests.
+Review the NFA-38 OpenAI integration service and its mocked tests, then merge the branch and record the final evidence in Jira. A later E4 task can build the authenticated, rights-aware generation workflow on this internal service. Live CNN access remains blocked because no authorised method or Go decision exists. Production deployment still needs an approved external log and alert destination, durable worker deployment, managed schedule configuration, and an approved OpenAI model and secret store. The application does not yet expose a generation endpoint or make automatic OpenAI requests.
 
 ## Licence
 

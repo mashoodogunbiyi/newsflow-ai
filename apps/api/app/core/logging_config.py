@@ -18,8 +18,10 @@ _STRUCTURED_FIELDS = {
     "failed_stage",
     "health_status",
     "job_id",
+    "model",
     "provider_duration_ms",
     "provider_id",
+    "request_id",
     "status",
     "trigger_type",
 }

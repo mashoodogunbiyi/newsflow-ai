@@ -7,6 +7,8 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.ai_config import OpenAIServiceConfiguration
+
 
 def find_environment_file() -> Path:
     """Locate the repository .env file without assuming a fixed directory depth."""
@@ -74,6 +76,15 @@ class Settings(BaseSettings):
     ingestion_long_running_seconds: int = Field(default=600, ge=30, le=86_400)
     ingestion_rejection_rate_percent: int = Field(default=25, ge=1, le=100)
     openai_api_key: SecretStr | None = None
+    openai_model: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+    )
+    openai_request_timeout: float = Field(default=30.0, ge=1.0, le=300.0)
+    openai_max_output_tokens: int = Field(default=800, ge=1, le=100_000)
+    openai_max_retries: int = Field(default=2, ge=0, le=5)
     seed_data_enabled: bool = False
 
     @property
@@ -134,6 +145,32 @@ class Settings(BaseSettings):
                 "Replace it in the ignored .env file before using OpenAI features."
             )
         return self.openai_api_key
+
+    def require_openai_configuration(self) -> OpenAIServiceConfiguration:
+        """Return a complete bounded OpenAI configuration for one service."""
+
+        api_key = self.require_openai_api_key()
+        model = (self.openai_model or "").strip()
+        if not model:
+            raise OpenAIConfigurationError(
+                "OPENAI_MODEL must be set before an OpenAI feature can run."
+            )
+        if model.lower() in {
+            "your_openai_model_here",
+            "your_approved_openai_model_here",
+            "replace_with_your_openai_model",
+        }:
+            raise OpenAIConfigurationError(
+                "OPENAI_MODEL still contains the example placeholder. "
+                "Replace it in the ignored .env file before using OpenAI features."
+            )
+        return OpenAIServiceConfiguration(
+            api_key=api_key,
+            model=model,
+            request_timeout=self.openai_request_timeout,
+            max_output_tokens=self.openai_max_output_tokens,
+            max_retries=self.openai_max_retries,
+        )
 
 
 @lru_cache

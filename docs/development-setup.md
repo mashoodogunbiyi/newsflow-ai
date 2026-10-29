@@ -90,6 +90,10 @@ LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
 SESSION_LIFETIME_MINUTES=60
 SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=your_approved_openai_model_here
+OPENAI_REQUEST_TIMEOUT=30
+OPENAI_MAX_OUTPUT_TOKENS=800
+OPENAI_MAX_RETRIES=2
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 API_INTERNAL_BASE_URL=http://localhost:8000
 ```
@@ -117,7 +121,11 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | LOGIN_RATE_LIMIT_WINDOW_SECONDS  | Sets the login rate-limit window in seconds.     | No - defaults to 60                              |
 | SESSION_LIFETIME_MINUTES         | Sets the absolute authenticated-session lifetime.| No - defaults to 60                              |
 | SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
-| OPENAI_API_KEY                   | Authenticates future server-side OpenAI features. | Not required for current features or tests       |
+| OPENAI_API_KEY                   | Authenticates the server-side OpenAI service.     | Required only for a live OpenAI call             |
+| OPENAI_MODEL                     | Selects the approved OpenAI model.                | Required only for a live OpenAI call             |
+| OPENAI_REQUEST_TIMEOUT           | Limits one OpenAI request in seconds.             | No - defaults to 30                              |
+| OPENAI_MAX_OUTPUT_TOKENS         | Caps generated output tokens.                     | No - defaults to 800                             |
+| OPENAI_MAX_RETRIES               | Bounds eligible temporary SDK retries.            | No - defaults to 2                               |
 | NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
 | API_INTERNAL_BASE_URL            | Lets the Next.js server reach FastAPI.            | No - defaults to http://localhost:8000 manually  |
 
@@ -495,7 +503,13 @@ Confirm Node.js 20.19 or later is active, then run npm ci from apps/web. Peer wa
 
 ### An OpenAI key error appears
 
-Current health checks, the fixture homepage, and normal tests do not need an OpenAI key. A future OpenAI-powered feature will need a real key in .env. Never send it to the frontend or commit it.
+Health checks, the fixture homepage, and normal tests do not need an OpenAI key. The NFA-38 integration validates both `OPENAI_API_KEY` and `OPENAI_MODEL` only when a backend workflow initialises the OpenAI service.
+
+- Put a real key and an approved model only in the ignored `.env` file or a deployed secret store.
+- Replace both committed example placeholders before a live use.
+- Keep the timeout, output limit, and retry budget within their documented bounds.
+- Never send the key to the frontend or commit it.
+- Run `pytest tests/test_config.py tests/test_openai_service.py` to test the integration without a real key or network request.
 
 ## 12. Related documentation
 
@@ -503,6 +517,7 @@ Current health checks, the fixture homepage, and normal tests do not need an Ope
 - [Frontend guide](../apps/web/README.md)
 - [Backend guide](../apps/api/README.md)
 - [Object-level authorisation](authorization.md)
+- [Secure OpenAI integration](openai-integration.md)
 - [Automated testing guide](testing.md)
 - [Docker guide](../infrastructure/docker/README.md)
 - [Project plan](../PROJECT_PLAN.md)
@@ -510,6 +525,6 @@ Current health checks, the fixture homepage, and normal tests do not need an Ope
 
 ## 13. Verification record
 
-These instructions were checked on 25 October 2026 against the repository structure, environment template, Docker Compose configuration, authentication interface, frontend scripts, backend package configuration, and working toolchain.
+These instructions were checked on 29 October 2026 against the repository structure, environment template, Docker Compose configuration, authentication interface, NFA-38 OpenAI service, frontend scripts, backend package configuration, and working toolchain.
 
 The verified environment used Git 2.50.1, Docker 29.8.2, Docker Compose v5.5.1, Node.js 26.11.1, npm 11.20.0, Python 3.12.15 in the backend virtual environment, and the Compose-managed postgres:16-alpine image. Other developers should use the supported versions listed above.
