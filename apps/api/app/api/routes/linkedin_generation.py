@@ -9,47 +9,18 @@ from app.api.dependencies import (
     require_authenticated_session,
     require_csrf_authenticated_session,
 )
+from app.api.generation import create_generation_resource, require_generation_service
 from app.core.errors import ApplicationError
-from app.models.generation_preferences import LinkedInGenerationPreferences
 from app.models.linkedin_generation import (
     LinkedInDraft,
     LinkedInDraftResponse,
     LinkedInGenerationRequest,
 )
 from app.repositories import AuthenticatedSession
-from app.repositories.article_rights import ArticleRightsRepositoryError
-from app.repositories.linkedin_generation import (
-    LinkedInGenerationIdempotencyConflict,
-    LinkedInGenerationRepositoryError,
-)
-from app.security import InMemoryRateLimiter, RateLimitExceeded
+from app.repositories.linkedin_generation import LinkedInGenerationRepositoryError
 from app.services import PrivateResourceNotFoundError
-from app.services.linkedin_generation import (
-    GenerationArticleNotFoundError,
-    GenerationInsufficientSourceError,
-    GenerationProviderConfigurationError,
-    GenerationRightsDeniedError,
-    InvalidGeneratedDraftError,
-    LinkedInGenerationService,
-)
-from app.services.openai_service import OpenAIServiceError
 
 router = APIRouter(prefix="/api/v1/linkedin-drafts", tags=["LinkedIn drafts"])
-
-
-def _service(request: Request) -> LinkedInGenerationService:
-    service: LinkedInGenerationService | None = getattr(
-        request.app.state,
-        "linkedin_generation_service",
-        None,
-    )
-    if service is None:
-        raise ApplicationError(
-            status_code=503,
-            code="linkedin_generation_unavailable",
-            message="LinkedIn draft generation is temporarily unavailable.",
-        )
-    return service
 
 
 def _response(draft: LinkedInDraft) -> LinkedInDraftResponse:
@@ -62,29 +33,6 @@ def _response(draft: LinkedInDraft) -> LinkedInDraftResponse:
     )
 
 
-async def _check_generation_limit(request: Request, owner_id: UUID) -> None:
-    limiter: InMemoryRateLimiter | None = getattr(
-        request.app.state,
-        "generation_rate_limiter",
-        None,
-    )
-    if limiter is None:
-        raise ApplicationError(
-            status_code=503,
-            code="linkedin_generation_unavailable",
-            message="LinkedIn draft generation is temporarily unavailable.",
-        )
-    try:
-        await limiter.check(str(owner_id))
-    except RateLimitExceeded as exc:
-        raise ApplicationError(
-            status_code=429,
-            code="linkedin_generation_rate_limited",
-            message="Too many generation requests. Please try again later.",
-            headers={"Retry-After": str(exc.retry_after_seconds)},
-        ) from exc
-
-
 def _raise_private_not_found(exc: PrivateResourceNotFoundError) -> NoReturn:
     raise ApplicationError(
         status_code=404,
@@ -94,7 +42,7 @@ def _raise_private_not_found(exc: PrivateResourceNotFoundError) -> NoReturn:
 
 
 def _raise_storage_unavailable(
-    exc: LinkedInGenerationRepositoryError | ArticleRightsRepositoryError,
+    exc: LinkedInGenerationRepositoryError,
 ) -> NoReturn:
     raise ApplicationError(
         status_code=503,
@@ -143,64 +91,12 @@ async def generate_linkedin_draft(
         ),
     ] = None,
 ) -> LinkedInDraftResponse:
-    await _check_generation_limit(request, active_session.user_id)
-    try:
-        draft = await _service(request).generate_draft(
-            owner_id=active_session.user_id,
-            article_id=payload.article_id,
-            preferences=LinkedInGenerationPreferences(
-                tone=payload.tone,
-                post_length=payload.length,
-            ),
-            idempotency_key=idempotency_key,
-        )
-    except GenerationArticleNotFoundError as exc:
-        raise ApplicationError(
-            status_code=404,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except GenerationRightsDeniedError as exc:
-        raise ApplicationError(
-            status_code=403,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except GenerationInsufficientSourceError as exc:
-        raise ApplicationError(
-            status_code=422,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except InvalidGeneratedDraftError as exc:
-        raise ApplicationError(
-            status_code=502,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except GenerationProviderConfigurationError as exc:
-        raise ApplicationError(
-            status_code=503,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except OpenAIServiceError as exc:
-        raise ApplicationError(
-            status_code=503,
-            code=exc.code,
-            message=exc.safe_message,
-        ) from exc
-    except LinkedInGenerationIdempotencyConflict as exc:
-        raise ApplicationError(
-            status_code=409,
-            code="idempotency_key_conflict",
-            message="The idempotency key has already been used for another request.",
-        ) from exc
-    except (
-        LinkedInGenerationRepositoryError,
-        ArticleRightsRepositoryError,
-    ) as exc:
-        _raise_storage_unavailable(exc)
+    draft = await create_generation_resource(
+        request=request,
+        owner_id=active_session.user_id,
+        payload=payload,
+        idempotency_key=idempotency_key,
+    )
 
     response.headers["Cache-Control"] = "no-store"
     return _response(draft)
@@ -226,7 +122,7 @@ async def get_linkedin_draft(
     ],
 ) -> LinkedInDraftResponse:
     try:
-        draft = await _service(request).get_draft(
+        draft = await require_generation_service(request).get_draft(
             owner_id=active_session.user_id,
             draft_id=draft_id,
         )

@@ -40,6 +40,8 @@ The workflow reads only information already stored through the authorised catalo
 
 ## API endpoints
 
+NFA-41 also provides the smaller frontend-facing `POST /api/generations` response. Both POST routes use the same function below, so rights checks and provider controls are not duplicated. See the [NFA-41 generation API guide](generation-api.md) for its public schema and error contract.
+
 ### Generate a draft
 
 ```text
@@ -178,6 +180,8 @@ The in-process limiter is suitable for local development. A multi-instance deplo
 | Per-user request limit reached | 429 | `linkedin_generation_rate_limited` |
 | Idempotency key reused differently | 409 | `idempotency_key_conflict` |
 | Empty, malformed, or out-of-range model result | 502 | Generation validation code |
+| OpenAI returns an invalid response | 502 | Safe provider response code |
+| OpenAI request times out | 504 | `openai_timeout` |
 | OpenAI or PostgreSQL is unavailable | 503 | Safe service-specific code |
 
 Provider bodies, database details, credentials, source content, and generated prose are not written to error messages or operational logs.

@@ -27,6 +27,16 @@ class LinkedInGenerationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class GenerationRequest(BaseModel):
+    """Strict NFA-41 request requiring every user selection explicitly."""
+
+    article_id: UUID
+    tone: LinkedInTone
+    length: LinkedInPostLength
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class LinkedInModelOutput(BaseModel):
     """Exact JSON contract expected from the OpenAI response."""
 
@@ -104,6 +114,25 @@ class LinkedInDraftResponse(BaseModel):
     prompt_version: str
     model_identifier: str
     token_usage: AITokenUsage
+    created_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class GenerationResponse(BaseModel):
+    """Minimal frontend response without provider or rights internals."""
+
+    generation_id: UUID
+    article_id: UUID
+    draft: str = Field(min_length=1, max_length=12_000)
+    tone: LinkedInTone
+    length: LinkedInPostLength
+    source_title: str = Field(min_length=1, max_length=300)
+    source_name: str = Field(min_length=1, max_length=200)
+    source_url: HttpUrl
+    source_attribution: str = Field(min_length=1, max_length=500)
+    status: Literal["draft"]
+    review_required: Literal[True]
     created_at: datetime
 
     model_config = ConfigDict(extra="forbid")

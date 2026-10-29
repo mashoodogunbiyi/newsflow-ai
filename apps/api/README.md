@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping.
 
 ## Requirements
 
@@ -418,7 +418,7 @@ NFA-38 adds `OpenAIService` as the single backend boundary for future text gener
 
 The service returns generated text, model and request identifiers, and available token usage through provider-neutral Pydantic models. It maps authentication, rate-limit, timeout, connection, service, request, incomplete-response, and output-limit failures to safe application errors. Logs exclude API keys, prompts, instructions, generated output, raw responses, and provider error details.
 
-No public FastAPI generation endpoint is included in NFA-38. A later E4 workflow must authenticate and authorise the user, apply NFA-32 rights checks, supply only permitted article information, enforce user-level limits, and then call this internal service. See the [OpenAI integration guide](../../docs/openai-integration.md) for configuration, usage, error policy, security controls, tests, and limitations.
+NFA-38 itself exposes no provider client directly. NFA-40 and NFA-41 now wrap this internal service with authentication, authorisation, NFA-32 rights checks, permitted article fields, user-level limits, safe responses, and private persistence. See the [OpenAI integration guide](../../docs/openai-integration.md) for configuration, usage, error policy, security controls, tests, and limitations.
 
 ### Build source-grounded LinkedIn prompts
 
@@ -442,6 +442,18 @@ The POST endpoint requires the HTTP-only session cookie, CSRF proof, an article 
 The optional `Idempotency-Key` header prevents repeated storage for one completed request. Per-user generation requests are limited to 10 per 60 seconds by default. The GET endpoint includes the authenticated owner in its database query, so a missing draft and another user's draft share the same HTTP 404 response.
 
 The OpenAI key remains server-side. Prompt text is not persisted, and logs exclude article text and generated prose. PostgreSQL records the source snapshot, exact rights version, prompt version, model identifier, provider request reference, and available token usage. See the [LinkedIn generation service guide](../../docs/linkedin-generation-service.md) for the complete workflow, API examples, errors, controls, tests, and limitations.
+
+### Request generation from the frontend
+
+NFA-41 adds the public application endpoint used by the future Next.js generation interface:
+
+```text
+POST /api/generations
+```
+
+The endpoint requires the HTTP-only session cookie and matching CSRF header, validates the article UUID plus supported tone and length enums, forbids extra request properties, applies the existing per-user limit, and delegates to the NFA-40 service. It returns only the generation ID, selected article and source reference, draft, writing preferences, review state, and creation time. Provider metadata, prompt content, rights internals, owner identifiers, and credentials are excluded.
+
+Expected failures use the shared safe JSON error format. Missing articles return `404`, denied rights return `403`, invalid source information returns `422`, invalid provider output returns `502`, unavailable services return `503`, OpenAI timeouts return `504`, and request limits return `429`. See the [NFA-41 generation API guide](../../docs/generation-api.md) for the complete schema, security controls, examples, status codes, and tests.
 
 ## Run with Docker Compose
 
@@ -497,7 +509,7 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
-The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, NFA-39 grounding and prompt controls, and NFA-40 authenticated orchestration, rights gates, strict output validation, limits, idempotency, and private draft access.
+The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, NFA-39 grounding and prompt controls, NFA-40 authenticated orchestration and private draft access, and the NFA-41 public request, response, validation, authentication, limit, and safe-error contract.
 
 Run the focused NFA-38 tests with:
 
@@ -518,6 +530,14 @@ pytest tests/test_openai_service.py \
   tests/test_prompt_builder.py \
   tests/test_linkedin_generation_service.py \
   tests/test_linkedin_generation_api.py
+```
+
+Run the focused NFA-41 tests with:
+
+```bash
+pytest tests/test_generation_api.py \
+  tests/test_linkedin_generation_api.py \
+  tests/test_linkedin_generation_service.py
 ```
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:

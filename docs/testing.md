@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, and NFA-40 private LinkedIn draft generation.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, and the NFA-41 frontend-facing generation REST API.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -206,6 +206,32 @@ pytest tests/test_openai_service.py \
 
 The OpenAI client, model result, article, rights decision, and users are synthetic. No focused or normal test makes a live OpenAI request, accesses live CNN information, or requires a real credential.
 
+## NFA-41 generation REST API coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| `POST /api/generations` and 201 response | `test_generation_api.py` |
+| Authentication and CSRF enforcement | `test_generation_api.py` plus existing authentication tests |
+| Article UUID, tone, length, extra-field, and header validation | `test_generation_api.py` |
+| Authenticated user identity passed to the service | `test_generation_api.py` |
+| NFA-40 service reuse and pre-provider rights enforcement | Generation API and NFA-40 service tests |
+| Minimal response and internal-field exclusion | `test_generation_api.py` |
+| Missing, restricted, and insufficient articles | API and NFA-40 service tests |
+| Safe 502, 503, and 504 provider failures | `test_generation_api.py` |
+| Per-user rate limit and retry delay | `test_generation_api.py` |
+| Idempotency header validation and delegation | `test_generation_api.py` |
+| OpenAPI request, response, security, and error documentation | `test_generation_api.py` |
+
+Run the focused NFA-41 tests from `apps/api`:
+
+```bash
+pytest tests/test_generation_api.py \
+  tests/test_linkedin_generation_api.py \
+  tests/test_linkedin_generation_service.py
+```
+
+These tests use synthetic records and provider doubles. They make no live OpenAI request and do not use live CNN information.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -294,17 +320,18 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 216 tests and safely skipped 11 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 78.28 percent, above the enforced 75 percent floor.
+- The normal backend run passed 241 tests and safely skipped 11 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 78.99 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applied all migrations through `20261029_0007` and rolled the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
 - The focused NFA-40 generation run passed 58 tests.
+- The focused NFA-41 and reused NFA-40 API and service run passed 36 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, and NFA-40
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, and NFA-41
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

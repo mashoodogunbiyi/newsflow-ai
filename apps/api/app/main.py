@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse, Response
 from app.api.routes.article_sync import router as article_sync_router
 from app.api.routes.articles import router as articles_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.generations import router as generations_router
 from app.api.routes.health import router as health_router
 from app.api.routes.ingestion_observability import (
     router as ingestion_observability_router,
@@ -409,6 +410,7 @@ def create_app(
     )
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(generations_router)
     application.include_router(library_router)
     application.include_router(articles_router)
     application.include_router(article_sync_router)
