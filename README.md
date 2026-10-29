@@ -2,7 +2,7 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds scheduled and administrator-triggered article synchronisation with durable jobs, checkpoints, leases, statistics, and bounded retries, while ADR-001 continues to block all live CNN access.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API with stable pagination, search, filters, sorting, attribution, and safe public response schemas. ADR-001 continues to block all live CNN access.
 
 ## Product workflow
 
@@ -61,6 +61,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/article-identity-and-deduplication.md](docs/article-identity-and-deduplication.md) - NFA-31 identity strategy, canonical URL fallback, PostgreSQL constraints, atomic ingestion, safe updates, and tests.
 - [docs/article-provenance-and-rights.md](docs/article-provenance-and-rights.md) - NFA-32 provenance events, versioned rights, attribution, retention, fail-closed checks, and automated evidence.
 - [docs/article-synchronisation.md](docs/article-synchronisation.md) - NFA-33 scheduled and manual synchronisation, durable jobs, checkpoints, leases, retries, security, and tests.
+- [docs/article-catalogue-api.md](docs/article-catalogue-api.md) - NFA-34 article list and detail endpoints, authentication, public fields, cursor pagination, rights filtering, errors, and tests.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -99,6 +100,7 @@ newsflow-ai/
 │   ├── article-normalisation.md # Rights-aware article processing rules and tests
 │   ├── article-provenance-and-rights.md # Provenance and versioned permission rules
 │   ├── article-synchronisation.md # Scheduled and manual ingestion workflow
+│   ├── article-catalogue-api.md # Authenticated rights-aware article REST API
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
 │   ├── development-setup.md # Complete local development guide
 │   ├── source-provider-interface.md # Provider-neutral news boundary
@@ -114,7 +116,7 @@ newsflow-ai/
 └── PROJECT_MANAGEMENT.md
 ```
 
-The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 to NFA-32 provide the database, secure accounts, provider boundary, safe article ingestion, provenance, and rights controls. NFA-33 connects those components through a reusable scheduled and manual synchronisation workflow with durable operational evidence. Shared packages and cross-service tests will be added by their related engineering tasks.
+The frontend and backend directories contain working application foundations. PostgreSQL connection configuration and readiness checking are implemented in the backend. Environment variables are validated centrally, secret values are masked, and unsafe example placeholders are rejected. Docker Compose can run the frontend, backend, and database together with health-based startup ordering and persistent PostgreSQL storage. NFA-20 to NFA-32 provide the database, secure accounts, provider boundary, safe article ingestion, provenance, and rights controls. NFA-33 connects those components through a reusable synchronisation workflow with durable operational evidence. NFA-34 now gives authenticated frontend users a rights-aware REST boundary for browsing current permitted article metadata without direct database access. Shared packages and cross-service tests will be added by their related engineering tasks.
 
 ### Directory responsibilities
 
@@ -131,6 +133,7 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/article-normalisation.md` | NFA-30 rights-aware mapping, validation, sanitisation, error rules, and tests |
 | `docs/article-provenance-and-rights.md` | NFA-32 provenance, versioned permissions, fail-closed checks, and tests |
 | `docs/article-synchronisation.md` | NFA-33 job lifecycle, schedule, manual trigger, checkpoint, retry, and recovery rules |
+| `docs/article-catalogue-api.md` | NFA-34 REST endpoints, public schema, authentication, pagination, filtering, rights, and tests |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
 | `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
@@ -207,6 +210,8 @@ NFA-32 records an immutable provenance event for every created, updated, or skip
 
 NFA-33 runs the same approved provider, normalisation, deduplication, provenance, and rights pipeline for scheduled and administrator-triggered synchronisation. PostgreSQL stores job statuses, counts, incremental checkpoints, schedule reservations, and expiring worker leases. Only administrators with CSRF proof can start a manual job, temporary provider failures receive bounded retries, and failed or partial jobs do not advance the checkpoint. See the [article synchronisation guide](docs/article-synchronisation.md).
 
+NFA-34 adds authenticated `GET /api/articles` and `GET /api/articles/{article_id}` endpoints. FastAPI validates cursor pagination, permitted metadata search, provider and publication-date filters, and newest or oldest sorting. SQLAlchemy queries only current PostgreSQL snapshots whose article, source, display, verification, attribution, and retention states allow disclosure. Restricted and missing records share the same 404 response. Internal rights versions, provider database identifiers, snapshot identifiers, and stored-content fields are excluded from the public Pydantic schema. See the [article catalogue API guide](docs/article-catalogue-api.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -274,7 +279,7 @@ pytest
 
 Detailed commands and automatic-formatting instructions are in the [frontend guide](apps/web/README.md#quality-checks) and [backend guide](apps/api/README.md#code-quality).
 
-NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 to NFA-32 test the provider boundary, disabled CNN access, normalisation, identity, provenance, and rights decisions. NFA-33 adds scheduled and manual synchronisation, administrator, retry, checkpoint, locking, interruption, statistics, and real PostgreSQL tests. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
+NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 to NFA-32 test the provider boundary, disabled CNN access, normalisation, identity, provenance, and rights decisions. NFA-33 adds synchronisation tests. NFA-34 adds authenticated catalogue endpoint, public-schema, cursor, filtering, sorting, rights-exclusion, safe-error, OpenAPI, and real PostgreSQL tests. GitHub automatically runs the normal backend and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
 
 ## Key delivery gates
 
@@ -296,7 +301,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review and merge the NFA-33 article synchronisation work and record its evidence in Jira. Continue permitted development with synthetic fixtures. Live CNN access remains blocked because no authorised method or Go decision exists. Production deployment still needs a durable job worker and managed schedule configuration. The application does not yet make OpenAI API requests.
+Review and merge the NFA-34 article catalogue REST API work and record its evidence in Jira. The next frontend catalogue task can consume these authenticated endpoints using synthetic fixtures. Live CNN access remains blocked because no authorised method or Go decision exists. Production deployment still needs a durable job worker and managed schedule configuration. The application does not yet make OpenAI API requests.
 
 ## Licence
 

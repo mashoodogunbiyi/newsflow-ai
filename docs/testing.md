@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation.
+This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation and the NFA-34 article catalogue REST API.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -10,9 +10,9 @@ The test suite is designed to detect security regressions before a pull request 
 
 | Layer | Location | Purpose |
 |---|---|---|
-| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, CSRF, safe errors, and authorisation. |
+| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
-| PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, and synchronisation. |
+| PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend linting, formatting, tests, type checking, and the frontend build on GitHub. |
 
@@ -67,6 +67,27 @@ Run the fast NFA-33 tests from `apps/api`:
 
 ```bash
 pytest tests/test_article_sync.py tests/test_admin_article_sync.py
+```
+
+## NFA-34 article catalogue coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Authenticated list and detail endpoints | `test_article_catalogue.py` |
+| Public response schema and internal-field exclusion | `test_article_catalogue.py` |
+| Cursor pagination and query binding | Fast tests and PostgreSQL catalogue integration |
+| Search, provider and publication-date filtering | Fast tests and PostgreSQL catalogue integration |
+| Newest and oldest stable sorting | Fast tests and PostgreSQL catalogue integration |
+| Missing, restricted, and expired record protection | Fast tests and PostgreSQL catalogue integration |
+| Invalid parameter and cursor handling | `test_article_catalogue.py` |
+| Parameterised handling of SQL-injection-like text | Fast tests and PostgreSQL catalogue integration |
+| Controlled database failure response | `test_article_catalogue.py` |
+| OpenAPI parameters, security, schemas, and responses | `test_article_catalogue.py` |
+
+Run the focused NFA-34 tests from `apps/api`:
+
+```bash
+pytest tests/test_article_catalogue.py
 ```
 
 ## Run the normal backend suite
@@ -131,6 +152,16 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_article_sync_integration.py
 ```
 
+## Run the PostgreSQL article catalogue proof
+
+Create a separate disposable database whose name contains `newsflow_article_catalogue_test`. Never use the normal development, shared, staging, or production database.
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_article_catalogue_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_article_catalogue_integration.py
+```
+
 ## GitHub quality checks
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
@@ -147,13 +178,15 @@ Do not add real credentials to workflow files. Future CI integration databases m
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 141 tests and safely skipped 7 opt-in PostgreSQL tests.
-- The NFA-33 PostgreSQL synchronisation test passed against its disposable database.
-- The full migration, seed, rollback, and rebuild test passed through the NFA-33 migration against its disposable database.
+- The normal backend run passed 151 tests and safely skipped 8 opt-in PostgreSQL tests.
+- The focused NFA-34 catalogue suite passed 10 tests.
+- The NFA-34 PostgreSQL catalogue test passed against its disposable database.
+- The full migration, seed, rollback, and rebuild test passed through migration `20261029_0005` against its disposable database.
+- Both disposable databases were removed after verification.
 - No test used live CNN content, real user data, or production credentials.
 
 ## Review status
 
-- Jira issue: NFA-33
+- Jira issue: NFA-34
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
