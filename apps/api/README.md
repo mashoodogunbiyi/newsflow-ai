@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test.
 
 ## Requirements
 
@@ -451,7 +451,7 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 ## Run the tests
 
 ```bash
-pytest
+pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
 The normal test suite uses database test doubles, so it does not need real credentials, an OpenAI API key, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, and blocked cross-user read, update, delete, and export attempts.
@@ -528,6 +528,16 @@ ALLOW_DATABASE_RESET_FOR_TESTS=true \
 pytest -m integration tests/test_article_catalogue_integration.py
 ```
 
+The NFA-36 pipeline suite requires a separate disposable database named `newsflow_pipeline_test`. It verifies the full synthetic provider, normalisation, deduplication, PostgreSQL, provenance, rights, synchronisation, observability, and REST API workflow. It also proves invalid-input safety, database-failure safety, source blocking, restricted AI use, and concurrent deduplication:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_pipeline_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_catalogue_pipeline_e2e.py
+```
+
+See the [NFA-36 article pipeline testing guide](../../docs/article-pipeline-testing.md) for the fixture design, safety gates, verified results, and limitations.
+
 See the [complete testing guide](../../docs/testing.md) before running any destructive integration test.
 
 ## Code quality
@@ -537,7 +547,7 @@ Install the development dependencies, including Ruff and Pytest, with `python -m
 ```bash
 ruff check .
 ruff format --check .
-pytest
+pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
 Apply safe automatic lint fixes and formatting when needed:
@@ -547,7 +557,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, and NFA-35 ingestion observability.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, and the NFA-36 complete synthetic pipeline. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
 
 ## Project structure
 
@@ -602,7 +612,8 @@ apps/api/
 |-- alembic.ini                 # Credential-free migration configuration
 |-- tests/test_api.py           # API and readiness tests
 |-- tests/conftest.py           # Reusable isolated security and PostgreSQL fixtures
-|-- tests/support/              # Synthetic repositories and test safety helpers
+|-- tests/fixtures/             # Reusable valid and invalid synthetic article records
+|-- tests/support/              # Synthetic repositories, fixture loaders, and database safety helpers
 |-- tests/test_account_security_regression.py # Full fast security journey
 |-- tests/test_account_security_integration.py # Opt-in PostgreSQL ownership proof
 |-- tests/test_article_normalisation.py # Article mapping, validation, sanitisation, and rights tests
@@ -615,6 +626,8 @@ apps/api/
 |-- tests/test_article_sync_integration.py # Opt-in PostgreSQL sync workflow proof
 |-- tests/test_article_catalogue.py # Fast authenticated catalogue API tests
 |-- tests/test_article_catalogue_integration.py # Opt-in PostgreSQL catalogue proof
+|-- tests/test_article_pipeline_fixtures.py # Synthetic pipeline fixture contract tests
+|-- tests/test_catalogue_pipeline_e2e.py # Complete isolated PostgreSQL pipeline proof
 |-- tests/test_authentication.py # Fast authentication and cookie tests
 |-- tests/test_authentication_integration.py # Opt-in PostgreSQL auth test
 |-- tests/test_authorization.py # Cross-user ownership and safe-error tests
@@ -661,6 +674,7 @@ Dependencies are declared in `pyproject.toml`:
 - `pydantic-settings` validates environment-based application settings and masks the database URL and OpenAI API key as secret values.
 - `httpx2` supports Starlette's test client used by FastAPI.
 - `pytest` runs the automated tests.
+- `pytest-cov` measures branch-aware backend coverage and enforces the CI floor.
 - `ruff` provides Python linting, import checks, bug-pattern checks, and formatting.
 - `hatchling` builds the installable Python package.
 

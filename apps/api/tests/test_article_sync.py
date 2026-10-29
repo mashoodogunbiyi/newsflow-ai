@@ -17,7 +17,11 @@ from app.models.article_sync import (
     SyncStatistics,
     SyncTriggerType,
 )
-from app.providers.exceptions import ProviderUnavailableError, SourceNotAuthorisedError
+from app.providers.exceptions import (
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+    SourceNotAuthorisedError,
+)
 from app.providers.fixture_provider import FixtureNewsProvider
 from app.providers.models import (
     ArticleQuery,
@@ -392,6 +396,22 @@ def test_temporary_provider_failure_uses_bounded_exponential_retry() -> None:
     assert result.status == SyncJobStatus.COMPLETED
     assert result.statistics.provider_attempts == 4
     assert sleeps == [0.25, 0.5]
+
+
+def test_provider_timeout_is_retried_and_classified_safely() -> None:
+    provider = RecordingProvider(
+        failures=[ProviderTimeoutError(), ProviderTimeoutError()]
+    )
+    service, _, _, _ = make_service(provider=provider, max_retries=1)
+
+    result = start_and_run(service)
+
+    assert result.status == SyncJobStatus.FAILED
+    assert result.error_code == "PROVIDER_TIMEOUT"
+    assert result.error_category == SyncErrorCategory.PROVIDER_TIMEOUT
+    assert result.failed_stage == "provider_request"
+    assert result.statistics.provider_attempts == 2
+    assert result.statistics.provider_failures == 2
 
 
 def test_provider_request_duration_is_recorded() -> None:

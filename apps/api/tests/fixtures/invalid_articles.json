@@ -1,0 +1,77 @@
+{
+  "cases": [
+    {
+      "name": "missing-title",
+      "expected_error": "PROVIDER_DATA_INVALID",
+      "record": {
+        "record_key": "fixture-pipeline-invalid-title",
+        "link": "https://example.invalid/newsflow-ai/pipeline-invalid-title",
+        "published_at": "2026-10-26T09:00:00Z",
+        "topic": "technology",
+        "summary": "Synthetic invalid record.",
+        "body": "This content must never be stored.",
+        "collected_at": "2026-10-26T09:05:00Z",
+        "changed_at": null
+      }
+    },
+    {
+      "name": "invalid-url",
+      "expected_error": "PROVIDER_DATA_INVALID",
+      "record": {
+        "record_key": "fixture-pipeline-invalid-url",
+        "headline": "Synthetic invalid URL record",
+        "link": "http://unauthorised.example.test/article",
+        "published_at": "2026-10-26T10:00:00Z",
+        "topic": "technology",
+        "summary": "Synthetic invalid record.",
+        "body": "This content must never be stored.",
+        "collected_at": "2026-10-26T10:05:00Z",
+        "changed_at": null
+      }
+    },
+    {
+      "name": "invalid-publication-date",
+      "expected_error": "PROVIDER_DATA_INVALID",
+      "record": {
+        "record_key": "fixture-pipeline-invalid-date",
+        "headline": "Synthetic invalid date record",
+        "link": "https://example.invalid/newsflow-ai/pipeline-invalid-date",
+        "published_at": "not-a-date",
+        "topic": "science",
+        "summary": "Synthetic invalid record.",
+        "body": "This content must never be stored.",
+        "collected_at": "2026-10-26T11:05:00Z",
+        "changed_at": null
+      }
+    },
+    {
+      "name": "missing-permitted-content",
+      "expected_error": "PROVIDER_DATA_INVALID",
+      "record": {
+        "record_key": "fixture-pipeline-invalid-content",
+        "headline": "Synthetic missing content record",
+        "link": "https://example.invalid/newsflow-ai/pipeline-invalid-content",
+        "published_at": "2026-10-26T12:00:00Z",
+        "topic": "business",
+        "summary": "Synthetic invalid record.",
+        "collected_at": "2026-10-26T12:05:00Z",
+        "changed_at": null
+      }
+    },
+    {
+      "name": "unsafe-markup",
+      "expected_error": "PROVIDER_DATA_INVALID",
+      "record": {
+        "record_key": "fixture-pipeline-invalid-markup",
+        "headline": "Synthetic unsafe markup record",
+        "link": "https://example.invalid/newsflow-ai/pipeline-invalid-markup",
+        "published_at": "2026-10-26T13:00:00Z",
+        "topic": "business",
+        "summary": "Synthetic invalid record.",
+        "body": "<script>restricted-test-value</script>",
+        "collected_at": "2026-10-26T13:05:00Z",
+        "changed_at": null
+      }
+    }
+  ]
+}

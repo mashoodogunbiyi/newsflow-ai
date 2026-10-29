@@ -8,6 +8,7 @@ class ProviderErrorCode(str, Enum):
 
     SOURCE_NOT_AUTHORISED = "SOURCE_NOT_AUTHORISED"
     PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE"
+    PROVIDER_TIMEOUT = "PROVIDER_TIMEOUT"
     PROVIDER_DATA_INVALID = "PROVIDER_DATA_INVALID"
     INVALID_PROVIDER_CURSOR = "INVALID_PROVIDER_CURSOR"
     ARTICLE_NOT_FOUND = "ARTICLE_NOT_FOUND"
@@ -47,6 +48,17 @@ class ProviderUnavailableError(ProviderError):
         super().__init__(
             code=ProviderErrorCode.PROVIDER_UNAVAILABLE,
             message="The news provider is temporarily unavailable.",
+            retryable=True,
+        )
+
+
+class ProviderTimeoutError(ProviderError):
+    """Raised when an authorised provider does not answer in time."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            code=ProviderErrorCode.PROVIDER_TIMEOUT,
+            message="The news provider request timed out.",
             retryable=True,
         )
 

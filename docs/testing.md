@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, and NFA-35 ingestion observability.
+This guide records the automated test strategy for account security and the provider-to-database article workflow, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, and the NFA-36 complete synthetic pipeline suite.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -14,7 +14,8 @@ The test suite is designed to detect security regressions before a pull request 
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
-| Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend linting, formatting, tests, type checking, and the frontend build on GitHub. |
+| Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
+| Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs the isolated NFA-36 PostgreSQL suite on GitHub. |
 
 ## NFA-26 coverage
 
@@ -113,6 +114,23 @@ pytest tests/test_article_sync.py \
   tests/test_admin_ingestion_observability.py
 ```
 
+## NFA-36 complete article pipeline coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Reusable valid, invalid, missing-field, update, and duplicate fixtures | `tests/fixtures`, `tests/support/article_pipeline.py`, and `test_article_pipeline_fixtures.py` |
+| Provider, normalisation, identity, rights, sync, and API unit coverage | Existing focused backend suites plus `test_article_sync.py` timeout coverage |
+| Complete provider-to-PostgreSQL-to-REST workflow | `test_catalogue_pipeline_e2e.py` |
+| Valid insert, permitted update, duplicate, repeat, and concurrent ingestion | Fixture tests and PostgreSQL end-to-end tests |
+| Invalid record and database failure safety | PostgreSQL end-to-end tests |
+| Provenance, rights, restricted AI use, and public-only API fields | PostgreSQL end-to-end tests |
+| Manual authentication and source-authorisation enforcement | End-to-end test plus `test_admin_article_sync.py` |
+| Schedule, timeout, checkpoint, interruption, and recovery policy | `test_article_sync.py` |
+| Accurate statistics, metrics, structured job logs, and redaction | End-to-end test and observability suites |
+| Live CNN remains inaccessible | CNN adapter tests and the end-to-end disabled-source assertion |
+
+The full strategy, exact disposable-database command, results, and limitations are recorded in [the NFA-36 pipeline testing guide](article-pipeline-testing.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -120,7 +138,7 @@ Activate the backend virtual environment, then run from `apps/api`:
 ```bash
 ruff check .
 ruff format --check .
-pytest
+pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
 Run only the NFA-26 security regression tests:
@@ -189,29 +207,26 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: install Python dependencies, lint, check formatting, and run Pytest.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, and run the NFA-36 pipeline suite against `newsflow_pipeline_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, and build Next.js.
 
-The normal GitHub backend job intentionally skips destructive PostgreSQL integration tests because it does not receive a database or reset permission. Those tests require deliberate local or future protected-CI configuration.
+The NFA-36 workflow step receives test-only credentials and reset permission only for the short-lived `newsflow_pipeline_test` service database. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
-Do not add real credentials to workflow files. Future CI integration databases must use short-lived test-only credentials stored as protected repository secrets.
+Do not add real credentials to workflow files. The committed workflow values are disposable CI-only values and must never be reused outside that isolated job.
 
 ## Verification record
 
 Verified locally on 29 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 161 tests and safely skipped 8 opt-in PostgreSQL tests.
-- The focused NFA-35 observability suite passed 18 tests.
-- The NFA-33 PostgreSQL synchronisation workflow passed against its disposable database with the NFA-35 fields.
-- The full migration, seed, rollback, and rebuild test passed through migration `20261029_0006` against its disposable database.
-- Docker Compose configuration validation passed.
-- The local development database reached migration `20261029_0006`, and the backend health check remained successful.
-- Both disposable databases were removed after verification.
+- The normal backend run passed 169 tests and safely skipped 11 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 77 percent, above the enforced 75 percent floor.
+- The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
+- Each NFA-36 test applied all migrations through `20261029_0006` and rolled the disposable schema back afterwards.
 - No test used live CNN content, real user data, or production credentials.
 
 ## Review status
 
-- Jira issue: NFA-35
+- Jira issue: NFA-36
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
