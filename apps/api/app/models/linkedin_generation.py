@@ -15,6 +15,11 @@ from pydantic import (
 
 from app.models.ai import AITokenUsage
 from app.models.generation_preferences import LinkedInPostLength, LinkedInTone
+from app.models.grounding import (
+    GroundingResult,
+    GroundingStatus,
+    GroundingWarning,
+)
 
 
 class LinkedInGenerationRequest(BaseModel):
@@ -92,6 +97,7 @@ class LinkedInDraft(BaseModel):
     length: LinkedInPostLength
     status: Literal["draft"] = "draft"
     review_required: Literal[True] = True
+    grounding: GroundingResult
     prompt_version: str = Field(pattern=r"^linkedin_post_v[1-9][0-9]*$")
     model_identifier: str = Field(min_length=1, max_length=200)
     token_usage: AITokenUsage
@@ -111,6 +117,7 @@ class LinkedInDraftResponse(BaseModel):
     length: LinkedInPostLength
     status: Literal["draft"]
     review_required: Literal[True]
+    grounding: GroundingResult
     prompt_version: str
     model_identifier: str
     token_usage: AITokenUsage
@@ -133,6 +140,9 @@ class GenerationResponse(BaseModel):
     source_attribution: str = Field(min_length=1, max_length=500)
     status: Literal["draft"]
     review_required: Literal[True]
+    grounding_status: GroundingStatus
+    validation_warnings: tuple[GroundingWarning, ...]
+    grounding_policy_version: Literal["grounding_v1"]
     created_at: datetime
 
     model_config = ConfigDict(extra="forbid")

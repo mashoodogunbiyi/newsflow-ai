@@ -31,6 +31,9 @@ def _public_response(draft: LinkedInDraft) -> GenerationResponse:
         source_attribution=draft.source.attribution_text,
         status=draft.status,
         review_required=draft.review_required,
+        grounding_status=draft.grounding.status,
+        validation_warnings=draft.grounding.warnings,
+        grounding_policy_version=draft.grounding.policy_version,
         created_at=draft.created_at,
     )
 
@@ -45,8 +48,9 @@ def _public_response(draft: LinkedInDraft) -> GenerationResponse:
         "request requires the HTTP-only session cookie and matching CSRF header. "
         "Before OpenAI is called, the reused NFA-40 service loads the selected "
         "PostgreSQL article and verifies current display and AI-processing rights. "
-        "A per-user request limit applies. The result requires human review and is "
-        "never published automatically."
+        "A per-user request limit applies. Deterministic factual-grounding checks "
+        "run before a draft is saved. The result requires human review, is never "
+        "described as factually verified, and is never published automatically."
     ),
     responses={
         400: {"description": "The request cannot be processed."},

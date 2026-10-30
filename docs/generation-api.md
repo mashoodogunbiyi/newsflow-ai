@@ -29,6 +29,7 @@ NFA-40 LinkedInGenerationService
       |-- NFA-39 prompt builder
       |-- NFA-38 OpenAI service
       |-- strict output validation
+      |-- NFA-42 factual-grounding checks
       `-- private PostgreSQL draft
       |
       v
@@ -91,11 +92,16 @@ A successful request returns HTTP `201 Created`:
   "source_attribution": "Source: NewsFlow AI synthetic fixture",
   "status": "draft",
   "review_required": true,
+  "grounding_status": "passed_automated_checks",
+  "validation_warnings": [],
+  "grounding_policy_version": "grounding_v1",
   "created_at": "2026-10-29T20:00:00Z"
 }
 ```
 
-The response includes the generation identifier, selected article identifier, source reference, user preferences, generated draft, and mandatory review state. It uses `Cache-Control: no-store`.
+The response includes the generation identifier, selected article identifier, source reference, user preferences, generated draft, safe grounding result, and mandatory review state. It uses `Cache-Control: no-store`.
+
+`passed_automated_checks` means only that no configured deterministic rule raised a warning. It must never be displayed as factually verified. Every draft keeps `review_required = true`. A questionable stored draft uses `review_required` plus one or more safe validation warnings. A blocking result is rejected before storage and is not returned as a draft.
 
 The response deliberately excludes:
 
@@ -135,6 +141,8 @@ Every expected failure uses the shared JSON error envelope:
 
 Provider bodies, credentials, prompts, article text, generated prose, database details, and stack traces are never copied into an error response.
 
+NFA-42 uses HTTP `502` and safe code `grounding_validation_rejected` when an empty draft, source-reference mismatch, insufficient permitted context, or unsupported direct quotation produces a blocking decision. The rejected draft and source text are excluded from the response.
+
 ## Request limits and ownership
 
 - The default local limit is 10 generation attempts per user in 60 seconds.
@@ -143,6 +151,7 @@ Provider bodies, credentials, prompts, article text, generated prose, database d
 - Successful generations are stored against the authenticated user's ID.
 - Existing owner-scoped retrieval requires the same user ID, preventing another user from accessing the private draft.
 - Generated content is always returned as a draft and is never automatically published.
+- Safe grounding warnings and the policy version are returned so the interface can explain why closer review is required.
 
 The in-memory request limiter is suitable for one local backend process. A multi-instance deployment must use a trusted shared rate-limit store or API gateway.
 
@@ -178,14 +187,15 @@ The tests cover:
 - Per-user rate limiting and idempotency forwarding.
 - OpenAPI request, response, error, and security descriptions.
 - Reuse of the NFA-40 service and its pre-OpenAI rights checks.
+- NFA-42 grounding status, safe warnings, and rejection before persistence.
 
 All tests use synthetic article information, sessions, users, and provider responses. No test makes a live or billable OpenAI request, uses live CNN content, or reads a real credential.
 
-Verified locally on 29 October 2026:
+Verified locally on 30 October 2026:
 
-- The focused NFA-41 and reused NFA-40 generation run passed 36 tests.
-- The complete backend suite passed 241 tests and safely skipped 11 opt-in PostgreSQL integration tests.
-- Backend branch-aware coverage was 78.99 percent, above the enforced 75 percent minimum.
+- The focused NFA-41 and reused NFA-40 generation run passed 37 tests.
+- The complete backend suite passed 254 tests and safely skipped 11 opt-in PostgreSQL integration tests.
+- Backend branch-aware coverage was 79.71 percent, above the enforced 75 percent minimum.
 - Ruff linting and formatting checks passed across all backend application and test files.
 - Docker Compose configuration and Git whitespace validation passed.
 

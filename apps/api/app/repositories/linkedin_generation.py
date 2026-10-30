@@ -22,6 +22,7 @@ from app.database.tables import (
 )
 from app.models.ai import AITextGenerationResult, AITokenUsage
 from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.grounding import GroundingResult
 from app.models.linkedin_generation import (
     LinkedInDraft,
     LinkedInDraftSourceReference,
@@ -91,6 +92,7 @@ class LinkedInGenerationRepository(Protocol):
         generated: AITextGenerationResult,
         draft_text: str,
         word_count: int,
+        grounding: GroundingResult,
     ) -> LinkedInDraft: ...
 
     async def get_draft_for_owner(
@@ -252,6 +254,7 @@ class SqlAlchemyLinkedInGenerationRepository:
         generated: AITextGenerationResult,
         draft_text: str,
         word_count: int,
+        grounding: GroundingResult,
     ) -> LinkedInDraft:
         now = datetime.now(UTC)
         draft_id = uuid4()
@@ -307,6 +310,13 @@ class SqlAlchemyLinkedInGenerationRepository:
                             attempt_count=1,
                             input_tokens=generated.usage.input_tokens,
                             output_tokens=generated.usage.output_tokens,
+                            grounding_status=grounding.status.value,
+                            grounding_policy_version=grounding.policy_version,
+                            grounding_warnings=[
+                                warning.model_dump(mode="json")
+                                for warning in grounding.warnings
+                            ],
+                            grounding_checked_claims=(grounding.checked_claim_count),
                             started_at=now,
                             completed_at=now,
                         )
@@ -361,6 +371,7 @@ class SqlAlchemyLinkedInGenerationRepository:
             source=source_reference,
             tone=preferences.tone,
             length=preferences.post_length,
+            grounding=grounding,
             prompt_version=prompt_version,
             model_identifier=generated.model,
             token_usage=generated.usage,
@@ -426,6 +437,10 @@ class SqlAlchemyLinkedInGenerationRepository:
                 GenerationRunTable.model.label("model_identifier"),
                 GenerationRunTable.input_tokens,
                 GenerationRunTable.output_tokens,
+                GenerationRunTable.grounding_status,
+                GenerationRunTable.grounding_policy_version,
+                GenerationRunTable.grounding_warnings,
+                GenerationRunTable.grounding_checked_claims,
                 GenerationRunTable.created_at,
                 PostVersionTable.rendered_text.label("draft"),
                 PostVersionTable.tone,
@@ -472,6 +487,19 @@ class SqlAlchemyLinkedInGenerationRepository:
             if input_tokens is None or output_tokens is None
             else input_tokens + output_tokens
         )
+        grounding = (
+            GroundingResult.legacy_unvalidated()
+            if row.grounding_status is None
+            else GroundingResult.model_validate(
+                {
+                    "status": row.grounding_status,
+                    "warnings": row.grounding_warnings or [],
+                    "policy_version": row.grounding_policy_version,
+                    "checked_claim_count": row.grounding_checked_claims,
+                    "human_review_required": True,
+                }
+            )
+        )
         return LinkedInDraft(
             draft_id=row.draft_id,
             generation_id=row.generation_id,
@@ -487,6 +515,7 @@ class SqlAlchemyLinkedInGenerationRepository:
             ),
             tone=row.tone,
             length=row.length_option,
+            grounding=grounding,
             prompt_version=row.prompt_version,
             model_identifier=row.model_identifier,
             token_usage=AITokenUsage(
