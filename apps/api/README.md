@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary.
 
 ## Requirements
 
@@ -522,6 +522,30 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_prompt.py
 
 See the [NFA-48 image-prompt composer guide](../../docs/image-prompt-composer.md) for parameters, rights checks, data separation, safety rules, errors, tests, and limitations.
 
+### Apply the sensitive-news image safety policy
+
+NFA-49 adds `ImageSafetyService` between NFA-48 prompt composition and any future provider. Its versioned deterministic policy classifies sensitive categories, rejects synthetic documentary evidence and misleading identifiable-person depictions, blocks safety overrides, routes uncertainty to review, and forces every request to remain conceptual, non-photorealistic, AI-designated, and subject to human review.
+
+Provider prompt and output moderation are required before automatic continuation. Sensitive requests also enable a strict safety level when available. Only `allowed` and `allowed_with_restrictions` results have `provider_call_allowed = true`; rejected or review-required results stop. An optional recorder receives IDs, policy version, category labels, decision, reason code, gate, designation, flags, and timestamp without source, user, draft, or prompt text.
+
+Run the focused checks from the repository root:
+
+```bash
+apps/api/.venv/bin/ruff check \
+  apps/api/app/models/image_safety.py \
+  apps/api/app/policies \
+  apps/api/app/services/image_safety.py \
+  apps/api/tests/test_image_safety.py
+apps/api/.venv/bin/ruff format --check \
+  apps/api/app/models/image_safety.py \
+  apps/api/app/policies \
+  apps/api/app/services/image_safety.py \
+  apps/api/tests/test_image_safety.py
+apps/api/.venv/bin/pytest -q apps/api/tests/test_image_safety.py
+```
+
+See the [NFA-49 sensitive-news image safety policy](../../docs/image-safety-policy.md) for categories, decisions, reason codes, provider controls, safe records, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -717,7 +741,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, the mocked NFA-38 OpenAI boundary, the NFA-39 LinkedIn prompt builder, and the NFA-48 image-prompt composer. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, the mocked NFA-38 OpenAI boundary, the NFA-39 LinkedIn prompt builder, the NFA-48 image-prompt composer, and the NFA-49 sensitive-news image safety policy. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
 
 ## Project structure
 
@@ -752,9 +776,11 @@ apps/api/
 |   |-- models/generation_preferences.py # LinkedIn choices, references, and prompt package
 |   |-- models/linkedin_generation.py # Generation request, model output, draft, and API schemas
 |   |-- models/image_prompt.py   # Image style, layout, request, reference, and result schemas
+|   |-- models/image_safety.py   # Image safety capabilities, decisions, results, and records
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- prompts/linkedin_post.py # Versioned trusted LinkedIn instructions and limits
 |   |-- prompts/image_illustration.py # Versioned safe illustration instructions
+|   |-- policies/sensitive_news.py # Central versioned sensitive-news image policy
 |   |-- providers/              # Provider protocol, normalisation, fixture, and disabled CNN boundary
 |   |-- repositories/articles.py # Atomic article and immutable snapshot persistence
 |   |-- repositories/article_rights.py # Rights versions and provenance queries
@@ -777,6 +803,7 @@ apps/api/
 |   |-- services/openai_service.py # Secure reusable Responses API boundary
 |   |-- services/prompt_builder.py # Rights-aware grounded prompt construction
 |   |-- services/image_prompt.py # Rights-aware article-or-draft image-prompt composer
+|   |-- services/image_safety.py # Pre-provider safety gate and safe decision recording
 |   |-- services/linkedin_generation.py # Authenticated generation orchestration
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
@@ -792,6 +819,7 @@ apps/api/
 |-- tests/test_article_deduplication.py # Fast identity, update, conflict, and concurrency tests
 |-- tests/test_article_deduplication_integration.py # Opt-in PostgreSQL deduplication proof
 |-- tests/test_image_prompt.py    # Safe illustration prompt unit tests
+|-- tests/test_image_safety.py    # Sensitive-news policy and provider-gate tests
 |-- tests/test_article_sync.py # Fast scheduled, manual, retry, and checkpoint tests
 |-- tests/test_admin_article_sync.py # Protected manual sync API tests
 |-- tests/test_admin_ingestion_observability.py # Protected operations API tests
