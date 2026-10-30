@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, and NFA-45 generation monitoring and audit.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, and the NFA-46 joined E4 acceptance workflow.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -361,6 +361,36 @@ apps/api/.venv/bin/pytest -q \
 
 The focused suite uses only synthetic IDs, article information, drafts, and provider outcomes. It does not contact CNN or OpenAI. See [the generation monitoring guide](generation-monitoring.md) for event definitions, protected endpoints, retention, failure investigation, and limitations.
 
+## NFA-46 joined E4 acceptance coverage
+
+`test_generation_workflow_acceptance.py` sends synthetic requests through the real FastAPI generation route and real generation orchestration. It uses the real article-rights service, prompt builder, grounding validator, usage calls, and generation audit service while replacing OpenAI and persistence with deterministic test doubles.
+
+| Requirement | Automated evidence |
+|---|---|
+| Successful authenticated HTTP-to-private-draft workflow | Complete success scenario and exact public response-field assertion |
+| Session and CSRF enforcement | Missing-session and invalid-CSRF scenarios |
+| Rights denied before provider access | Restricted-article scenario and zero OpenAI-call assertion |
+| Preference and source-context validation | Invalid-enum and insufficient-context scenarios |
+| Safe OpenAI and malformed-output failures | Unavailable-provider and invalid-structured-output scenarios |
+| Shared usage rejection | Limit-exceeded scenario, `Retry-After`, and zero provider access |
+| Trusted source reference and mandatory review | Success response assertions |
+| Content-free correlated audit evidence | Recorded start, rights, validation, completion, and failure events |
+| Human control and no automatic publishing | Draft status, review requirement, and route inspection |
+
+Run the focused NFA-46 evidence set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_generation_workflow_acceptance.py \
+  apps/api/tests/test_generation_api.py \
+  apps/api/tests/test_linkedin_generation_service.py \
+  apps/api/tests/test_generation_audit.py \
+  apps/api/tests/test_admin_generation_monitoring.py \
+  apps/api/tests/evaluation
+```
+
+The suite uses only original synthetic article content and mocked OpenAI output. It creates no live OpenAI request, retrieves no CNN content, and uses no real credential or personal information. See the [E4 acceptance record](e4-generation-acceptance.md) and [E4 architecture](architecture/ai-generation-architecture.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -449,8 +479,8 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 296 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 80.02 percent, above the enforced 75 percent floor.
+- The normal backend run passed 306 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 80.06 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -462,10 +492,11 @@ Verified locally on 30 October 2026:
 - The safety-gated NFA-43 PostgreSQL integration test passed against a disposable Docker database, then rolled the schema back.
 - The focused NFA-44 evaluation and generation-control run passed 83 tests and safely skipped the deliberately gated live-model test.
 - The focused NFA-45 monitoring, generation workflow, API, and configuration run passed 71 tests.
+- The focused NFA-46 E4 acceptance set passed 79 tests and safely skipped the optional live-model test.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, and NFA-45
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, and NFA-46
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

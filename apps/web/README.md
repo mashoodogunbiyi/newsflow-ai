@@ -2,7 +2,9 @@
 
 The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience.
 
-The application contains a responsive homepage, registration and login pages, a protected dashboard, session restoration, and logout. It uses original static demonstration content and does not retrieve live CNN information or call the OpenAI API.
+The application contains a responsive homepage, registration and login pages, a protected dashboard, session restoration, and logout. It uses original static demonstration content and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; that interface is not implemented in this task.
+
+The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
 ## Requirements
 
