@@ -173,14 +173,17 @@ The generated prose is retained because it is the user's editable draft. The sou
 
 - The default per-user limit is 10 generation requests per 60 seconds.
 - `GENERATION_RATE_LIMIT_ATTEMPTS` and `GENERATION_RATE_LIMIT_WINDOW_SECONDS` configure the local limiter.
+- NFA-43 adds a shared default of 50 provider-bound attempts per user per UTC day.
+- NFA-43 allows at most 2 active provider-bound attempts per user by default.
+- PostgreSQL advisory locks make daily, concurrent, and active duplicate checks atomic across backend instances.
 - NFA-39 length selection supplies a bounded output-token value.
 - NFA-38 enforces the server-wide maximum output, timeout, and retry budget.
 - Provider retries remain bounded by the OpenAI SDK configuration.
 - The service does not add an unbounded application retry loop.
-- An idempotency key prevents repeated storage for the same completed request.
-- Token usage and the model identifier are recorded without storing credentials.
+- An idempotency key returns the same completed draft or rejects the same active request without another provider call.
+- Safe success, failure, model, and available token usage evidence is recorded without storing credentials, prompts, article content, or generated prose.
 
-The in-process limiter is suitable for local development. A multi-instance deployment must move this control to a shared rate-limit store, gateway, or trusted reverse proxy.
+The in-process burst limiter is suitable as an extra local defence. The cost-sensitive daily, concurrent, and duplicate controls are shared through PostgreSQL. See the [NFA-43 generation operations guide](generation-operations.md) for configuration, retention, failure categories, retry rules, and troubleshooting.
 
 ## Controlled errors
 
@@ -191,7 +194,9 @@ The in-process limiter is suitable for local development. A multi-instance deplo
 | Article is not permitted | 403 | `article_ai_generation_not_permitted` |
 | Article is unavailable | 404 | `generation_article_not_found` |
 | Source information is insufficient | 422 | `insufficient_source_information` |
-| Per-user request limit reached | 429 | `linkedin_generation_rate_limited` |
+| Short burst or daily limit reached | 429 | `generation_limit_exceeded` |
+| Concurrent generation limit reached | 429 | `generation_concurrency_limit` |
+| Identical request already active | 409 | `generation_in_progress` |
 | Idempotency key reused differently | 409 | `idempotency_key_conflict` |
 | Empty, malformed, or out-of-range model result | 502 | Generation validation code |
 | Blocking factual-grounding result | 502 | `grounding_validation_rejected` |
@@ -231,10 +236,10 @@ Every test uses synthetic article information and a fake OpenAI client. Tests ne
 Verified locally on 30 October 2026:
 
 - The focused NFA-40 run passed 44 tests.
-- The complete backend suite passed 254 tests and safely skipped 11 opt-in PostgreSQL integration tests.
-- Backend branch-aware coverage was 79.71 percent, above the enforced 75 percent minimum.
+- The complete backend suite passed 269 tests and safely skipped 12 opt-in PostgreSQL integration tests.
+- Backend branch-aware coverage was 81.64 percent, above the enforced 75 percent minimum.
 - Ruff linting and formatting checks passed across the backend application and tests.
-- The Alembic migration chain has one head at `20261030_0008`.
+- The Alembic migration chain has one head at `20261030_0009`.
 
 ## Limitations and next steps
 

@@ -17,6 +17,7 @@ from app.services.openai_service import (
     OpenAIAuthenticationFailure,
     OpenAIInvalidResponseError,
     OpenAIOutputLimitError,
+    OpenAIQuotaFailure,
     OpenAIRateLimitFailure,
     OpenAIService,
     OpenAITimeoutFailure,
@@ -82,17 +83,23 @@ def successful_response(
     )
 
 
-def status_error(error_type: type[openai.APIStatusError], status_code: int):
+def status_error(
+    error_type: type[openai.APIStatusError],
+    status_code: int,
+    *,
+    headers: dict[str, str] | None = None,
+    body: dict[str, object] | None = None,
+):
     request = httpx.Request("POST", "https://api.openai.com/v1/responses")
     response = httpx.Response(
         status_code,
         request=request,
-        headers={"x-request-id": "req_failure_123"},
+        headers={"x-request-id": "req_failure_123", **(headers or {})},
     )
     return error_type(
         PROVIDER_DETAIL + " containing " + API_KEY,
         response=response,
-        body={"error": {"message": "provider failure"}},
+        body=body or {"error": {"message": "provider failure"}},
     )
 
 
@@ -249,7 +256,13 @@ def test_authentication_failure_is_safe_and_not_retryable() -> None:
 
 
 def test_rate_limit_failure_is_retryable_after_sdk_budget() -> None:
-    client = FakeClient(status_error(openai.RateLimitError, 429))
+    client = FakeClient(
+        status_error(
+            openai.RateLimitError,
+            429,
+            headers={"retry-after": "17"},
+        )
+    )
     service = OpenAIService(configuration=configuration(max_retries=2), client=client)
 
     with pytest.raises(OpenAIRateLimitFailure) as error:
@@ -262,6 +275,35 @@ def test_rate_limit_failure_is_retryable_after_sdk_budget() -> None:
     assert error.value.code == "openai_rate_limited"
     assert error.value.retryable is True
     assert error.value.request_id == "req_failure_123"
+    assert error.value.retry_after_seconds == 17
+
+
+def test_quota_rate_limit_is_not_marked_retryable() -> None:
+    client = FakeClient(
+        status_error(
+            openai.RateLimitError,
+            429,
+            body={
+                "error": {
+                    "message": "private provider detail",
+                    "type": "insufficient_quota",
+                    "code": "insufficient_quota",
+                }
+            },
+        )
+    )
+    service = OpenAIService(configuration=configuration(), client=client)
+
+    with pytest.raises(OpenAIQuotaFailure) as error:
+        run(
+            service.generate_text(
+                AITextGenerationRequest(input_text="Synthetic authorised input.")
+            )
+        )
+
+    assert error.value.code == "openai_quota_exceeded"
+    assert error.value.retryable is False
+    assert "private" not in str(error.value)
 
 
 def test_timeout_failure_is_controlled_and_retryable() -> None:

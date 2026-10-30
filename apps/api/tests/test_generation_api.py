@@ -24,6 +24,12 @@ from app.repositories.linkedin_generation import (
     LinkedInGenerationRepositoryError,
 )
 from app.security import InMemoryRateLimiter
+from app.services.generation_usage import (
+    GenerationConcurrencyLimitExceeded,
+    GenerationDuplicateInProgress,
+    GenerationLimitExceeded,
+    GenerationUsageUnavailable,
+)
 from app.services.linkedin_generation import (
     GenerationArticleNotFoundError,
     GenerationInsufficientSourceError,
@@ -33,6 +39,7 @@ from app.services.linkedin_generation import (
 )
 from app.services.openai_service import (
     OpenAIInvalidResponseError,
+    OpenAIRateLimitFailure,
     OpenAITimeoutFailure,
     OpenAIUnavailableFailure,
 )
@@ -380,9 +387,88 @@ def test_generation_applies_per_user_request_limit() -> None:
 
     assert first.status_code == 201
     assert limited.status_code == 429
-    assert limited.json()["error"]["code"] == "linkedin_generation_rate_limited"
+    assert limited.json()["error"]["code"] == "generation_limit_exceeded"
     assert int(limited.headers["retry-after"]) >= 1
     assert len(service.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_status", "expected_code"),
+    [
+        (
+            GenerationLimitExceeded(
+                code="generation_limit_exceeded",
+                message="You have reached your current generation limit.",
+                retry_after_seconds=3600,
+            ),
+            429,
+            "generation_limit_exceeded",
+        ),
+        (
+            GenerationConcurrencyLimitExceeded(
+                code="generation_concurrency_limit",
+                message="Too many generations are already in progress.",
+                retry_after_seconds=30,
+            ),
+            429,
+            "generation_concurrency_limit",
+        ),
+        (
+            GenerationDuplicateInProgress(
+                code="generation_in_progress",
+                message="This generation request is already in progress.",
+                retry_after_seconds=20,
+            ),
+            409,
+            "generation_in_progress",
+        ),
+    ],
+)
+def test_persistent_usage_controls_return_safe_errors_and_retry_after(
+    failure: Exception,
+    expected_status: int,
+    expected_code: str,
+) -> None:
+    test_client, _ = client(failure=failure)
+
+    response = test_client.post("/api/generations", json=valid_payload())
+
+    assert response.status_code == expected_status
+    assert response.json()["error"]["code"] == expected_code
+    assert int(response.headers["retry-after"]) >= 1
+
+
+def test_usage_storage_failure_fails_closed_before_a_provider_retry() -> None:
+    test_client, _ = client(
+        failure=GenerationUsageUnavailable(
+            code="generation_usage_unavailable",
+            message="Generation is temporarily unavailable.",
+        )
+    )
+
+    response = test_client.post("/api/generations", json=valid_payload())
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "generation_usage_unavailable"
+
+
+def test_temporary_provider_rate_limit_preserves_safe_retry_after() -> None:
+    test_client, _ = client(
+        failure=OpenAIRateLimitFailure(
+            code="openai_rate_limited",
+            message="The AI service is temporarily rate limited.",
+            retryable=True,
+            request_id="private-provider-request-id",
+            retry_after_seconds=17,
+        )
+    )
+
+    response = test_client.post("/api/generations", json=valid_payload())
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "openai_rate_limited"
+    assert response.headers["retry-after"] == "17"
+    assert "private-provider-request-id" not in response.text
 
 
 def test_generation_reports_missing_service_without_internal_details() -> None:

@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.ai_config import OpenAIServiceConfiguration
@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     manual_sync_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     generation_rate_limit_attempts: int = Field(default=10, ge=1, le=100)
     generation_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    generation_daily_limit: int = Field(default=50, ge=1, le=10_000)
+    generation_concurrent_limit: int = Field(default=2, ge=1, le=20)
+    generation_attempt_timeout_seconds: int = Field(default=180, ge=10, le=1800)
+    generation_usage_retention_days: int = Field(default=90, ge=1, le=730)
     ingestion_metrics_enabled: bool = True
     ingestion_metrics_window_hours: int = Field(default=24, ge=1, le=168)
     ingestion_failure_threshold: int = Field(default=3, ge=1, le=20)
@@ -88,6 +92,15 @@ class Settings(BaseSettings):
     openai_max_output_tokens: int = Field(default=800, ge=1, le=100_000)
     openai_max_retries: int = Field(default=2, ge=0, le=5)
     seed_data_enabled: bool = False
+
+    @field_validator("openai_model", mode="before")
+    @classmethod
+    def empty_optional_model_is_unconfigured(cls, value: object) -> object:
+        """Let non-AI API features start when Compose supplies an empty value."""
+
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @property
     def session_cookie_secure(self) -> bool:

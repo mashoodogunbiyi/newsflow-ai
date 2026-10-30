@@ -46,11 +46,13 @@ class OpenAIServiceError(RuntimeError):
         message: str,
         retryable: bool,
         request_id: str | None = None,
+        retry_after_seconds: int | None = None,
     ) -> None:
         self.code = code
         self.safe_message = message
         self.retryable = retryable
         self.request_id = request_id
+        self.retry_after_seconds = retry_after_seconds
         super().__init__(message)
 
 
@@ -60,6 +62,10 @@ class OpenAIAuthenticationFailure(OpenAIServiceError):
 
 class OpenAIRateLimitFailure(OpenAIServiceError):
     """Raised after the configured SDK retry budget is exhausted."""
+
+
+class OpenAIQuotaFailure(OpenAIServiceError):
+    """Raised for a non-retryable provider quota or billing limit."""
 
 
 class OpenAITimeoutFailure(OpenAIServiceError):
@@ -159,12 +165,21 @@ class OpenAIService:
             self._log_failure(error)
             raise error from exc
         except openai.RateLimitError as exc:
-            error = OpenAIRateLimitFailure(
-                code="openai_rate_limited",
-                message="The AI service is temporarily rate limited.",
-                retryable=True,
-                request_id=self._request_id(exc),
-            )
+            if self._quota_exhausted(exc):
+                error = OpenAIQuotaFailure(
+                    code="openai_quota_exceeded",
+                    message="AI generation is temporarily unavailable.",
+                    retryable=False,
+                    request_id=self._request_id(exc),
+                )
+            else:
+                error = OpenAIRateLimitFailure(
+                    code="openai_rate_limited",
+                    message="The AI service is temporarily rate limited.",
+                    retryable=True,
+                    request_id=self._request_id(exc),
+                    retry_after_seconds=self._retry_after(exc),
+                )
             self._log_failure(error)
             raise error from exc
         except openai.APITimeoutError as exc:
@@ -266,6 +281,42 @@ class OpenAIService:
     def _request_id(error: BaseException) -> str | None:
         request_id = getattr(error, "request_id", None)
         return request_id if isinstance(request_id, str) else None
+
+    @staticmethod
+    def _quota_exhausted(error: BaseException) -> bool:
+        markers = {
+            "insufficient_quota",
+            "billing_hard_limit_reached",
+            "usage_limit_reached",
+        }
+        code = getattr(error, "code", None)
+        if isinstance(code, str) and code.lower() in markers:
+            return True
+        body = getattr(error, "body", None)
+        if not isinstance(body, dict):
+            return False
+        provider_error = body.get("error", body)
+        if not isinstance(provider_error, dict):
+            return False
+        values = {provider_error.get("code"), provider_error.get("type")}
+        return any(
+            isinstance(value, str) and value.lower() in markers for value in values
+        )
+
+    @staticmethod
+    def _retry_after(error: BaseException) -> int | None:
+        response = getattr(error, "response", None)
+        headers = getattr(response, "headers", None)
+        if headers is None:
+            return None
+        raw_value = headers.get("retry-after")
+        if raw_value is None:
+            return None
+        try:
+            seconds = int(float(raw_value))
+        except (TypeError, ValueError):
+            return None
+        return max(1, min(seconds, 300))
 
     @staticmethod
     def _usage(provider_usage: Any) -> AITokenUsage:

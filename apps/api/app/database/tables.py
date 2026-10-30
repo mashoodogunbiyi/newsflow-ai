@@ -9,6 +9,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     String,
@@ -521,6 +522,84 @@ class GenerationRunTable(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class GenerationUsageEventTable(Base):
+    """Content-free operational evidence for one provider-bound attempt."""
+
+    __tablename__ = "generation_usage_events"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('started', 'succeeded', 'failed')",
+            name="ck_generation_usage_events_status",
+        ),
+        CheckConstraint(
+            "input_tokens IS NULL OR input_tokens >= 0",
+            name="ck_generation_usage_events_input_tokens",
+        ),
+        CheckConstraint(
+            "output_tokens IS NULL OR output_tokens >= 0",
+            name="ck_generation_usage_events_output_tokens",
+        ),
+        CheckConstraint(
+            "total_tokens IS NULL OR total_tokens >= 0",
+            name="ck_generation_usage_events_total_tokens",
+        ),
+        CheckConstraint(
+            "(status = 'started' AND completed_at IS NULL) OR "
+            "(status IN ('succeeded', 'failed') AND completed_at IS NOT NULL)",
+            name="ck_generation_usage_events_completion",
+        ),
+        CheckConstraint(
+            "(status = 'failed' AND error_category IS NOT NULL) OR "
+            "(status != 'failed' AND error_category IS NULL)",
+            name="ck_generation_usage_events_error_category",
+        ),
+        CheckConstraint(
+            "(status = 'succeeded' AND generation_run_id IS NOT NULL) OR "
+            "status != 'succeeded'",
+            name="ck_generation_usage_events_generation_run",
+        ),
+        Index(
+            "uq_generation_usage_events_active_request",
+            "user_id",
+            "request_fingerprint",
+            unique=True,
+            postgresql_where=text("status = 'started'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    generation_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generation_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    model_identifier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
     )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

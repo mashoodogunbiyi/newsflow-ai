@@ -13,7 +13,11 @@ from app.core.config import OpenAIConfigurationError
 from app.core.logging_config import log_event
 from app.models.ai import AIJsonSchemaFormat, AITextGenerationRequest
 from app.models.article_rights import ArticleUseOperation
-from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.generation_preferences import (
+    LinkedInGenerationPreferences,
+    LinkedInPromptPackage,
+)
+from app.models.generation_usage import GenerationErrorCategory
 from app.models.grounding import GroundingStatus
 from app.models.linkedin_generation import (
     LinkedInDraft,
@@ -22,11 +26,26 @@ from app.models.linkedin_generation import (
 )
 from app.prompts.linkedin_post import LINKEDIN_LENGTH_SPECIFICATIONS
 from app.repositories.linkedin_generation import (
+    LinkedInGenerationArticle,
     LinkedInGenerationRepository,
+    LinkedInGenerationRepositoryError,
 )
 from app.services.article_rights import ArticleRightsService
 from app.services.authorization import require_owned_resource
+from app.services.generation_usage import (
+    GenerationUsageService,
+    GenerationUsageUnavailable,
+)
 from app.services.generation_validator import GenerationGroundingValidator
+from app.services.openai_service import (
+    OpenAIAuthenticationFailure,
+    OpenAIInvalidResponseError,
+    OpenAIQuotaFailure,
+    OpenAIRateLimitFailure,
+    OpenAIServiceError,
+    OpenAITimeoutFailure,
+    OpenAIUnavailableFailure,
+)
 from app.services.prompt_builder import (
     ArticlePromptRightsError,
     InsufficientSourceInformationError,
@@ -103,12 +122,14 @@ class LinkedInGenerationService:
         repository: LinkedInGenerationRepository,
         rights: ArticleRightsService,
         openai_factory: AITextGeneratorFactory,
+        usage: GenerationUsageService | None = None,
         prompt_builder: LinkedInPromptBuilder | None = None,
         grounding_validator: GenerationGroundingValidator | None = None,
     ) -> None:
         self._repository = repository
         self._rights = rights
         self._openai_factory = openai_factory
+        self._usage = usage
         self._prompt_builder = prompt_builder or LinkedInPromptBuilder()
         self._grounding_validator = (
             grounding_validator or GenerationGroundingValidator()
@@ -183,6 +204,60 @@ class LinkedInGenerationService:
         if existing is not None:
             return existing
 
+        attempt = None
+        if self._usage is not None:
+            attempt = await self._usage.start_attempt(
+                owner_id=owner_id,
+                request_fingerprint=request_key,
+            )
+
+        try:
+            draft = await self._generate_new_draft(
+                owner_id=owner_id,
+                source=source,
+                package=package,
+                preferences=preferences,
+                request_key=request_key,
+                request_marker=request_marker,
+            )
+        except Exception as exc:
+            if self._usage is not None and attempt is not None:
+                try:
+                    await self._usage.fail_attempt(
+                        attempt=attempt,
+                        category=self._error_category(exc),
+                    )
+                except GenerationUsageUnavailable:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "generation_usage_failure_not_recorded",
+                        status="failed",
+                        error_category=self._error_category(exc).value,
+                    )
+            raise
+
+        if self._usage is not None and attempt is not None:
+            await self._usage.complete_attempt(
+                attempt=attempt,
+                generation_run_id=draft.generation_id,
+                model_identifier=draft.model_identifier,
+                token_usage=draft.token_usage,
+            )
+        return draft
+
+    async def _generate_new_draft(
+        self,
+        *,
+        owner_id: UUID,
+        source: LinkedInGenerationArticle,
+        package: LinkedInPromptPackage,
+        preferences: LinkedInGenerationPreferences,
+        request_key: str,
+        request_marker: str,
+    ) -> LinkedInDraft:
+        """Call the provider, validate its result, and persist one new draft."""
+
         generation_request = package.generation_request.model_copy(
             update={
                 "json_schema_format": AIJsonSchemaFormat(
@@ -236,7 +311,7 @@ class LinkedInGenerationService:
         )
         grounding = self._grounding_validator.validate(
             draft=output.draft,
-            article_id=article_id,
+            article_id=source.article_id,
             source_reference=source_reference,
             article=source.article,
         )
@@ -312,3 +387,32 @@ class LinkedInGenerationService:
             ).encode()
         ).hexdigest()
         return f"Prompt content not retained. Request fingerprint: {fingerprint}"
+
+    @staticmethod
+    def _error_category(exc: Exception) -> GenerationErrorCategory:
+        if isinstance(exc, OpenAIAuthenticationFailure):
+            return GenerationErrorCategory.AI_AUTHENTICATION_ERROR
+        if isinstance(exc, OpenAIRateLimitFailure):
+            return GenerationErrorCategory.AI_RATE_LIMIT_ERROR
+        if isinstance(exc, OpenAIQuotaFailure):
+            return GenerationErrorCategory.AI_QUOTA_ERROR
+        if isinstance(exc, OpenAITimeoutFailure):
+            return GenerationErrorCategory.AI_TIMEOUT
+        if isinstance(exc, OpenAIUnavailableFailure):
+            return GenerationErrorCategory.AI_SERVICE_UNAVAILABLE
+        if isinstance(exc, OpenAIInvalidResponseError):
+            return GenerationErrorCategory.AI_INVALID_RESPONSE
+        if isinstance(exc, GenerationProviderConfigurationError):
+            return GenerationErrorCategory.AI_CONFIGURATION_ERROR
+        if isinstance(
+            exc,
+            (
+                InvalidGeneratedDraftError,
+                GenerationInsufficientSourceError,
+                OpenAIServiceError,
+            ),
+        ):
+            return GenerationErrorCategory.GENERATION_VALIDATION_ERROR
+        if isinstance(exc, LinkedInGenerationRepositoryError):
+            return GenerationErrorCategory.GENERATION_STORAGE_ERROR
+        return GenerationErrorCategory.GENERATION_UNEXPECTED_ERROR

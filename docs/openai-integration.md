@@ -100,11 +100,14 @@ This example shows the provider boundary only. NFA-39 now supplies the versioned
 |---|---|---|---|
 | Invalid credentials | `openai_authentication_failed` | No | Rejects the request without revealing the key or provider message. |
 | Rate limit after the SDK retry budget | `openai_rate_limited` | Yes | Returns a safe temporary failure to the calling workflow. |
+| Billing or usage quota exhausted | `openai_quota_exceeded` | No | Requires an authorised configuration or budget change before retrying. |
 | Timeout after the SDK retry budget | `openai_timeout` | Yes | Returns a safe timeout failure. |
 | Connection or service failure | `openai_unavailable` | Yes | Returns a safe availability failure. |
 | Other provider rejection | `openai_request_rejected` | No | Returns a generic rejection without provider details. |
 | Incomplete or empty response | `openai_incomplete_response` or `openai_empty_response` | No | Rejects unusable generated output. |
 | Requested output above the configured cap | `openai_output_limit_exceeded` | No | Blocks the call before the provider is contacted. |
+
+NFA-43 preserves a bounded numeric `Retry-After` value for temporary rate limits when OpenAI supplies one. It also distinguishes temporary rate limiting from non-retryable quota exhaustion and relies on the configured SDK retry budget instead of adding a second nested retry loop. See the [generation operations guide](generation-operations.md) for the complete operational policy.
 
 `OPENAI_MAX_RETRIES` controls the official SDK's bounded retry behaviour for eligible temporary failures. Authentication errors and application validation failures are not deliberately retried by NewsFlow AI. A later workflow may retry a reported temporary application error only through an explicitly reviewed job policy with its own strict limit.
 
@@ -144,7 +147,7 @@ No test makes a live OpenAI request.
 Verified locally on 29 October 2026:
 
 - The focused configuration and OpenAI service run passed 27 tests.
-- The complete backend run passed 185 tests and safely skipped 11 opt-in PostgreSQL tests.
+- The current complete backend run passed 269 tests and safely skipped 12 opt-in PostgreSQL tests.
 - Branch-aware backend coverage measured 80.36 percent, above the enforced 75 percent floor.
 - Ruff linting and formatting checks passed.
 - Docker Compose configuration validation passed.
