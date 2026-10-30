@@ -27,6 +27,7 @@ EXPECTED_TABLES = {
     "generated_images",
     "generated_posts",
     "generation_facts",
+    "generation_audit_events",
     "generation_runs",
     "generation_usage_events",
     "post_claim_sources",
@@ -163,6 +164,37 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         "ix_generation_usage_events_expires_at",
         "uq_generation_usage_events_active_request",
     } <= usage_indexes
+    audit_columns = {
+        column["name"]
+        for column in sa.inspect(engine).get_columns("generation_audit_events")
+    }
+    assert {
+        "generation_request_id",
+        "user_id",
+        "article_id",
+        "generation_run_id",
+        "usage_event_id",
+        "event_type",
+        "status",
+        "occurred_at",
+        "duration_ms",
+        "model_identifier",
+        "prompt_version",
+        "error_category",
+        "rights_decision",
+        "validation_status",
+    } <= audit_columns
+    audit_indexes = {
+        index["name"]
+        for index in sa.inspect(engine).get_indexes("generation_audit_events")
+    }
+    assert {
+        "ix_generation_audit_events_request_time",
+        "ix_generation_audit_events_user_time",
+        "ix_generation_audit_events_type_time",
+        "ix_generation_audit_events_error_time",
+        "ix_generation_audit_events_occurred_at",
+    } <= audit_indexes
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
     }

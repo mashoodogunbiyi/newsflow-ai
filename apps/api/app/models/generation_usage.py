@@ -27,6 +27,12 @@ class GenerationErrorCategory(StrEnum):
     AI_CONFIGURATION_ERROR = "ai_configuration_error"
     GENERATION_VALIDATION_ERROR = "generation_validation_error"
     GENERATION_STORAGE_ERROR = "generation_storage_error"
+    GENERATION_ARTICLE_NOT_FOUND = "generation_article_not_found"
+    GENERATION_RIGHTS_DENIED = "generation_rights_denied"
+    GENERATION_DAILY_LIMIT = "generation_daily_limit"
+    GENERATION_CONCURRENCY_LIMIT = "generation_concurrency_limit"
+    GENERATION_DUPLICATE_IN_PROGRESS = "generation_duplicate_in_progress"
+    GENERATION_RATE_LIMIT = "generation_rate_limit"
     GENERATION_ABANDONED = "generation_abandoned"
     GENERATION_UNEXPECTED_ERROR = "generation_unexpected_error"
 

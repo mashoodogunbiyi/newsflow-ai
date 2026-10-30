@@ -6,6 +6,7 @@ from fastapi import Request
 
 from app.core.errors import ApplicationError
 from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.generation_usage import GenerationErrorCategory
 from app.models.linkedin_generation import (
     GenerationRequest,
     LinkedInDraft,
@@ -17,6 +18,10 @@ from app.repositories.linkedin_generation import (
     LinkedInGenerationRepositoryError,
 )
 from app.security import InMemoryRateLimiter, RateLimitExceeded
+from app.services.generation_audit import (
+    GenerationAuditService,
+    GenerationAuditUnavailable,
+)
 from app.services.generation_usage import (
     GenerationConcurrencyLimitExceeded,
     GenerationDuplicateInProgress,
@@ -57,7 +62,11 @@ def require_generation_service(request: Request) -> LinkedInGenerationService:
     return service
 
 
-async def enforce_generation_limit(request: Request, owner_id: UUID) -> None:
+async def enforce_generation_limit(
+    request: Request,
+    owner_id: UUID,
+    article_id: UUID,
+) -> None:
     """Apply the configured per-user request limit before generation."""
 
     limiter: InMemoryRateLimiter | None = getattr(
@@ -74,6 +83,31 @@ async def enforce_generation_limit(request: Request, owner_id: UUID) -> None:
     try:
         await limiter.check(str(owner_id))
     except RateLimitExceeded as exc:
+        audit: GenerationAuditService | None = getattr(
+            request.app.state,
+            "generation_audit_service",
+            None,
+        )
+        if audit is not None:
+            try:
+                context = await audit.start_request(
+                    user_id=owner_id,
+                    article_id=article_id,
+                )
+                await audit.record_usage_rejection(
+                    context=context,
+                    category=GenerationErrorCategory.GENERATION_RATE_LIMIT,
+                )
+                await audit.fail_request(
+                    context=context,
+                    category=GenerationErrorCategory.GENERATION_RATE_LIMIT,
+                )
+            except GenerationAuditUnavailable as audit_error:
+                raise ApplicationError(
+                    status_code=503,
+                    code=audit_error.code,
+                    message=audit_error.safe_message,
+                ) from audit_error
         raise ApplicationError(
             status_code=429,
             code="generation_limit_exceeded",
@@ -91,7 +125,7 @@ async def create_generation_resource(
 ) -> LinkedInDraft:
     """Validate API controls and delegate all generation logic to NFA-40."""
 
-    await enforce_generation_limit(request, owner_id)
+    await enforce_generation_limit(request, owner_id, payload.article_id)
     try:
         return await require_generation_service(request).generate_draft(
             owner_id=owner_id,
@@ -154,6 +188,12 @@ async def create_generation_resource(
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
     except GenerationUsageUnavailable as exc:
+        raise ApplicationError(
+            status_code=503,
+            code=exc.code,
+            message=exc.safe_message,
+        ) from exc
+    except GenerationAuditUnavailable as exc:
         raise ApplicationError(
             status_code=503,
             code=exc.code,

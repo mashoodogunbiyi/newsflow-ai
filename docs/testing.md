@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, and the NFA-44 AI evaluation and regression framework.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, and NFA-45 generation monitoring and audit.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -17,6 +17,7 @@ The test suite is designed to detect security regressions before a pull request 
 | Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs the isolated NFA-36 PostgreSQL suite on GitHub. |
 | AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
+| Generation monitoring and audit | `apps/api/tests/test_generation_audit.py` and `test_admin_generation_monitoring.py` | Checks lifecycle correlation, duration, metrics, token aggregation, retention, safe records, and administrator-only inspection. |
 
 ## NFA-26 coverage
 
@@ -332,6 +333,34 @@ RUN_LIVE_AI_EVALUATION=true pytest -m live_ai -s \
 
 See [the AI generation evaluation guide](ai-generation-evaluation.md) for scoring thresholds, regression procedure, live-test safeguards, and limitations.
 
+## NFA-45 generation monitoring and audit coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Start, completion, and failure events | `test_generation_audit.py` and `test_linkedin_generation_service.py` |
+| Rights, validation, and usage-rejection events | Audit service and generation workflow tests |
+| Correlation identifier and duration | `test_generation_audit.py` |
+| Success, failure, timeout, rate-limit, rejection, and average-duration metrics | `test_generation_audit.py` |
+| Available NFA-43 token totals | Monitoring aggregation test |
+| Safe fields and sensitive-data minimisation | Audit redaction test |
+| Administrator access and ordinary-user denial | `test_admin_generation_monitoring.py` |
+| Retention and configuration bounds | Audit and configuration tests |
+| PostgreSQL table, columns, indexes, upgrade, and rollback | `test_migrations_integration.py` |
+
+Run the focused NFA-45 evidence set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_generation_audit.py \
+  apps/api/tests/test_admin_generation_monitoring.py \
+  apps/api/tests/test_linkedin_generation_service.py \
+  apps/api/tests/test_generation_api.py \
+  apps/api/tests/test_linkedin_generation_api.py \
+  apps/api/tests/test_config.py
+```
+
+The focused suite uses only synthetic IDs, article information, drafts, and provider outcomes. It does not contact CNN or OpenAI. See [the generation monitoring guide](generation-monitoring.md) for event definitions, protected endpoints, retention, failure investigation, and limitations.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -420,10 +449,10 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 286 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 79.86 percent, above the enforced 75 percent floor.
+- The normal backend run passed 296 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 80.02 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
-- Each NFA-36 test applies all migrations through `20261030_0009` and rolls the disposable schema back afterwards.
+- Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
 - The focused NFA-40 generation run passed 44 tests.
@@ -432,10 +461,11 @@ Verified locally on 30 October 2026:
 - The focused NFA-43 generation operations run passed 82 tests.
 - The safety-gated NFA-43 PostgreSQL integration test passed against a disposable Docker database, then rolled the schema back.
 - The focused NFA-44 evaluation and generation-control run passed 83 tests and safely skipped the deliberately gated live-model test.
+- The focused NFA-45 monitoring, generation workflow, API, and configuration run passed 71 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, and NFA-44
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, and NFA-45
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

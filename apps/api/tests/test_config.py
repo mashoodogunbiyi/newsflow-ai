@@ -191,6 +191,8 @@ def test_linkedin_generation_rate_limit_has_bounded_defaults() -> None:
     assert settings.generation_concurrent_limit == 2
     assert settings.generation_attempt_timeout_seconds == 180
     assert settings.generation_usage_retention_days == 90
+    assert settings.generation_audit_retention_days == 90
+    assert settings.generation_monitoring_window_hours == 24
 
 
 def test_empty_optional_openai_model_does_not_block_non_ai_startup() -> None:

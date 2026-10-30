@@ -606,6 +606,89 @@ class GenerationUsageEventTable(Base):
     )
 
 
+class GenerationAuditEventTable(Base):
+    """Content-free lifecycle event for one correlated generation request."""
+
+    __tablename__ = "generation_audit_events"
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ("
+            "'generation_started', 'generation_rights_verified', "
+            "'generation_rights_denied', 'generation_usage_rejected', "
+            "'generation_validation_passed', 'generation_validation_failed', "
+            "'generation_completed', 'generation_failed')",
+            name="ck_generation_audit_events_type",
+        ),
+        CheckConstraint(
+            "status IN ('started', 'passed', 'succeeded', 'rejected', 'failed')",
+            name="ck_generation_audit_events_status",
+        ),
+        CheckConstraint(
+            "duration_ms IS NULL OR duration_ms >= 0",
+            name="ck_generation_audit_events_duration",
+        ),
+        Index(
+            "ix_generation_audit_events_request_time",
+            "generation_request_id",
+            "occurred_at",
+        ),
+        Index(
+            "ix_generation_audit_events_user_time",
+            "user_id",
+            "occurred_at",
+        ),
+        Index(
+            "ix_generation_audit_events_type_time",
+            "event_type",
+            "occurred_at",
+        ),
+        Index(
+            "ix_generation_audit_events_error_time",
+            "error_category",
+            "occurred_at",
+        ),
+        Index("ix_generation_audit_events_occurred_at", "occurred_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    generation_request_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    article_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    generation_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generation_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    usage_event_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generation_usage_events.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    model_identifier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    rights_decision: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    validation_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+
 class PostVersionTable(Base):
     """Application mapping for a version of a generated post."""
 

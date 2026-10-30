@@ -13,6 +13,7 @@ from app.core.config import OpenAIConfigurationError
 from app.core.logging_config import log_event
 from app.models.ai import AIJsonSchemaFormat, AITextGenerationRequest
 from app.models.article_rights import ArticleUseOperation
+from app.models.generation_audit import GenerationAuditContext
 from app.models.generation_preferences import (
     LinkedInGenerationPreferences,
     LinkedInPromptPackage,
@@ -32,7 +33,14 @@ from app.repositories.linkedin_generation import (
 )
 from app.services.article_rights import ArticleRightsService
 from app.services.authorization import require_owned_resource
+from app.services.generation_audit import (
+    GenerationAuditService,
+    GenerationAuditUnavailable,
+)
 from app.services.generation_usage import (
+    GenerationConcurrencyLimitExceeded,
+    GenerationDuplicateInProgress,
+    GenerationLimitExceeded,
     GenerationUsageService,
     GenerationUsageUnavailable,
 )
@@ -123,6 +131,7 @@ class LinkedInGenerationService:
         rights: ArticleRightsService,
         openai_factory: AITextGeneratorFactory,
         usage: GenerationUsageService | None = None,
+        audit: GenerationAuditService | None = None,
         prompt_builder: LinkedInPromptBuilder | None = None,
         grounding_validator: GenerationGroundingValidator | None = None,
     ) -> None:
@@ -130,6 +139,7 @@ class LinkedInGenerationService:
         self._rights = rights
         self._openai_factory = openai_factory
         self._usage = usage
+        self._audit = audit
         self._prompt_builder = prompt_builder or LinkedInPromptBuilder()
         self._grounding_validator = (
             grounding_validator or GenerationGroundingValidator()
@@ -144,74 +154,108 @@ class LinkedInGenerationService:
         idempotency_key: str | None = None,
     ) -> LinkedInDraft:
         """Return a private human-review draft without publishing it anywhere."""
-
-        source = await self._repository.get_article(article_id)
-        if source is None:
-            raise GenerationArticleNotFoundError(
-                code="generation_article_not_found",
-                message="The selected article was not found.",
-            )
-
-        access_decision = await self._rights.can_use_article(
-            article_id=article_id,
-            operation=ArticleUseOperation.DISPLAY_METADATA,
+        context = (
+            await self._audit.start_request(user_id=owner_id, article_id=article_id)
+            if self._audit is not None
+            else None
         )
-        if not access_decision.allowed:
-            raise GenerationArticleNotFoundError(
-                code="generation_article_not_found",
-                message="The selected article was not found.",
-            )
-
-        decision = await self._rights.can_use_article(
-            article_id=article_id,
-            operation=ArticleUseOperation.USE_FOR_AI_GENERATION,
-        )
-        if not decision.allowed:
-            raise GenerationRightsDeniedError(
-                code="article_ai_generation_not_permitted",
-                message="The selected article is not permitted for AI generation.",
-            )
-
-        try:
-            package = self._prompt_builder.build(
-                article_id=article_id,
-                article=source.article,
-                rights_decision=decision,
-                preferences=preferences,
-            )
-        except ArticlePromptRightsError as exc:
-            raise GenerationRightsDeniedError(
-                code=exc.code,
-                message=exc.safe_message,
-            ) from exc
-        except InsufficientSourceInformationError as exc:
-            raise GenerationInsufficientSourceError(
-                code=exc.code,
-                message=exc.safe_message,
-            ) from exc
-
-        request_marker = self._request_marker(
-            article_id=article_id,
-            preferences=preferences,
-            prompt_version=package.prompt_version,
-        )
-        request_key = self._request_key(owner_id, idempotency_key)
-        existing = await self._repository.get_draft_by_request_key(
-            owner_id=owner_id,
-            request_key=request_key,
-            request_marker=request_marker,
-        )
-        if existing is not None:
-            return existing
-
         attempt = None
-        if self._usage is not None:
-            attempt = await self._usage.start_attempt(
-                owner_id=owner_id,
-                request_fingerprint=request_key,
+        package: LinkedInPromptPackage | None = None
+        validation_recorded = False
+        try:
+            source = await self._repository.get_article(article_id)
+            if source is None:
+                raise GenerationArticleNotFoundError(
+                    code="generation_article_not_found",
+                    message="The selected article was not found.",
+                )
+
+            access_decision = await self._rights.can_use_article(
+                article_id=article_id,
+                operation=ArticleUseOperation.DISPLAY_METADATA,
+            )
+            if not access_decision.allowed:
+                await self._record_rights(
+                    context=context,
+                    allowed=False,
+                    decision=access_decision.reason.value,
+                )
+                raise GenerationArticleNotFoundError(
+                    code="generation_article_not_found",
+                    message="The selected article was not found.",
+                )
+
+            decision = await self._rights.can_use_article(
+                article_id=article_id,
+                operation=ArticleUseOperation.USE_FOR_AI_GENERATION,
+            )
+            if not decision.allowed:
+                await self._record_rights(
+                    context=context,
+                    allowed=False,
+                    decision=decision.reason.value,
+                )
+                raise GenerationRightsDeniedError(
+                    code="article_ai_generation_not_permitted",
+                    message=(
+                        "The selected article is not permitted for AI generation."
+                    ),
+                )
+            await self._record_rights(
+                context=context,
+                allowed=True,
+                decision=decision.reason.value,
             )
 
-        try:
+            try:
+                package = self._prompt_builder.build(
+                    article_id=article_id,
+                    article=source.article,
+                    rights_decision=decision,
+                    preferences=preferences,
+                )
+            except ArticlePromptRightsError as exc:
+                await self._record_rights(
+                    context=context,
+                    allowed=False,
+                    decision=exc.code,
+                )
+                raise GenerationRightsDeniedError(
+                    code=exc.code,
+                    message=exc.safe_message,
+                ) from exc
+            except InsufficientSourceInformationError as exc:
+                raise GenerationInsufficientSourceError(
+                    code=exc.code,
+                    message=exc.safe_message,
+                ) from exc
+
+            request_marker = self._request_marker(
+                article_id=article_id,
+                preferences=preferences,
+                prompt_version=package.prompt_version,
+            )
+            request_key = self._request_key(owner_id, idempotency_key)
+            existing = await self._repository.get_draft_by_request_key(
+                owner_id=owner_id,
+                request_key=request_key,
+                request_marker=request_marker,
+            )
+            if existing is not None:
+                await self._record_completed(
+                    context=context,
+                    draft=existing,
+                    usage_event_id=None,
+                    prompt_version=package.prompt_version,
+                )
+                return existing
+
+            if self._usage is not None:
+                attempt = await self._usage.start_attempt(
+                    owner_id=owner_id,
+                    request_fingerprint=request_key,
+                )
+
             draft = await self._generate_new_draft(
                 owner_id=owner_id,
                 source=source,
@@ -220,12 +264,68 @@ class LinkedInGenerationService:
                 request_key=request_key,
                 request_marker=request_marker,
             )
+            if self._audit is not None and context is not None:
+                await self._audit.record_validation(
+                    context=context,
+                    passed=True,
+                    validation_status=draft.grounding.status.value,
+                    prompt_version=package.prompt_version,
+                )
+                validation_recorded = True
+
+            if self._usage is not None and attempt is not None:
+                await self._usage.complete_attempt(
+                    attempt=attempt,
+                    generation_run_id=draft.generation_id,
+                    model_identifier=draft.model_identifier,
+                    token_usage=draft.token_usage,
+                )
+            await self._record_completed(
+                context=context,
+                draft=draft,
+                usage_event_id=(attempt.id if attempt is not None else None),
+                prompt_version=package.prompt_version,
+            )
+            return draft
         except Exception as exc:
+            category = self._error_category(exc)
+            if (
+                self._audit is not None
+                and context is not None
+                and isinstance(
+                    exc,
+                    (InvalidGeneratedDraftError, GenerationInsufficientSourceError),
+                )
+                and not validation_recorded
+            ):
+                await self._audit.record_validation(
+                    context=context,
+                    passed=False,
+                    validation_status=exc.code,
+                    prompt_version=(package.prompt_version if package else None),
+                )
+                validation_recorded = True
+            if (
+                self._audit is not None
+                and context is not None
+                and isinstance(
+                    exc,
+                    (
+                        GenerationLimitExceeded,
+                        GenerationConcurrencyLimitExceeded,
+                        GenerationDuplicateInProgress,
+                    ),
+                )
+            ):
+                await self._audit.record_usage_rejection(
+                    context=context,
+                    category=category,
+                )
             if self._usage is not None and attempt is not None:
                 try:
                     await self._usage.fail_attempt(
                         attempt=attempt,
-                        category=self._error_category(exc),
+                        category=category,
                     )
                 except GenerationUsageUnavailable:
                     log_event(
@@ -233,18 +333,19 @@ class LinkedInGenerationService:
                         logging.ERROR,
                         "generation_usage_failure_not_recorded",
                         status="failed",
-                        error_category=self._error_category(exc).value,
+                        error_category=category.value,
                     )
+            if (
+                self._audit is not None
+                and context is not None
+                and not isinstance(exc, GenerationAuditUnavailable)
+            ):
+                await self._audit.fail_request(
+                    context=context,
+                    category=category,
+                    usage_event_id=(attempt.id if attempt is not None else None),
+                )
             raise
-
-        if self._usage is not None and attempt is not None:
-            await self._usage.complete_attempt(
-                attempt=attempt,
-                generation_run_id=draft.generation_id,
-                model_identifier=draft.model_identifier,
-                token_usage=draft.token_usage,
-            )
-        return draft
 
     async def _generate_new_draft(
         self,
@@ -404,6 +505,16 @@ class LinkedInGenerationService:
             return GenerationErrorCategory.AI_INVALID_RESPONSE
         if isinstance(exc, GenerationProviderConfigurationError):
             return GenerationErrorCategory.AI_CONFIGURATION_ERROR
+        if isinstance(exc, GenerationArticleNotFoundError):
+            return GenerationErrorCategory.GENERATION_ARTICLE_NOT_FOUND
+        if isinstance(exc, GenerationRightsDeniedError):
+            return GenerationErrorCategory.GENERATION_RIGHTS_DENIED
+        if isinstance(exc, GenerationLimitExceeded):
+            return GenerationErrorCategory.GENERATION_DAILY_LIMIT
+        if isinstance(exc, GenerationConcurrencyLimitExceeded):
+            return GenerationErrorCategory.GENERATION_CONCURRENCY_LIMIT
+        if isinstance(exc, GenerationDuplicateInProgress):
+            return GenerationErrorCategory.GENERATION_DUPLICATE_IN_PROGRESS
         if isinstance(
             exc,
             (
@@ -416,3 +527,34 @@ class LinkedInGenerationService:
         if isinstance(exc, LinkedInGenerationRepositoryError):
             return GenerationErrorCategory.GENERATION_STORAGE_ERROR
         return GenerationErrorCategory.GENERATION_UNEXPECTED_ERROR
+
+    async def _record_rights(
+        self,
+        *,
+        context: GenerationAuditContext | None,
+        allowed: bool,
+        decision: str,
+    ) -> None:
+        if self._audit is not None and context is not None:
+            await self._audit.record_rights_decision(
+                context=context,
+                allowed=allowed,
+                decision=decision,
+            )
+
+    async def _record_completed(
+        self,
+        *,
+        context: GenerationAuditContext | None,
+        draft: LinkedInDraft,
+        usage_event_id: UUID | None,
+        prompt_version: str,
+    ) -> None:
+        if self._audit is not None and context is not None:
+            await self._audit.complete_request(
+                context=context,
+                generation_run_id=draft.generation_id,
+                usage_event_id=usage_event_id,
+                model_identifier=draft.model_identifier,
+                prompt_version=prompt_version,
+            )

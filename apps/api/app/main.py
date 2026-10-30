@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse, Response
 from app.api.routes.article_sync import router as article_sync_router
 from app.api.routes.articles import router as articles_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.generation_monitoring import router as generation_monitoring_router
 from app.api.routes.generations import router as generations_router
 from app.api.routes.health import router as health_router
 from app.api.routes.ingestion_observability import (
@@ -47,6 +48,7 @@ from app.repositories.article_sync import (
     SqlAlchemyArticleSyncRepository,
 )
 from app.repositories.articles import SqlAlchemyArticleRepository
+from app.repositories.generation_audit import SqlAlchemyGenerationAuditRepository
 from app.repositories.generation_usage import SqlAlchemyGenerationUsageRepository
 from app.repositories.linkedin_generation import (
     LinkedInGenerationRepository,
@@ -63,6 +65,8 @@ from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
 from app.services.article_rights import ArticleRightsService
 from app.services.article_sync import ArticleSyncService
+from app.services.generation_audit import GenerationAuditService
+from app.services.generation_monitoring import GenerationMonitoringService
 from app.services.generation_usage import GenerationUsageService
 from app.services.ingestion_observability import IngestionObservabilityService
 from app.services.linkedin_generation import (
@@ -94,6 +98,8 @@ def create_app(
     linkedin_generation_repository: LinkedInGenerationRepository | None = None,
     linkedin_generation_service: LinkedInGenerationService | None = None,
     generation_usage_service: GenerationUsageService | None = None,
+    generation_audit_service: GenerationAuditService | None = None,
+    generation_monitoring_service: GenerationMonitoringService | None = None,
     openai_factory: AITextGeneratorFactory | None = None,
     generation_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
@@ -145,6 +151,8 @@ def create_app(
         configured_linkedin_generation_repository = linkedin_generation_repository
         configured_linkedin_generation_service = linkedin_generation_service
         configured_generation_usage_service = generation_usage_service
+        configured_generation_audit_service = generation_audit_service
+        configured_generation_monitoring_service = generation_monitoring_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
@@ -208,6 +216,23 @@ def create_app(
                         days=application_settings.generation_usage_retention_days
                     ),
                 )
+            generation_audit_repository = SqlAlchemyGenerationAuditRepository(
+                sqlalchemy_database
+            )
+            if configured_generation_audit_service is None:
+                configured_generation_audit_service = GenerationAuditService(
+                    repository=generation_audit_repository,
+                    retention=timedelta(
+                        days=application_settings.generation_audit_retention_days
+                    ),
+                )
+            if configured_generation_monitoring_service is None:
+                configured_generation_monitoring_service = GenerationMonitoringService(
+                    repository=generation_audit_repository,
+                    default_window_hours=(
+                        application_settings.generation_monitoring_window_hours
+                    ),
+                )
             if configured_linkedin_generation_service is None:
                 assert configured_article_rights_repository is not None
                 assert configured_linkedin_generation_repository is not None
@@ -219,11 +244,9 @@ def create_app(
                         or (lambda: OpenAIService.from_settings(application_settings))
                     ),
                     usage=configured_generation_usage_service,
+                    audit=configured_generation_audit_service,
                 )
-            if (
-                application_settings.news_source_mode == "fixture"
-                and configured_article_sync_repository is None
-            ):
+            if configured_article_sync_repository is None:
                 configured_article_sync_repository = SqlAlchemyArticleSyncRepository(
                     sqlalchemy_database
                 )
@@ -295,6 +318,10 @@ def create_app(
         )
         application.state.linkedin_generation_service = (
             configured_linkedin_generation_service
+        )
+        application.state.generation_audit_service = configured_generation_audit_service
+        application.state.generation_monitoring_service = (
+            configured_generation_monitoring_service
         )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
@@ -430,6 +457,7 @@ def create_app(
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(generations_router)
+    application.include_router(generation_monitoring_router)
     application.include_router(library_router)
     application.include_router(articles_router)
     application.include_router(article_sync_router)
