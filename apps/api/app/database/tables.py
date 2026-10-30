@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import (
     CHAR,
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -465,6 +467,17 @@ class GenerationRunTable(Base):
     """Application mapping for one bounded AI generation attempt."""
 
     __tablename__ = "generation_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "grounding_status IS NULL OR grounding_status IN "
+            "('passed_automated_checks', 'review_required', 'rejected')",
+            name="ck_generation_runs_grounding_status",
+        ),
+        CheckConstraint(
+            "grounding_checked_claims IS NULL OR grounding_checked_claims >= 0",
+            name="ck_generation_runs_grounding_checked_claims",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
@@ -495,6 +508,14 @@ class GenerationRunTable(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     safe_error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    grounding_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    grounding_policy_version: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )
+    grounding_warnings: Mapped[list[dict[str, str]] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    grounding_checked_claims: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

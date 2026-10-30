@@ -14,6 +14,7 @@ from app.api.routes.linkedin_generation import router
 from app.core.errors import ApplicationError, register_exception_handlers
 from app.models.ai import AITokenUsage
 from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.grounding import GroundingResult, GroundingStatus
 from app.models.linkedin_generation import (
     LinkedInDraft,
     LinkedInDraftSourceReference,
@@ -45,6 +46,10 @@ class StubGenerationService:
             ),
             tone="professional",
             length="medium",
+            grounding=GroundingResult(
+                status=GroundingStatus.PASSED_AUTOMATED_CHECKS,
+                checked_claim_count=1,
+            ),
             prompt_version="linkedin_post_v1",
             model_identifier="test-openai-model",
             token_usage=AITokenUsage(
@@ -160,6 +165,7 @@ def test_generation_and_private_get_return_no_store_human_review_draft() -> None
     assert response.headers["cache-control"] == "no-store"
     assert response.json()["status"] == "draft"
     assert response.json()["review_required"] is True
+    assert response.json()["grounding"]["status"] == "passed_automated_checks"
     assert response.json()["source"]["article_id"] == str(ARTICLE_ID)
     assert "owner_id" not in response.json()
     assert "model_identifier" in response.json()

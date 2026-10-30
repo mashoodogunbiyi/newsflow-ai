@@ -12,6 +12,7 @@ from app.api.routes.generations import router
 from app.core.errors import ApplicationError, register_exception_handlers
 from app.models.ai import AITokenUsage
 from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.grounding import GroundingResult, GroundingStatus
 from app.models.linkedin_generation import (
     LinkedInDraft,
     LinkedInDraftSourceReference,
@@ -63,6 +64,10 @@ class StubGenerationService:
             ),
             tone="professional",
             length="medium",
+            grounding=GroundingResult(
+                status=GroundingStatus.PASSED_AUTOMATED_CHECKS,
+                checked_claim_count=1,
+            ),
             prompt_version="linkedin_post_v1",
             model_identifier="private-provider-model",
             token_usage=AITokenUsage(
@@ -176,6 +181,9 @@ def test_generation_returns_minimal_consistent_frontend_response() -> None:
         "source_attribution": "Source: NewsFlow AI synthetic fixture",
         "status": "draft",
         "review_required": True,
+        "grounding_status": "passed_automated_checks",
+        "validation_warnings": [],
+        "grounding_policy_version": "grounding_v1",
         "created_at": "2026-10-29T20:00:00Z",
     }
     assert service.calls == [

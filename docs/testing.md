@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, and the NFA-41 frontend-facing generation REST API.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, and NFA-42 deterministic factual-grounding validation.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -232,6 +232,32 @@ pytest tests/test_generation_api.py \
 
 These tests use synthetic records and provider doubles. They make no live OpenAI request and do not use live CNN information.
 
+## NFA-42 factual-grounding coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Strict structured output and empty-result rejection | `test_generation_validator.py` and `test_linkedin_generation_service.py` |
+| Trusted article ID and canonical URL | `test_generation_validator.py` |
+| Unsupported numbers and quotations | `test_generation_validator.py` |
+| Named entities and low-support factual assertions | `test_generation_validator.py` |
+| Clearly framed commentary distinguished from factual claims | `test_generation_validator.py` |
+| Insufficient permitted context | `test_generation_validator.py` and prompt-builder tests |
+| Safe warning text without source or claim excerpts | `test_generation_validator.py` |
+| Blocking result rejected before persistence | `test_linkedin_generation_service.py` |
+| Grounding status and warnings in API responses | Generation API tests |
+| Grounding migration fields and index | `test_migrations_integration.py` |
+
+Run the focused NFA-42 tests from `apps/api`:
+
+```bash
+pytest tests/test_generation_validator.py \
+  tests/test_linkedin_generation_service.py \
+  tests/test_generation_api.py \
+  tests/test_linkedin_generation_api.py
+```
+
+All grounding fixtures are original synthetic records. The validator does not call a second model, make network requests, retrieve restricted text, or log article and draft excerpts.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -317,21 +343,22 @@ Do not add real credentials to workflow files. The committed workflow values are
 
 ## Verification record
 
-Verified locally on 29 October 2026:
+Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 241 tests and safely skipped 11 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 78.99 percent, above the enforced 75 percent floor.
+- The normal backend run passed 254 tests and safely skipped 11 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 79.71 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
-- Each NFA-36 test applied all migrations through `20261029_0007` and rolled the disposable schema back afterwards.
+- Each NFA-36 test applies all migrations through `20261030_0008` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
-- The focused NFA-40 generation run passed 58 tests.
-- The focused NFA-41 and reused NFA-40 API and service run passed 36 tests.
+- The focused NFA-40 generation run passed 44 tests.
+- The focused NFA-41 and reused NFA-40 API and service run passed 37 tests.
+- The focused NFA-42 validation, service, and API run passed 49 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, and NFA-41
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, and NFA-42
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

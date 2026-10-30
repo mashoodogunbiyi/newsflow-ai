@@ -33,6 +33,9 @@ NFA-38 OpenAIService
 Strict JSON and word-limit validation
               |
               v
+NFA-42 factual-grounding validation
+              |
+              v
 Owner-scoped PostgreSQL draft
 ```
 
@@ -88,6 +91,13 @@ Example response:
   "length": "medium",
   "status": "draft",
   "review_required": true,
+  "grounding": {
+    "status": "passed_automated_checks",
+    "warnings": [],
+    "policy_version": "grounding_v1",
+    "checked_claim_count": 1,
+    "human_review_required": true
+  },
   "prompt_version": "linkedin_post_v1",
   "model_identifier": "configured-model",
   "token_usage": {
@@ -142,16 +152,20 @@ The backend still validates the returned JSON with Pydantic. This defence reject
 
 OpenAI's [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses) recommends JSON Schema enforcement where supported. Application validation remains necessary because structured output does not prove factual accuracy.
 
+NFA-42 adds deterministic checks after this structural validation. It verifies the trusted article ID and canonical URL, then checks numbers, quotations, dates, named entities, and factual assertions against only the permitted source fields. Results can pass automated checks, require review, or be rejected. Passing checks never means factually verified, and every stored draft still requires human verification. See the [factual grounding guide](factual-grounding-validation.md).
+
 ## PostgreSQL persistence
 
 A successful generation writes:
 
 - One owner-scoped `generated_posts` row with `status = 'draft'`.
-- One successful `generation_runs` row with the model, prompt version, provider request reference, token usage, hashed idempotency value, and the exact rights-version ID used.
+- One successful `generation_runs` row with the model, prompt version, provider request reference, token usage, hashed idempotency value, exact rights-version ID, and safe grounding result used.
 - One immutable AI-origin `post_versions` row containing the generated draft and approved source attribution.
 - Three safe application-generated hashtag records required by the approved NFA-20 schema.
 
 Migration `20261029_0007` adds `generation_runs.article_rights_version_id` so the permission decision used for generation remains auditable even when current article rights change later.
+
+Migration `20261030_0008` adds safe grounding status, policy version, warning JSON, and checked-claim counts. It stores no source or draft excerpt. Rows created before NFA-42 are returned conservatively as `review_required` with `legacy_unvalidated`.
 
 The generated prose is retained because it is the user's editable draft. The source prompt and source content are not duplicated in the generation record. `prompt_text` contains only a non-sensitive request fingerprint marker because the existing schema requires a value.
 
@@ -180,6 +194,7 @@ The in-process limiter is suitable for local development. A multi-instance deplo
 | Per-user request limit reached | 429 | `linkedin_generation_rate_limited` |
 | Idempotency key reused differently | 409 | `idempotency_key_conflict` |
 | Empty, malformed, or out-of-range model result | 502 | Generation validation code |
+| Blocking factual-grounding result | 502 | `grounding_validation_rejected` |
 | OpenAI returns an invalid response | 502 | Safe provider response code |
 | OpenAI request times out | 504 | `openai_timeout` |
 | OpenAI or PostgreSQL is unavailable | 503 | Safe service-specific code |
@@ -209,22 +224,23 @@ Coverage includes:
 - Per-user rate limiting and idempotent duplicate handling.
 - Owner-only draft retrieval.
 - Human-review status and no automatic publication.
+- Grounding status, safe warnings, unsupported-claim checks, and rejection before persistence.
 
 Every test uses synthetic article information and a fake OpenAI client. Tests never make a live or billable OpenAI request and never use live CNN content.
 
-Verified locally on 29 October 2026:
+Verified locally on 30 October 2026:
 
-- The focused NFA-40 run passed 58 tests.
-- The complete backend suite passed 216 tests and safely skipped 11 opt-in PostgreSQL integration tests.
-- Backend branch-aware coverage was 78.28 percent, above the enforced 75 percent minimum.
+- The focused NFA-40 run passed 44 tests.
+- The complete backend suite passed 254 tests and safely skipped 11 opt-in PostgreSQL integration tests.
+- Backend branch-aware coverage was 79.71 percent, above the enforced 75 percent minimum.
 - Ruff linting and formatting checks passed across the backend application and tests.
-- The Alembic migration chain has one head at `20261029_0007`.
+- The Alembic migration chain has one head at `20261030_0008`.
 
 ## Limitations and next steps
 
 - NFA-40 provides backend endpoints. The Next.js dashboard does not yet provide the article selection and generation interface.
-- The generated draft is structurally validated but remains unverified content requiring human review.
-- Detailed factual-grounding evaluation and content-safety workflows remain later E4 tasks.
+- The generated draft is structurally and deterministically checked but remains unverified content requiring human review.
+- Automated grounding can miss subtle errors and can produce false positives. Human comparison with the source remains mandatory.
 - Local rate limiting is process-specific and must use shared infrastructure before multi-instance deployment.
 - Live CNN access remains blocked by ADR-001. Only synthetic fixtures may be used until written authorisation and a revised Go decision exist.
 - A real generation requires an approved `OPENAI_MODEL` and a valid server-side `OPENAI_API_KEY` in the ignored `.env` file or deployed secret store.

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -180,6 +181,7 @@ class InMemoryGenerationRepository:
             source=source_reference,
             tone=preferences.tone,
             length=preferences.post_length,
+            grounding=values["grounding"],
             prompt_version=values["prompt_version"],
             model_identifier=generated.model,
             token_usage=generated.usage,
@@ -243,6 +245,7 @@ def test_success_connects_rights_prompt_openai_validation_and_persistence() -> N
     assert result.owner_id == OWNER_ID
     assert result.status == "draft"
     assert result.review_required is True
+    assert result.grounding.status == "review_required"
     assert result.source.article_id == ARTICLE_ID
     assert result.source.rights_version_id == RIGHTS_VERSION_ID
     assert result.source.source_url == source().article.url
@@ -258,6 +261,7 @@ def test_success_connects_rights_prompt_openai_validation_and_persistence() -> N
     assert request.json_schema_format.schema_definition["additionalProperties"] is False
     assert "Tone: professional" in request.instructions.get_secret_value()
     assert repository.save_calls[0]["word_count"] == 80
+    assert repository.save_calls[0]["grounding"] == result.grounding
     assert generator.closed is True
 
 
@@ -360,6 +364,53 @@ def test_malformed_empty_and_out_of_range_outputs_are_rejected(
     assert error.value.code == expected_code
     assert repository.save_calls == []
     assert generator.closed is True
+
+
+def test_fabricated_quotation_is_rejected_before_persistence() -> None:
+    quoted = 'The company said "This result is guaranteed." ' + draft_text(80)
+    application_service, repository, _, generator, _ = service(
+        outcome=provider_result(quoted)
+    )
+
+    with pytest.raises(InvalidGeneratedDraftError) as error:
+        run(
+            application_service.generate_draft(
+                owner_id=OWNER_ID,
+                article_id=ARTICLE_ID,
+                preferences=LinkedInGenerationPreferences(
+                    post_length=LinkedInPostLength.SHORT
+                ),
+            )
+        )
+
+    assert error.value.code == "grounding_validation_rejected"
+    assert repository.save_calls == []
+    assert generator.closed is True
+
+
+def test_grounding_logs_contain_only_safe_status_and_counts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    private_marker = "restricted-draft-marker"
+    generated_text = " ".join(
+        [private_marker, *(f"safe{number}" for number in range(79))]
+    )
+    application_service, _, _, _, _ = service(outcome=provider_result(generated_text))
+    caplog.set_level(logging.INFO)
+
+    run(
+        application_service.generate_draft(
+            owner_id=OWNER_ID,
+            article_id=ARTICLE_ID,
+            preferences=LinkedInGenerationPreferences(
+                post_length=LinkedInPostLength.SHORT
+            ),
+        )
+    )
+
+    assert "linkedin_draft_grounding_evaluated" in caplog.text
+    assert private_marker not in caplog.text
+    assert source().article.title not in caplog.text
 
 
 def test_model_insufficiency_and_provider_timeout_are_controlled() -> None:

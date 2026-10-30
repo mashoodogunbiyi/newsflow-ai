@@ -14,6 +14,7 @@ from app.core.logging_config import log_event
 from app.models.ai import AIJsonSchemaFormat, AITextGenerationRequest
 from app.models.article_rights import ArticleUseOperation
 from app.models.generation_preferences import LinkedInGenerationPreferences
+from app.models.grounding import GroundingStatus
 from app.models.linkedin_generation import (
     LinkedInDraft,
     LinkedInDraftSourceReference,
@@ -25,6 +26,7 @@ from app.repositories.linkedin_generation import (
 )
 from app.services.article_rights import ArticleRightsService
 from app.services.authorization import require_owned_resource
+from app.services.generation_validator import GenerationGroundingValidator
 from app.services.prompt_builder import (
     ArticlePromptRightsError,
     InsufficientSourceInformationError,
@@ -102,11 +104,15 @@ class LinkedInGenerationService:
         rights: ArticleRightsService,
         openai_factory: AITextGeneratorFactory,
         prompt_builder: LinkedInPromptBuilder | None = None,
+        grounding_validator: GenerationGroundingValidator | None = None,
     ) -> None:
         self._repository = repository
         self._rights = rights
         self._openai_factory = openai_factory
         self._prompt_builder = prompt_builder or LinkedInPromptBuilder()
+        self._grounding_validator = (
+            grounding_validator or GenerationGroundingValidator()
+        )
 
     async def generate_draft(
         self,
@@ -220,17 +226,43 @@ class LinkedInGenerationService:
             )
 
         reference = package.article_reference
+        source_reference = LinkedInDraftSourceReference(
+            article_id=reference.article_id,
+            title=reference.title,
+            source_name=reference.source_name,
+            source_url=reference.canonical_url,
+            attribution_text=reference.attribution_text,
+            rights_version_id=reference.rights_version_id,
+        )
+        grounding = self._grounding_validator.validate(
+            draft=output.draft,
+            article_id=article_id,
+            source_reference=source_reference,
+            article=source.article,
+        )
+        log_event(
+            logger,
+            logging.INFO,
+            "linkedin_draft_grounding_evaluated",
+            status=grounding.status.value,
+            counts={
+                "checked_claims": grounding.checked_claim_count,
+                "validation_warnings": len(grounding.warnings),
+            },
+        )
+        if grounding.status == GroundingStatus.REJECTED:
+            raise InvalidGeneratedDraftError(
+                code="grounding_validation_rejected",
+                message=(
+                    "The generated draft failed automated grounding checks and "
+                    "was not saved."
+                ),
+            )
+
         draft = await self._repository.save_draft(
             owner_id=owner_id,
             source=source,
-            source_reference=LinkedInDraftSourceReference(
-                article_id=reference.article_id,
-                title=reference.title,
-                source_name=reference.source_name,
-                source_url=reference.canonical_url,
-                attribution_text=reference.attribution_text,
-                rights_version_id=reference.rights_version_id,
-            ),
+            source_reference=source_reference,
             preferences=preferences,
             prompt_version=package.prompt_version,
             request_key=request_key,
@@ -238,6 +270,7 @@ class LinkedInGenerationService:
             generated=generated,
             draft_text=output.draft,
             word_count=word_count,
+            grounding=grounding,
         )
         log_event(
             logger,
