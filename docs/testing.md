@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, and the NFA-48 safe image-prompt composer.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, and the NFA-49 sensitive-news image safety policy.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -426,6 +426,43 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_prompt.py
 
 The test data is original and synthetic. The suite makes no CNN or image-provider request, requires no API key, and uses no real personal information. See the [image-prompt composer guide](image-prompt-composer.md).
 
+## NFA-49 sensitive-news image safety coverage
+
+`test_image_safety.py` evaluates real NFA-48 prompt packages through the central NFA-49 service without calling an image provider.
+
+| Requirement | Automated evidence |
+|---|---|
+| Ordinary topic | Allowed conceptual technology scenario |
+| Sensitive categories | Parameterised conflict, terrorism, disaster, injury, health, political, and criminal scenarios |
+| Misleading documentary imagery | Conflict and disaster fabrication rejection |
+| Conceptual alternative | Sensitive requests restricted to conceptual, non-photorealistic treatment |
+| Identifiable real person | Sensitive person misrepresentation rejection |
+| Frontend override prevention | Extra safety fields rejected and text override denied |
+| Prompt injection | Article instruction remains untrusted and cannot enable photorealism |
+| Uncertain classification | Conservative review-required provider gate |
+| Provider safety | Missing moderation blocks or pauses provider access |
+| Safe policy record | Content-free recorder assertions |
+| AI designation and review | Required result fields in ordinary and sensitive decisions |
+| Provider call gate | Allowed decisions continue; rejected and review-required decisions stop |
+
+Run the focused NFA-49 checks from the repository root:
+
+```bash
+apps/api/.venv/bin/ruff check \
+  apps/api/app/models/image_safety.py \
+  apps/api/app/policies \
+  apps/api/app/services/image_safety.py \
+  apps/api/tests/test_image_safety.py
+apps/api/.venv/bin/ruff format --check \
+  apps/api/app/models/image_safety.py \
+  apps/api/app/policies \
+  apps/api/app/services/image_safety.py \
+  apps/api/tests/test_image_safety.py
+apps/api/.venv/bin/pytest -q apps/api/tests/test_image_safety.py
+```
+
+All scenarios use original synthetic topics and text. The suite makes no CNN, OpenAI, or image-provider request and stores no source or user text in decision records. See the [image safety policy](image-safety-policy.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -514,8 +551,8 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 329 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 80.51 percent, above the enforced 75 percent floor.
+- The normal backend run passed 348 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 81.01 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -529,10 +566,11 @@ Verified locally on 30 October 2026:
 - The focused NFA-45 monitoring, generation workflow, API, and configuration run passed 71 tests.
 - The focused NFA-46 E4 acceptance set passed 79 tests and safely skipped the optional live-model test.
 - The focused NFA-48 image-prompt composer run passed 23 tests.
+- The focused NFA-49 sensitive-news image safety run passed 19 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, and NFA-48
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, and NFA-49
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
