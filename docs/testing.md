@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, and the NFA-46 joined E4 acceptance workflow.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, and the NFA-48 safe image-prompt composer.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -391,6 +391,41 @@ apps/api/.venv/bin/pytest -q \
 
 The suite uses only original synthetic article content and mocked OpenAI output. It creates no live OpenAI request, retrieves no CNN content, and uses no real credential or personal information. See the [E4 acceptance record](e4-generation-acceptance.md) and [E4 architecture](architecture/ai-generation-architecture.md).
 
+## NFA-48 image-prompt composer coverage
+
+`test_image_prompt.py` verifies the internal image-prompt package without calling an image provider.
+
+| Requirement | Automated evidence |
+|---|---|
+| Valid structured prompt | Article-context result, version, reference, and review flags |
+| Defined styles and composition | Every style, aspect ratio, and composition mapping |
+| Strict parameters | Unsupported enums and extra free-text property rejection |
+| Current source rights | Allowed, denied, mismatched, incomplete-attribution, and restricted-content scenarios |
+| Permitted fields only | Exact article-context allowlist and excluded source metadata |
+| Insufficient information | Safe rejection rather than invented visual details |
+| Article-or-draft context | Matching draft, missing draft, generation mismatch, validation rejection, and size bound |
+| Prompt-injection separation | Malicious synthetic content remains outside trusted instructions |
+| Restricted photography and non-deception | Mandatory original-illustration and non-documentary rules |
+| Version and safe representation | `image_prompt_v1` and masked context fields |
+
+Run the focused NFA-48 checks from the repository root:
+
+```bash
+apps/api/.venv/bin/ruff check \
+  apps/api/app/models/image_prompt.py \
+  apps/api/app/prompts/image_illustration.py \
+  apps/api/app/services/image_prompt.py \
+  apps/api/tests/test_image_prompt.py
+apps/api/.venv/bin/ruff format --check \
+  apps/api/app/models/image_prompt.py \
+  apps/api/app/prompts/image_illustration.py \
+  apps/api/app/services/image_prompt.py \
+  apps/api/tests/test_image_prompt.py
+apps/api/.venv/bin/pytest -q apps/api/tests/test_image_prompt.py
+```
+
+The test data is original and synthetic. The suite makes no CNN or image-provider request, requires no API key, and uses no real personal information. See the [image-prompt composer guide](image-prompt-composer.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -479,8 +514,8 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 306 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 80.06 percent, above the enforced 75 percent floor.
+- The normal backend run passed 329 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 80.51 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -493,10 +528,11 @@ Verified locally on 30 October 2026:
 - The focused NFA-44 evaluation and generation-control run passed 83 tests and safely skipped the deliberately gated live-model test.
 - The focused NFA-45 monitoring, generation workflow, API, and configuration run passed 71 tests.
 - The focused NFA-46 E4 acceptance set passed 79 tests and safely skipped the optional live-model test.
+- The focused NFA-48 image-prompt composer run passed 23 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, and NFA-46
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, and NFA-48
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
