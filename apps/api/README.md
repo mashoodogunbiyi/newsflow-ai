@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract.
 
 ## Requirements
 
@@ -479,6 +479,24 @@ GET /api/admin/generations/metrics
 ```
 
 Both endpoints require an authenticated administrator. The audit endpoint can filter by request ID or event type. The metrics endpoint accepts a 1 to 168 hour window and returns aggregate requests, outcomes, durations, rights and validation failures, usage rejections, provider error categories, and token totals without user or article metric labels. See the [NFA-45 generation monitoring guide](../../docs/generation-monitoring.md) for fields, retention, investigation, tests, and limitations.
+
+### Verify the complete E4 generation workflow
+
+NFA-46 tests the joined `POST /api/generations` path through the real FastAPI route and orchestration services while replacing only external OpenAI and persistent storage boundaries with controlled test doubles. It verifies authentication, CSRF, rights, preferences, source sufficiency, safe provider failures, structured output, usage controls, audit correlation, trusted source references, private draft status, mandatory human review, and the absence of automatic publishing.
+
+Run the focused evidence set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_generation_workflow_acceptance.py \
+  apps/api/tests/test_generation_api.py \
+  apps/api/tests/test_linkedin_generation_service.py \
+  apps/api/tests/test_generation_audit.py \
+  apps/api/tests/test_admin_generation_monitoring.py \
+  apps/api/tests/evaluation
+```
+
+See the [E4 architecture](../../docs/architecture/ai-generation-architecture.md), [acceptance record](../../docs/e4-generation-acceptance.md), and [E6 frontend contract](../../docs/e6-generation-integration-contract.md).
 
 ## Run with Docker Compose
 
