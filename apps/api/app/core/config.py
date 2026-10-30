@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     generation_concurrent_limit: int = Field(default=2, ge=1, le=20)
     generation_attempt_timeout_seconds: int = Field(default=180, ge=10, le=1800)
     generation_usage_retention_days: int = Field(default=90, ge=1, le=730)
+    generation_audit_retention_days: int = Field(default=90, ge=1, le=730)
+    generation_monitoring_window_hours: int = Field(default=24, ge=1, le=168)
     ingestion_metrics_enabled: bool = True
     ingestion_metrics_window_hours: int = Field(default=24, ge=1, le=168)
     ingestion_failure_threshold: int = Field(default=3, ge=1, le=20)

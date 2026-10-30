@@ -14,6 +14,7 @@ from app.models.article_rights import (
     ArticleUseOperation,
     RightsDecisionReason,
 )
+from app.models.generation_audit import GenerationAuditContext
 from app.models.generation_preferences import (
     LinkedInGenerationPreferences,
     LinkedInPostLength,
@@ -29,6 +30,7 @@ from app.providers.models import NewsArticle
 from app.providers.normalisation import ArticleNormalisationService
 from app.repositories.linkedin_generation import LinkedInGenerationArticle
 from app.services.authorization import PrivateResourceNotFoundError
+from app.services.generation_usage import GenerationLimitExceeded
 from app.services.linkedin_generation import (
     GenerationArticleNotFoundError,
     GenerationInsufficientSourceError,
@@ -165,6 +167,51 @@ class RecordingUsageService:
 
     async def fail_attempt(self, **values: object) -> None:
         self.failed.append(values)
+
+
+class RejectingUsageService(RecordingUsageService):
+    async def start_attempt(
+        self,
+        *,
+        owner_id: UUID,
+        request_fingerprint: str,
+    ) -> GenerationUsageAttempt:
+        del owner_id, request_fingerprint
+        raise GenerationLimitExceeded(
+            code="generation_limit_exceeded",
+            message="You have reached your current generation limit.",
+            retry_after_seconds=60,
+        )
+
+
+class RecordingAuditService:
+    def __init__(self) -> None:
+        self.context = GenerationAuditContext(
+            generation_request_id=uuid4(),
+            user_id=OWNER_ID,
+            article_id=ARTICLE_ID,
+            started_at=NOW,
+        )
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    async def start_request(self, **values: object) -> GenerationAuditContext:
+        self.calls.append(("started", values))
+        return self.context
+
+    async def record_rights_decision(self, **values: object) -> None:
+        self.calls.append(("rights", values))
+
+    async def record_validation(self, **values: object) -> None:
+        self.calls.append(("validation", values))
+
+    async def record_usage_rejection(self, **values: object) -> None:
+        self.calls.append(("usage_rejection", values))
+
+    async def complete_request(self, **values: object) -> None:
+        self.calls.append(("completed", values))
+
+    async def fail_request(self, **values: object) -> None:
+        self.calls.append(("failed", values))
 
 
 class InMemoryGenerationRepository:
@@ -321,6 +368,55 @@ def test_usage_control_wraps_provider_call_and_records_returned_tokens() -> None
     assert usage.failed == []
 
 
+def test_audit_wraps_success_with_rights_validation_and_one_correlation_id() -> None:
+    application_service, _, _, _, _ = service()
+    audit = RecordingAuditService()
+    application_service._audit = audit  # type: ignore[assignment]
+
+    result = run(
+        application_service.generate_draft(
+            owner_id=OWNER_ID,
+            article_id=ARTICLE_ID,
+            preferences=LinkedInGenerationPreferences(
+                post_length=LinkedInPostLength.SHORT
+            ),
+            idempotency_key="nfa45-audit-success",
+        )
+    )
+
+    assert [name for name, _ in audit.calls] == [
+        "started",
+        "rights",
+        "validation",
+        "completed",
+    ]
+    assert audit.calls[1][1]["context"] == audit.context
+    assert audit.calls[2][1]["context"] == audit.context
+    assert audit.calls[3][1]["context"] == audit.context
+    assert audit.calls[3][1]["generation_run_id"] == result.generation_id
+
+
+def test_audit_records_denied_rights_and_failed_request() -> None:
+    application_service, _, _, _, _ = service(allowed=False)
+    audit = RecordingAuditService()
+    application_service._audit = audit  # type: ignore[assignment]
+
+    with pytest.raises(GenerationRightsDeniedError):
+        run(
+            application_service.generate_draft(
+                owner_id=OWNER_ID,
+                article_id=ARTICLE_ID,
+                preferences=LinkedInGenerationPreferences(),
+            )
+        )
+
+    assert [name for name, _ in audit.calls] == ["started", "rights", "failed"]
+    assert audit.calls[1][1]["allowed"] is False
+    assert audit.calls[2][1]["category"] == (
+        GenerationErrorCategory.GENERATION_RIGHTS_DENIED
+    )
+
+
 def test_provider_timeout_is_recorded_with_safe_operational_category() -> None:
     timeout = OpenAITimeoutFailure(
         code="openai_timeout",
@@ -329,7 +425,9 @@ def test_provider_timeout_is_recorded_with_safe_operational_category() -> None:
     )
     application_service, _, _, _, _ = service(outcome=timeout)
     usage = RecordingUsageService()
+    audit = RecordingAuditService()
     application_service._usage = usage  # type: ignore[assignment]
+    application_service._audit = audit  # type: ignore[assignment]
 
     with pytest.raises(OpenAITimeoutFailure):
         run(
@@ -343,6 +441,61 @@ def test_provider_timeout_is_recorded_with_safe_operational_category() -> None:
 
     assert usage.completed == []
     assert usage.failed[0]["category"] == GenerationErrorCategory.AI_TIMEOUT
+    assert [name for name, _ in audit.calls] == ["started", "rights", "failed"]
+    assert audit.calls[-1][1]["category"] == GenerationErrorCategory.AI_TIMEOUT
+
+
+def test_usage_limit_rejection_is_audited_before_provider_access() -> None:
+    application_service, _, _, _, created = service()
+    audit = RecordingAuditService()
+    application_service._usage = RejectingUsageService()  # type: ignore[assignment]
+    application_service._audit = audit  # type: ignore[assignment]
+
+    with pytest.raises(GenerationLimitExceeded):
+        run(
+            application_service.generate_draft(
+                owner_id=OWNER_ID,
+                article_id=ARTICLE_ID,
+                preferences=LinkedInGenerationPreferences(),
+                idempotency_key="nfa45-usage-rejection",
+            )
+        )
+
+    assert created == []
+    assert [name for name, _ in audit.calls] == [
+        "started",
+        "rights",
+        "usage_rejection",
+        "failed",
+    ]
+    assert audit.calls[2][1]["category"] == (
+        GenerationErrorCategory.GENERATION_DAILY_LIMIT
+    )
+
+
+def test_generated_output_validation_failure_is_audited() -> None:
+    invalid = provider_result().model_copy(update={"text": "not-json"})
+    application_service, _, _, _, _ = service(outcome=invalid)
+    audit = RecordingAuditService()
+    application_service._audit = audit  # type: ignore[assignment]
+
+    with pytest.raises(InvalidGeneratedDraftError):
+        run(
+            application_service.generate_draft(
+                owner_id=OWNER_ID,
+                article_id=ARTICLE_ID,
+                preferences=LinkedInGenerationPreferences(),
+            )
+        )
+
+    assert [name for name, _ in audit.calls] == [
+        "started",
+        "rights",
+        "validation",
+        "failed",
+    ]
+    assert audit.calls[2][1]["passed"] is False
+    assert audit.calls[2][1]["validation_status"] == "invalid_generated_draft"
 
 
 def test_missing_article_and_denied_rights_fail_before_openai() -> None:

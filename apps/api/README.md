@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection.
 
 ## Requirements
 
@@ -58,6 +58,12 @@ MANUAL_SYNC_RATE_LIMIT_ATTEMPTS=2
 MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_RATE_LIMIT_ATTEMPTS=10
 GENERATION_RATE_LIMIT_WINDOW_SECONDS=60
+GENERATION_DAILY_LIMIT=50
+GENERATION_CONCURRENT_LIMIT=2
+GENERATION_ATTEMPT_TIMEOUT_SECONDS=180
+GENERATION_USAGE_RETENTION_DAYS=90
+GENERATION_AUDIT_RETENTION_DAYS=90
+GENERATION_MONITORING_WINDOW_HOURS=24
 INGESTION_METRICS_ENABLED=true
 INGESTION_METRICS_WINDOW_HOURS=24
 INGESTION_FAILURE_THRESHOLD=3
@@ -105,6 +111,8 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `GENERATION_CONCURRENT_LIMIT` | No | No | Shared active attempts per user; defaults to 2. |
 | `GENERATION_ATTEMPT_TIMEOUT_SECONDS` | No | No | Active-attempt lease before recovery; defaults to 180 seconds. |
 | `GENERATION_USAGE_RETENTION_DAYS` | No | No | Completed usage-evidence retention; defaults to 90 days. |
+| `GENERATION_AUDIT_RETENTION_DAYS` | No | No | Content-free audit-event retention; defaults to 90 days. |
+| `GENERATION_MONITORING_WINDOW_HOURS` | No | No | Default administrator metrics window from 1 to 168 hours; defaults to 24. |
 | `INGESTION_METRICS_ENABLED` | No | No | Enables ingestion aggregate calculation; defaults to `true`. |
 | `INGESTION_METRICS_WINDOW_HOURS` | No | No | Default metrics window from 1 to 168 hours; defaults to 24. |
 | `INGESTION_FAILURE_THRESHOLD` | No | No | Consecutive failures before critical health; defaults to 3. |
@@ -459,6 +467,19 @@ The endpoint requires the HTTP-only session cookie and matching CSRF header, val
 
 Expected failures use the shared safe JSON error format. Missing articles return `404`, denied rights return `403`, invalid source information returns `422`, active duplicates and conflicting idempotency return `409`, invalid provider output returns `502`, unavailable services return `503`, OpenAI timeouts return `504`, and request limits return `429`. Safe limit and temporary provider responses include `Retry-After` when available. See the [NFA-41 generation API guide](../../docs/generation-api.md) and [NFA-43 generation operations guide](../../docs/generation-operations.md) for the complete schema, security, usage-control, error, and test contracts.
 
+### Inspect generation monitoring as an administrator
+
+NFA-45 assigns a random correlation identifier to every generation request and stores content-free start, rights, usage rejection, validation, completion, and failure events. Existing NFA-43 usage events provide available token totals. Audit rows and structured logs exclude prompts, article content, generated drafts, API keys, credentials, and raw provider errors.
+
+The protected internal endpoints are:
+
+```text
+GET /api/admin/generations/audit
+GET /api/admin/generations/metrics
+```
+
+Both endpoints require an authenticated administrator. The audit endpoint can filter by request ID or event type. The metrics endpoint accepts a 1 to 168 hour window and returns aggregate requests, outcomes, durations, rights and validation failures, usage rejections, provider error categories, and token totals without user or article metric labels. See the [NFA-45 generation monitoring guide](../../docs/generation-monitoring.md) for fields, retention, investigation, tests, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -484,13 +505,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. NFA-45 migration `20261030_0010` adds content-free lifecycle audit events, request correlation, duration, safe decision fields, and operational indexes. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261030_0009`, this command removes the NFA-43 usage-control table and its indexes. A second downgrade removes the NFA-42 grounding evidence fields, constraints, and index. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261030_0010`, this command removes the NFA-45 audit-event table and its indexes. A second downgrade removes the NFA-43 usage-control table and its indexes. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
