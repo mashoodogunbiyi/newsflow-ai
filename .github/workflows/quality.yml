@@ -59,7 +59,9 @@ jobs:
 
       - name: Run backend tests
         working-directory: apps/api
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=75
+        run: >-
+          pytest -m "not live_ai"
+          --cov=app --cov-report=term-missing --cov-fail-under=75
 
       - name: Run isolated article-pipeline tests
         working-directory: apps/api

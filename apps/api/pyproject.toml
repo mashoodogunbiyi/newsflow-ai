@@ -35,6 +35,7 @@ addopts = "-q"
 testpaths = ["tests"]
 markers = [
     "integration: tests that require a running PostgreSQL database",
+    "live_ai: optional tests that make a deliberately enabled billable OpenAI request",
 ]
 
 [tool.coverage.run]

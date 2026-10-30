@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, and NFA-42 deterministic factual-grounding validation.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, and the NFA-44 AI evaluation and regression framework.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -16,6 +16,7 @@ The test suite is designed to detect security regressions before a pull request 
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
 | Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs the isolated NFA-36 PostgreSQL suite on GitHub. |
+| AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
 
 ## NFA-26 coverage
 
@@ -296,6 +297,41 @@ pytest -m integration tests/test_generation_usage_integration.py
 
 No NFA-43 test makes a live or billable OpenAI request. Provider responses, users, article information, and usage events are synthetic.
 
+## NFA-44 AI evaluation and regression coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Reusable synthetic article dataset | `fixtures/evaluation_articles.json` and its schema-validation tests |
+| Mocked deterministic generation cases | `fixtures/expected_generation_cases.json` |
+| Structure, tone, length, and writing quality | `evaluation/test_generation_quality.py` |
+| Grounding, numbers, quotations, source references, and insufficient context | `evaluation/test_grounding_and_safety.py` |
+| Prompt injection and restricted information | Evaluation safety tests plus prompt-builder and generation-service tests |
+| Prompt-version comparison | `evaluation/test_prompt_regression.py` |
+| Generation API failures and invalid preferences | `test_generation_api.py` and `test_linkedin_generation_api.py` |
+| Usage limits, concurrency, and duplicates | `test_generation_usage.py` and the safety-gated PostgreSQL test |
+| Authentication, CSRF, rights, and authorisation | Generation API, service, prompt-builder, and ownership tests |
+| Optional live model remains separate | `evaluation/test_live_model_evaluation.py` with the `live_ai` marker and explicit environment gate |
+
+Run the complete deterministic NFA-44 evidence set from `apps/api`:
+
+```bash
+pytest tests/evaluation \
+  tests/test_generation_api.py \
+  tests/test_linkedin_generation_api.py \
+  tests/test_linkedin_generation_service.py \
+  tests/test_generation_usage.py \
+  tests/test_openai_service.py
+```
+
+The optional live-model test is skipped unless `RUN_LIVE_AI_EVALUATION=true` is deliberately supplied. It can make a billable request. The GitHub workflow explicitly runs the backend suite with `-m "not live_ai"`, so CI cannot select it:
+
+```bash
+RUN_LIVE_AI_EVALUATION=true pytest -m live_ai -s \
+  tests/evaluation/test_live_model_evaluation.py
+```
+
+See [the AI generation evaluation guide](ai-generation-evaluation.md) for scoring thresholds, regression procedure, live-test safeguards, and limitations.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -384,8 +420,8 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 269 tests and safely skipped 12 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 81.64 percent, above the enforced 75 percent floor.
+- The normal backend run passed 286 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 79.86 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261030_0009` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -395,10 +431,11 @@ Verified locally on 30 October 2026:
 - The focused NFA-42 validation, service, and API run passed 49 tests.
 - The focused NFA-43 generation operations run passed 82 tests.
 - The safety-gated NFA-43 PostgreSQL integration test passed against a disposable Docker database, then rolled the schema back.
+- The focused NFA-44 evaluation and generation-control run passed 83 tests and safely skipped the deliberately gated live-model test.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, and NFA-43
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, and NFA-44
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
