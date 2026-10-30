@@ -59,14 +59,15 @@ def _raise_storage_unavailable(
     description=(
         "Require an authenticated session and CSRF proof, load the selected "
         "PostgreSQL article, verify current AI-processing rights, create a bounded "
-        "source-grounded OpenAI request, validate the result, and store an "
+        "source-grounded OpenAI request under shared usage controls, validate "
+        "the result, and store an "
         "owner-scoped draft for human review. Nothing is published automatically."
     ),
     responses={
         401: {"description": "Authentication is required."},
         403: {"description": "CSRF failed or article generation is not permitted."},
         404: {"description": "The selected article was not found."},
-        409: {"description": "The idempotency key conflicts with another request."},
+        409: {"description": "The request conflicts or is already in progress."},
         422: {"description": "Inputs or permitted source information are invalid."},
         429: {"description": "The user generation limit was exceeded."},
         502: {"description": "The AI provider returned an invalid response."},

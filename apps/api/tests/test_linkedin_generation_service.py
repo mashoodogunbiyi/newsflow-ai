@@ -19,6 +19,10 @@ from app.models.generation_preferences import (
     LinkedInPostLength,
     LinkedInTone,
 )
+from app.models.generation_usage import (
+    GenerationErrorCategory,
+    GenerationUsageAttempt,
+)
 from app.models.linkedin_generation import LinkedInDraft
 from app.providers.fixture_provider import DEFAULT_FIXTURES
 from app.providers.models import NewsArticle
@@ -133,6 +137,34 @@ class FakeGenerator:
 
     async def close(self) -> None:
         self.closed = True
+
+
+class RecordingUsageService:
+    def __init__(self) -> None:
+        self.started: list[tuple[UUID, str]] = []
+        self.completed: list[dict[str, object]] = []
+        self.failed: list[dict[str, object]] = []
+
+    async def start_attempt(
+        self,
+        *,
+        owner_id: UUID,
+        request_fingerprint: str,
+    ) -> GenerationUsageAttempt:
+        self.started.append((owner_id, request_fingerprint))
+        return GenerationUsageAttempt(
+            id=uuid4(),
+            owner_id=owner_id,
+            request_fingerprint=request_fingerprint,
+            created_at=NOW,
+            expires_at=NOW,
+        )
+
+    async def complete_attempt(self, **values: object) -> None:
+        self.completed.append(values)
+
+    async def fail_attempt(self, **values: object) -> None:
+        self.failed.append(values)
 
 
 class InMemoryGenerationRepository:
@@ -263,6 +295,54 @@ def test_success_connects_rights_prompt_openai_validation_and_persistence() -> N
     assert repository.save_calls[0]["word_count"] == 80
     assert repository.save_calls[0]["grounding"] == result.grounding
     assert generator.closed is True
+
+
+def test_usage_control_wraps_provider_call_and_records_returned_tokens() -> None:
+    application_service, _, _, _, _ = service()
+    usage = RecordingUsageService()
+    application_service._usage = usage  # type: ignore[assignment]
+
+    result = run(
+        application_service.generate_draft(
+            owner_id=OWNER_ID,
+            article_id=ARTICLE_ID,
+            preferences=LinkedInGenerationPreferences(
+                post_length=LinkedInPostLength.SHORT
+            ),
+            idempotency_key="nfa43-usage-success",
+        )
+    )
+
+    assert usage.started[0][0] == OWNER_ID
+    assert len(usage.started[0][1]) == 64
+    assert usage.completed[0]["generation_run_id"] == result.generation_id
+    assert usage.completed[0]["model_identifier"] == "test-openai-model"
+    assert usage.completed[0]["token_usage"].total_tokens == 220
+    assert usage.failed == []
+
+
+def test_provider_timeout_is_recorded_with_safe_operational_category() -> None:
+    timeout = OpenAITimeoutFailure(
+        code="openai_timeout",
+        message="The AI service request timed out.",
+        retryable=True,
+    )
+    application_service, _, _, _, _ = service(outcome=timeout)
+    usage = RecordingUsageService()
+    application_service._usage = usage  # type: ignore[assignment]
+
+    with pytest.raises(OpenAITimeoutFailure):
+        run(
+            application_service.generate_draft(
+                owner_id=OWNER_ID,
+                article_id=ARTICLE_ID,
+                preferences=LinkedInGenerationPreferences(),
+                idempotency_key="nfa43-timeout",
+            )
+        )
+
+    assert usage.completed == []
+    assert usage.failed[0]["category"] == GenerationErrorCategory.AI_TIMEOUT
 
 
 def test_missing_article_and_denied_rights_fail_before_openai() -> None:

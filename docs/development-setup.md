@@ -88,6 +88,12 @@ REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 LOGIN_RATE_LIMIT_ATTEMPTS=5
 LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
 SESSION_LIFETIME_MINUTES=60
+GENERATION_RATE_LIMIT_ATTEMPTS=10
+GENERATION_RATE_LIMIT_WINDOW_SECONDS=60
+GENERATION_DAILY_LIMIT=50
+GENERATION_CONCURRENT_LIMIT=2
+GENERATION_ATTEMPT_TIMEOUT_SECONDS=180
+GENERATION_USAGE_RETENTION_DAYS=90
 SEED_DATA_ENABLED=false
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=your_approved_openai_model_here
@@ -120,6 +126,12 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 | LOGIN_RATE_LIMIT_ATTEMPTS        | Limits login attempts per client.                | No - defaults to 5                               |
 | LOGIN_RATE_LIMIT_WINDOW_SECONDS  | Sets the login rate-limit window in seconds.     | No - defaults to 60                              |
 | SESSION_LIFETIME_MINUTES         | Sets the absolute authenticated-session lifetime.| No - defaults to 60                              |
+| GENERATION_RATE_LIMIT_ATTEMPTS   | Limits short bursts per authenticated user.      | No - defaults to 10                              |
+| GENERATION_RATE_LIMIT_WINDOW_SECONDS | Sets the short burst window.                 | No - defaults to 60                              |
+| GENERATION_DAILY_LIMIT           | Limits provider-bound attempts per user and UTC day. | No - defaults to 50                           |
+| GENERATION_CONCURRENT_LIMIT      | Limits active provider-bound attempts per user.  | No - defaults to 2                               |
+| GENERATION_ATTEMPT_TIMEOUT_SECONDS | Sets the active-attempt recovery lease.        | No - defaults to 180                             |
+| GENERATION_USAGE_RETENTION_DAYS  | Retains completed usage evidence.                | No - defaults to 90                              |
 | SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
 | OPENAI_API_KEY                   | Authenticates the server-side OpenAI service.     | Required only for a live OpenAI call             |
 | OPENAI_MODEL                     | Selects the approved OpenAI model.                | Required only for a live OpenAI call             |

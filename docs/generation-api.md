@@ -121,7 +121,7 @@ The response deliberately excludes:
 | 401 | The session is missing, invalid, or expired. |
 | 403 | CSRF validation failed or the article is not authorised for AI generation. |
 | 404 | The article does not exist or must not be disclosed. |
-| 409 | An idempotency key was reused for different inputs. |
+| 409 | An idempotency key conflicts with other inputs, or the same request is already active. |
 | 422 | The request schema or permitted source information is invalid. |
 | 429 | The authenticated user exceeded the generation request limit. |
 | 502 | OpenAI failed the request or returned an invalid result. |
@@ -145,15 +145,17 @@ NFA-42 uses HTTP `502` and safe code `grounding_validation_rejected` when an emp
 
 ## Request limits and ownership
 
-- The default local limit is 10 generation attempts per user in 60 seconds.
-- The response includes `Retry-After` when the user is rate limited.
+- The default local burst limit is 10 generation requests per user in 60 seconds.
+- NFA-43 adds shared defaults of 50 provider-bound attempts per UTC day and 2 active attempts per user.
+- PostgreSQL reservations enforce daily, concurrent, and active duplicate controls across backend instances.
+- The response includes `Retry-After` for burst, daily, concurrent, duplicate, and temporary provider conditions when a safe delay is available.
 - NFA-40 applies the configured OpenAI timeout, retry budget, and maximum output-token controls.
 - Successful generations are stored against the authenticated user's ID.
 - Existing owner-scoped retrieval requires the same user ID, preventing another user from accessing the private draft.
 - Generated content is always returned as a draft and is never automatically published.
 - Safe grounding warnings and the policy version are returned so the interface can explain why closer review is required.
 
-The in-memory request limiter is suitable for one local backend process. A multi-instance deployment must use a trusted shared rate-limit store or API gateway.
+The in-memory burst limiter protects one local backend process. The cost-sensitive daily, concurrent, and active duplicate controls are shared through PostgreSQL. The complete policy is documented in the [generation operations guide](generation-operations.md).
 
 ## OpenAPI documentation
 
@@ -184,7 +186,7 @@ The tests cover:
 - Insufficient authorised source information.
 - Safe invalid, unavailable, and timed-out OpenAI responses.
 - Repository and rights-data failures without sensitive detail leakage.
-- Per-user rate limiting and idempotency forwarding.
+- Burst, daily, concurrent, and duplicate controls with retry headers.
 - OpenAPI request, response, error, and security descriptions.
 - Reuse of the NFA-40 service and its pre-OpenAI rights checks.
 - NFA-42 grounding status, safe warnings, and rejection before persistence.
@@ -194,8 +196,8 @@ All tests use synthetic article information, sessions, users, and provider respo
 Verified locally on 30 October 2026:
 
 - The focused NFA-41 and reused NFA-40 generation run passed 37 tests.
-- The complete backend suite passed 254 tests and safely skipped 11 opt-in PostgreSQL integration tests.
-- Backend branch-aware coverage was 79.71 percent, above the enforced 75 percent minimum.
+- The complete backend suite passed 269 tests and safely skipped 12 opt-in PostgreSQL integration tests.
+- Backend branch-aware coverage was 81.64 percent, above the enforced 75 percent minimum.
 - Ruff linting and formatting checks passed across all backend application and test files.
 - Docker Compose configuration and Git whitespace validation passed.
 

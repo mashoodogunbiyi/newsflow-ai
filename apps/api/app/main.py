@@ -47,6 +47,7 @@ from app.repositories.article_sync import (
     SqlAlchemyArticleSyncRepository,
 )
 from app.repositories.articles import SqlAlchemyArticleRepository
+from app.repositories.generation_usage import SqlAlchemyGenerationUsageRepository
 from app.repositories.linkedin_generation import (
     LinkedInGenerationRepository,
     SqlAlchemyLinkedInGenerationRepository,
@@ -62,6 +63,7 @@ from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
 from app.services.article_rights import ArticleRightsService
 from app.services.article_sync import ArticleSyncService
+from app.services.generation_usage import GenerationUsageService
 from app.services.ingestion_observability import IngestionObservabilityService
 from app.services.linkedin_generation import (
     AITextGeneratorFactory,
@@ -91,6 +93,7 @@ def create_app(
     article_rights_repository: ArticleRightsRepository | None = None,
     linkedin_generation_repository: LinkedInGenerationRepository | None = None,
     linkedin_generation_service: LinkedInGenerationService | None = None,
+    generation_usage_service: GenerationUsageService | None = None,
     openai_factory: AITextGeneratorFactory | None = None,
     generation_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
@@ -141,6 +144,7 @@ def create_app(
         configured_article_rights_repository = article_rights_repository
         configured_linkedin_generation_repository = linkedin_generation_repository
         configured_linkedin_generation_service = linkedin_generation_service
+        configured_generation_usage_service = generation_usage_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
@@ -190,6 +194,20 @@ def create_app(
                 configured_linkedin_generation_repository = (
                     SqlAlchemyLinkedInGenerationRepository(sqlalchemy_database)
                 )
+            if configured_generation_usage_service is None:
+                configured_generation_usage_service = GenerationUsageService(
+                    repository=SqlAlchemyGenerationUsageRepository(sqlalchemy_database),
+                    daily_limit=application_settings.generation_daily_limit,
+                    concurrent_limit=(application_settings.generation_concurrent_limit),
+                    attempt_timeout=timedelta(
+                        seconds=(
+                            application_settings.generation_attempt_timeout_seconds
+                        )
+                    ),
+                    retention=timedelta(
+                        days=application_settings.generation_usage_retention_days
+                    ),
+                )
             if configured_linkedin_generation_service is None:
                 assert configured_article_rights_repository is not None
                 assert configured_linkedin_generation_repository is not None
@@ -200,6 +218,7 @@ def create_app(
                         openai_factory
                         or (lambda: OpenAIService.from_settings(application_settings))
                     ),
+                    usage=configured_generation_usage_service,
                 )
             if (
                 application_settings.news_source_mode == "fixture"

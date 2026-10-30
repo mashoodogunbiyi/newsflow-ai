@@ -258,6 +258,44 @@ pytest tests/test_generation_validator.py \
 
 All grounding fixtures are original synthetic records. The validator does not call a second model, make network requests, retrieve restricted text, or log article and draft excerpts.
 
+## NFA-43 generation operations coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Configurable daily, concurrent, lease, retention, timeout, retry, and token controls | `test_config.py`, `test_generation_usage.py`, and `test_openai_service.py` |
+| Shared daily and concurrent enforcement | `test_generation_usage_integration.py` against safety-gated PostgreSQL |
+| Active duplicate protection | Generation usage unit and PostgreSQL integration tests |
+| Successful status and available token recording | `test_generation_usage.py` and `test_linkedin_generation_service.py` |
+| Failed status and safe category recording | Generation usage, OpenAI service, and LinkedIn generation tests |
+| Authentication before provider use | Generation API authentication tests |
+| Safe HTTP errors and retry headers | `test_generation_api.py` and `test_linkedin_generation_api.py` |
+| OpenAI authentication, temporary rate limit, quota, timeout, availability, and invalid-response handling | `test_openai_service.py` |
+| Sensitive prompt, content, credential, and provider-detail protection | OpenAI service, generation usage, and API tests |
+| Migration fields, constraints, indexes, upgrade, and rollback | `test_migrations_integration.py` |
+
+Run the normal focused NFA-43 tests from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_generation_usage.py \
+  apps/api/tests/test_openai_service.py \
+  apps/api/tests/test_linkedin_generation_service.py \
+  apps/api/tests/test_generation_api.py \
+  apps/api/tests/test_linkedin_generation_api.py \
+  apps/api/tests/test_config.py
+```
+
+The real PostgreSQL test deletes and rebuilds only a deliberately named disposable database. Never point it at the normal development, shared, staging, or production database:
+
+```bash
+cd apps/api
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_generation_usage_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+pytest -m integration tests/test_generation_usage_integration.py
+```
+
+No NFA-43 test makes a live or billable OpenAI request. Provider responses, users, article information, and usage events are synthetic.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -346,19 +384,21 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 30 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 254 tests and safely skipped 11 opt-in PostgreSQL tests.
-- Backend branch-aware coverage measured 79.71 percent, above the enforced 75 percent floor.
+- The normal backend run passed 269 tests and safely skipped 12 opt-in PostgreSQL tests.
+- Backend branch-aware coverage measured 81.64 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
-- Each NFA-36 test applies all migrations through `20261030_0008` and rolls the disposable schema back afterwards.
+- Each NFA-36 test applies all migrations through `20261030_0009` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
 - The focused NFA-40 generation run passed 44 tests.
 - The focused NFA-41 and reused NFA-40 API and service run passed 37 tests.
 - The focused NFA-42 validation, service, and API run passed 49 tests.
+- The focused NFA-43 generation operations run passed 82 tests.
+- The safety-gated NFA-43 PostgreSQL integration test passed against a disposable Docker database, then rolled the schema back.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, and NFA-42
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, and NFA-43
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

@@ -17,6 +17,12 @@ from app.repositories.linkedin_generation import (
     LinkedInGenerationRepositoryError,
 )
 from app.security import InMemoryRateLimiter, RateLimitExceeded
+from app.services.generation_usage import (
+    GenerationConcurrencyLimitExceeded,
+    GenerationDuplicateInProgress,
+    GenerationLimitExceeded,
+    GenerationUsageUnavailable,
+)
 from app.services.linkedin_generation import (
     GenerationArticleNotFoundError,
     GenerationInsufficientSourceError,
@@ -27,6 +33,7 @@ from app.services.linkedin_generation import (
 )
 from app.services.openai_service import (
     OpenAIInvalidResponseError,
+    OpenAIRateLimitFailure,
     OpenAIRequestFailure,
     OpenAIServiceError,
     OpenAITimeoutFailure,
@@ -69,7 +76,7 @@ async def enforce_generation_limit(request: Request, owner_id: UUID) -> None:
     except RateLimitExceeded as exc:
         raise ApplicationError(
             status_code=429,
-            code="linkedin_generation_rate_limited",
+            code="generation_limit_exceeded",
             message="Too many generation requests. Please try again later.",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
@@ -125,11 +132,50 @@ async def create_generation_resource(
             code=exc.code,
             message=exc.safe_message,
         ) from exc
+    except GenerationLimitExceeded as exc:
+        raise ApplicationError(
+            status_code=429,
+            code=exc.code,
+            message=exc.safe_message,
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
+    except GenerationConcurrencyLimitExceeded as exc:
+        raise ApplicationError(
+            status_code=429,
+            code=exc.code,
+            message=exc.safe_message,
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
+    except GenerationDuplicateInProgress as exc:
+        raise ApplicationError(
+            status_code=409,
+            code=exc.code,
+            message=exc.safe_message,
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
+    except GenerationUsageUnavailable as exc:
+        raise ApplicationError(
+            status_code=503,
+            code=exc.code,
+            message=exc.safe_message,
+        ) from exc
     except OpenAITimeoutFailure as exc:
         raise ApplicationError(
             status_code=504,
             code=exc.code,
             message=exc.safe_message,
+        ) from exc
+    except OpenAIRateLimitFailure as exc:
+        headers = (
+            {"Retry-After": str(exc.retry_after_seconds)}
+            if exc.retry_after_seconds is not None
+            else None
+        )
+        raise ApplicationError(
+            status_code=503,
+            code=exc.code,
+            message=exc.safe_message,
+            headers=headers,
         ) from exc
     except (OpenAIInvalidResponseError, OpenAIRequestFailure) as exc:
         raise ApplicationError(

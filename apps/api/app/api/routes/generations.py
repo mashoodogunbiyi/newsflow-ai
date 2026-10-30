@@ -48,7 +48,8 @@ def _public_response(draft: LinkedInDraft) -> GenerationResponse:
         "request requires the HTTP-only session cookie and matching CSRF header. "
         "Before OpenAI is called, the reused NFA-40 service loads the selected "
         "PostgreSQL article and verifies current display and AI-processing rights. "
-        "A per-user request limit applies. Deterministic factual-grounding checks "
+        "Shared per-user burst, daily, concurrent, and duplicate controls apply. "
+        "Deterministic factual-grounding checks "
         "run before a draft is saved. The result requires human review, is never "
         "described as factually verified, and is never published automatically."
     ),
@@ -57,9 +58,9 @@ def _public_response(draft: LinkedInDraft) -> GenerationResponse:
         401: {"description": "Authentication is missing or invalid."},
         403: {"description": "CSRF failed or article generation is not permitted."},
         404: {"description": "The selected article was not found."},
-        409: {"description": "The idempotency key conflicts with another request."},
+        409: {"description": "The request conflicts or is already in progress."},
         422: {"description": "The request or permitted source information is invalid."},
-        429: {"description": "The per-user generation limit was exceeded."},
+        429: {"description": "A per-user generation limit was exceeded."},
         502: {"description": "The AI provider failed or returned an invalid result."},
         503: {"description": "Generation, storage, or OpenAI is unavailable."},
         504: {"description": "The upstream AI request timed out."},

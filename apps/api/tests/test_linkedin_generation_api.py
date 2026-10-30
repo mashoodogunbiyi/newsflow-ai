@@ -187,5 +187,5 @@ def test_generation_endpoint_applies_per_user_request_limit() -> None:
 
     assert first.status_code == 201
     assert limited.status_code == 429
-    assert limited.json()["error"]["code"] == "linkedin_generation_rate_limited"
+    assert limited.json()["error"]["code"] == "generation_limit_exceeded"
     assert int(limited.headers["retry-after"]) >= 1
