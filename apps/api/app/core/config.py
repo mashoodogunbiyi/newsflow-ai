@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.ai_config import OpenAIServiceConfiguration
 from app.core.image_generation_config import OpenAIImageGenerationConfiguration
+from app.core.image_storage_config import ImageStorageConfiguration
 
 
 def find_environment_file() -> Path:
@@ -110,6 +111,18 @@ class Settings(BaseSettings):
         le=52_428_800,
     )
     image_generation_duplicate_cache_size: int = Field(default=100, ge=1, le=1_000)
+    image_storage_backend: Literal["local"] = "local"
+    image_storage_local_root: Path = Path(".local/image-storage")
+    image_storage_max_bytes: int = Field(
+        default=10_485_760,
+        ge=1_048_576,
+        le=26_214_400,
+    )
+    image_storage_max_pixels: int = Field(
+        default=4_000_000,
+        ge=1_048_576,
+        le=16_777_216,
+    )
     seed_data_enabled: bool = False
 
     @field_validator("openai_model", "openai_image_model", mode="before")
@@ -241,6 +254,21 @@ class Settings(BaseSettings):
             raise OpenAIConfigurationError(
                 "OPENAI_IMAGE_MODEL is not an approved image model."
             ) from exc
+
+    def require_image_storage_configuration(self) -> ImageStorageConfiguration:
+        """Return safe private-storage settings for local development."""
+
+        if self.app_env in {"staging", "production"}:
+            raise ConfigurationError(
+                "Local image storage is limited to development and test. "
+                "Configure an approved private object-storage adapter before deployment."
+            )
+        return ImageStorageConfiguration(
+            backend=self.image_storage_backend,
+            local_root=self.image_storage_local_root,
+            max_file_bytes=self.image_storage_max_bytes,
+            max_pixels=self.image_storage_max_pixels,
+        )
 
 
 @lru_cache

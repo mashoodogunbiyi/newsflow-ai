@@ -195,6 +195,29 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         "ix_generation_audit_events_error_time",
         "ix_generation_audit_events_occurred_at",
     } <= audit_indexes
+    generated_image_columns = {
+        column["name"] for column in sa.inspect(engine).get_columns("generated_images")
+    }
+    assert {
+        "request_id",
+        "user_id",
+        "article_id",
+        "article_snapshot_id",
+        "content_sha256",
+        "model_identifier",
+        "prompt_version",
+        "safety_policy_version",
+        "validation_status",
+        "generation_status",
+        "ai_generated",
+    } <= generated_image_columns
+    generated_image_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("generated_images")
+    }
+    assert {
+        "ix_generated_images_owner_created",
+        "ix_generated_images_article_created",
+    } <= generated_image_indexes
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
     }

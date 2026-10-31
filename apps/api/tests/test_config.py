@@ -4,6 +4,7 @@ import pytest
 
 from app.core.config import (
     ENVIRONMENT_FILE,
+    ConfigurationError,
     DatabaseConfigurationError,
     OpenAIConfigurationError,
     Settings,
@@ -132,6 +133,26 @@ def test_openai_settings_have_bounded_defaults() -> None:
     assert settings.image_generation_retry_base_seconds == 1
     assert settings.image_generation_max_response_bytes == 26_214_400
     assert settings.image_generation_duplicate_cache_size == 100
+    assert settings.image_storage_backend == "local"
+    assert str(settings.image_storage_local_root) == ".local/image-storage"
+    assert settings.image_storage_max_bytes == 10_485_760
+    assert settings.image_storage_max_pixels == 4_000_000
+
+
+def test_local_image_storage_is_limited_to_development_and_test() -> None:
+    configuration = Settings(
+        _env_file=None,
+        app_env="test",
+    ).require_image_storage_configuration()
+
+    assert configuration.backend == "local"
+    assert (1024, 1024) in configuration.supported_dimensions
+
+    with pytest.raises(ConfigurationError, match="limited to development and test"):
+        Settings(
+            _env_file=None,
+            app_env="production",
+        ).require_image_storage_configuration()
 
 
 def test_unsupported_openai_image_model_is_rejected_safely() -> None:

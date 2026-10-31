@@ -141,6 +141,10 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `IMAGE_GENERATION_RETRY_BASE_SECONDS` | No | No | Bounded retry fallback delay; defaults to 1 second. |
 | `IMAGE_GENERATION_MAX_RESPONSE_BYTES` | No | No | Maximum accepted inline image size; defaults to 25 MiB. |
 | `IMAGE_GENERATION_DUPLICATE_CACHE_SIZE` | No | No | Per-process completed request cache; defaults to 100. |
+| `IMAGE_STORAGE_BACKEND` | No | No | Private storage adapter; only `local` is approved for development and test. |
+| `IMAGE_STORAGE_LOCAL_ROOT` | No | No | Ignored private local root; defaults to `.local/image-storage`. |
+| `IMAGE_STORAGE_MAX_BYTES` | No | No | Maximum file accepted for storage; defaults to 10 MiB. |
+| `IMAGE_STORAGE_MAX_PIXELS` | No | No | Maximum decoded pixel count; defaults to 4,000,000. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
 
 Operating rules:
@@ -594,6 +598,21 @@ apps/api/.venv/bin/pytest -q \
 
 See the [NFA-50 OpenAI image generation guide](../../docs/openai-image-generation.md) for configuration, supported models and parameters, gates, response validation, errors, retries, metadata, tests, security, and limitations.
 
+### Validate and privately store generated images
+
+NFA-51 adds a Pillow-based content validator, a private storage protocol, a secure local development adapter, and PostgreSQL metadata persistence. The workflow verifies actual PNG, JPEG, or WebP content, provider length and SHA-256 metadata, integrity, dimensions, size, and pixel limits. It re-encodes accepted pixels without source metadata before storage.
+
+Local objects use unpredictable server-generated keys, restrictive filesystem permissions, and no public URL. The safe result never contains the storage key. PostgreSQL verifies the owner, article snapshot, generated post, optional source post version, and image-generation run before recording model, prompt, safety policy, validation, review, integrity, and AI-designation metadata. Request UUIDs are idempotent, and database failure triggers object cleanup.
+
+Rebuild the backend image for Pillow and apply migration `20261031_0011`:
+
+```bash
+docker compose up --build --detach
+docker compose exec backend alembic upgrade head
+```
+
+See the [NFA-51 secure generated-image storage guide](../../docs/image-storage.md) for limits, configuration, privacy, consistency, lifecycle, tests, and deployment limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -619,13 +638,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. NFA-45 migration `20261030_0010` adds content-free lifecycle audit events, request correlation, duration, safe decision fields, and operational indexes. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. NFA-45 migration `20261030_0010` adds content-free lifecycle audit events, request correlation, duration, safe decision fields, and operational indexes. NFA-51 migration `20261031_0011` adds private image ownership, article and generation associations, integrity, model and policy provenance, validation, and AI-designation controls. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261030_0010`, this command removes the NFA-45 audit-event table and its indexes. A second downgrade removes the NFA-43 usage-control table and its indexes. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261031_0011`, this command removes the NFA-51 generated-image metadata additions and indexes. A second downgrade removes the NFA-45 audit-event table and its indexes. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -808,6 +827,7 @@ apps/api/
 |   |-- core/ai_config.py       # Validated OpenAI settings object
 |   |-- core/image_generation_config.py # Reviewed OpenAI image models and limits
 |   |-- core/config.py          # Environment-based settings
+|   |-- core/image_storage_config.py # Private image validation and storage limits
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- core/logging_config.py  # Structured formatting and credential redaction
 |   |-- database/connection.py  # PostgreSQL connection check
@@ -827,6 +847,7 @@ apps/api/
 |   |-- models/image_prompt.py   # Image style, layout, request, reference, and result schemas
 |   |-- models/image_safety.py   # Image safety capabilities, decisions, results, and records
 |   |-- models/image_generation.py # Image provider request, result, usage, and safe record
+|   |-- models/generated_image.py # Private image storage and metadata models
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- prompts/linkedin_post.py # Versioned trusted LinkedIn instructions and limits
 |   |-- prompts/image_illustration.py # Versioned safe illustration instructions
@@ -839,6 +860,7 @@ apps/api/
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
 |   |-- repositories/linkedin_generation.py # Current article read and private draft persistence
+|   |-- repositories/generated_images.py # Image ownership and metadata persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
 |   |-- security/               # Argon2id and authentication rate limiting
 |   |-- services/authentication.py # Login, session, CSRF, and logout workflow
@@ -855,6 +877,9 @@ apps/api/
 |   |-- services/image_prompt.py # Rights-aware article-or-draft image-prompt composer
 |   |-- services/image_safety.py # Pre-provider safety gate and safe decision recording
 |   |-- services/openai_image_service.py # Secure OpenAI Images API boundary
+|   |-- services/image_validation.py # Content checks and metadata removal
+|   |-- services/image_storage.py # Private storage abstraction and local adapter
+|   |-- services/generated_image_storage.py # Storage, persistence, retry, and cleanup workflow
 |   |-- services/linkedin_generation.py # Authenticated generation orchestration
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point

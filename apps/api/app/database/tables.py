@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     CHAR,
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -756,12 +757,62 @@ class GeneratedImageTable(Base):
 
     __tablename__ = "generated_images"
 
-    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    request_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False, unique=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    article_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    article_snapshot_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("article_snapshots.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     generated_post_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=False
     )
+    source_post_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    generation_run_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    storage_provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    byte_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    width_px: Mapped[int] = mapped_column(Integer, nullable=False)
+    height_px: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    model_identifier: Mapped[str] = mapped_column(String(200), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    safety_policy_version: Mapped[str] = mapped_column(String(50), nullable=False)
     safety_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    validation_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    generation_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    ai_generated: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
+    ai_disclosure_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
     status: Mapped[str] = mapped_column(String(20), nullable=False)
+    alt_text: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

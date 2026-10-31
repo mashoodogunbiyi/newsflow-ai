@@ -287,6 +287,8 @@ NFA-49 evaluates every NFA-48 result before a future provider call. Deterministi
 
 NFA-50 connects the NFA-48 and NFA-49 outputs to the official asynchronous OpenAI Python SDK through a backend-only Images API service. It accepts only a current matching rights decision and an allowed safety result, forces OpenAI's `auto` moderation, maps the approved aspect ratio to a controlled size, validates Base64 or HTTPS response references, limits response size and concurrency, records available usage without content, and masks generated data. Only explicit rate-limit rejection is retried; ambiguous expensive calls are not automatically replayed. A bounded request fingerprint cache prevents avoidable duplicate calls within one service process. See the [OpenAI image generation integration guide](docs/openai-image-generation.md).
 
+NFA-51 validates generated image bytes with Pillow before they are retained. The backend verifies the actual PNG, JPEG, or WebP content, integrity, declared media type, approved dimensions, pixel count, and size, then re-encodes the pixels without EXIF, comments, or other unnecessary metadata. A private storage abstraction uses unpredictable keys and a Docker named volume for local development; no public URL or storage key is returned. PostgreSQL records owner, article snapshot, generated post, image-generation run, integrity hash, model, prompt and safety-policy versions, validation state, review state, and the AI-generated designation. Retries are idempotent, and an uploaded object is deleted if database persistence fails. See the [secure generated-image storage guide](docs/image-storage.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -311,6 +313,10 @@ IMAGE_GENERATION_MAX_RETRIES=1
 IMAGE_GENERATION_RETRY_BASE_SECONDS=1
 IMAGE_GENERATION_MAX_RESPONSE_BYTES=26214400
 IMAGE_GENERATION_DUPLICATE_CACHE_SIZE=100
+IMAGE_STORAGE_BACKEND=local
+IMAGE_STORAGE_LOCAL_ROOT=.local/image-storage
+IMAGE_STORAGE_MAX_BYTES=10485760
+IMAGE_STORAGE_MAX_PIXELS=4000000
 GENERATION_RATE_LIMIT_ATTEMPTS=10
 GENERATION_RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_DAILY_LIMIT=50
@@ -321,7 +327,7 @@ GENERATION_AUDIT_RETENTION_DAYS=90
 GENERATION_MONITORING_WINDOW_HOURS=24
 ```
 
-The FastAPI backend loads these values through validated settings and stores credentials as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` and `OPENAI_MODEL` are required only when the OpenAI text service is initialised; `OPENAI_API_KEY` and the approved `OPENAI_IMAGE_MODEL` are required when image generation is initialised. Missing or unchanged example values produce clear errors without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. NFA-38 bounds text requests. NFA-50 independently bounds image timeouts, concurrency, retries, response size, and duplicate-cache size. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
+The FastAPI backend loads these values through validated settings and stores credentials as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` and `OPENAI_MODEL` are required only when the OpenAI text service is initialised; `OPENAI_API_KEY` and the approved `OPENAI_IMAGE_MODEL` are required when image generation is initialised. Missing or unchanged example values produce clear errors without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. NFA-38 bounds text requests. NFA-50 independently bounds image timeouts, concurrency, retries, response size, and duplicate-cache size. NFA-51 limits accepted image bytes and pixels and permits the local storage adapter only in development and test. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
 ### Docker development environment
 
@@ -330,6 +336,7 @@ NFA-16 runs the application as three cooperating containers:
 - `frontend` runs the Next.js development server and is available at `http://localhost:3000`.
 - `backend` runs FastAPI and is available at `http://localhost:8000`.
 - `database` runs PostgreSQL and stores its data in the persistent `postgres_data` named volume.
+- `backend` stores private local generated-image objects in the persistent `image_storage_data` named volume.
 
 For first-time setup, create the ignored local configuration file, replace its PostgreSQL placeholders, and start the stack:
 

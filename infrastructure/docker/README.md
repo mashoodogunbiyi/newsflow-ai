@@ -22,6 +22,8 @@ FastAPI accepts credentialed browser requests only from `FRONTEND_ORIGIN`, which
 
 The frontend waits for a healthy backend, and the backend waits for a healthy database. This ordering avoids starting a dependent service before the service it needs is ready.
 
+The backend also mounts the private `image_storage_data` named volume at `/app/.local/image-storage`. NFA-51 stores development image objects there without publishing that directory or returning a direct file URL.
+
 ## First-time setup
 
 Create the ignored local environment file:
@@ -124,6 +126,8 @@ docker compose exec backend alembic history
 ```
 
 `alembic downgrade -1` is available for a disposable local database, but the initial downgrade deletes all application tables and their data. Do not run it as part of normal shutdown.
+
+Migration `20261031_0011` adds generated-image ownership, article and generation associations, integrity metadata, model and policy provenance, and validation and AI-designation fields. Rebuild the backend image before applying it because NFA-51 adds Pillow.
 
 ## Stop the application
 

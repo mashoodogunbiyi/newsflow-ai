@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, the NFA-49 sensitive-news image safety policy, and the mocked NFA-50 OpenAI image generation boundary.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, the NFA-49 sensitive-news image safety policy, the mocked NFA-50 OpenAI image generation boundary, and NFA-51 secure image validation and private storage.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -511,6 +511,39 @@ apps/api/.venv/bin/pytest -q \
 
 No focused or normal NFA-50 test requires a real OpenAI key or spends provider credits. See the [OpenAI image generation integration guide](openai-image-generation.md).
 
+## NFA-51 secure image storage coverage
+
+NFA-51 uses synthetic locally generated pixels and a temporary private directory. The focused tests prove:
+
+- content-based PNG detection, integrity checking, media-type matching, dimensions, size, and pixel controls;
+- rejection of non-images, corrupt data, oversized data, and provider digest mismatches;
+- removal of PNG comments and other unneeded source metadata through clean re-encoding;
+- random private object keys, no public URL, restrictive local file permissions, and path isolation;
+- owner, article, post, generation, model, prompt, policy, validation, review, and AI provenance metadata;
+- idempotent request retries without a duplicate file;
+- storage failure without false database success;
+- database failure followed by object compensation deletion; and
+- rejection of blocked output before file processing.
+
+Run the focused set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_image_validation.py \
+  apps/api/tests/test_image_storage.py
+```
+
+The migration integration test verifies that `20261031_0011` applies to fresh PostgreSQL, exposes the required columns and indexes, survives the repeatable seed process, rolls back to `base`, and reapplies successfully. It is destructive and must use only the specifically named disposable database:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_migration_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+apps/api/.venv/bin/pytest -q apps/api/tests/test_migrations_integration.py
+```
+
+See the [secure generated-image storage guide](image-storage.md) for the validation, storage, database, idempotency, cleanup, and lifecycle design.
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -599,10 +632,10 @@ Do not add real credentials to workflow files. The committed workflow values are
 Verified locally on 31 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 376 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 84.02 percent, above the enforced 75 percent floor.
+- The normal backend run passed 390 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 83.85 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
-- Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
+- Each NFA-36 test applies all migrations through `20261031_0011` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
 - The focused NFA-39 prompt-builder run passed 18 tests.
 - The focused NFA-40 generation run passed 44 tests.
@@ -616,10 +649,12 @@ Verified locally on 31 October 2026:
 - The focused NFA-48 image-prompt composer run passed 23 tests.
 - The focused NFA-49 sensitive-news image safety run passed 19 tests.
 - The focused NFA-50 configuration and OpenAI image service run passed 44 tests.
+- The focused NFA-51 configuration, validation, private storage, idempotency, and cleanup run passed 32 tests.
+- The NFA-51 migration applied, rolled back, and reapplied successfully against the disposable `newsflow_migration_test` PostgreSQL database.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, and NFA-50
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, and NFA-51
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
