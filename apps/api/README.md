@@ -2,6 +2,8 @@
 
 This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary.
 
+NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests.
+
 ## Requirements
 
 - Python 3.10 or newer. Python 3.12 is recommended and recorded in `.python-version`.
@@ -75,10 +77,17 @@ OPENAI_MODEL=your_approved_openai_model
 OPENAI_REQUEST_TIMEOUT=30
 OPENAI_MAX_OUTPUT_TOKENS=800
 OPENAI_MAX_RETRIES=2
+OPENAI_IMAGE_MODEL=gpt-image-2.5-flare
+IMAGE_GENERATION_TIMEOUT=120
+IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS=2
+IMAGE_GENERATION_MAX_RETRIES=1
+IMAGE_GENERATION_RETRY_BASE_SECONDS=1
+IMAGE_GENERATION_MAX_RESPONSE_BYTES=26214400
+IMAGE_GENERATION_DUPLICATE_CACHE_SIZE=100
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-`DATABASE_URL` is required when the API starts. `OPENAI_API_KEY` and `OPENAI_MODEL` are loaded and validated by the backend but are required only when an OpenAI-powered feature runs. This keeps the non-AI API usable without provider credentials. Empty values and the committed example placeholders produce clear errors without printing secret values.
+`DATABASE_URL` is required when the API starts. `OPENAI_API_KEY` and `OPENAI_MODEL` are loaded and validated for text generation, while `OPENAI_API_KEY` and `OPENAI_IMAGE_MODEL` are validated for image generation. They are required only when the matching OpenAI-powered service runs. This keeps the non-AI API usable without provider credentials. Empty values, committed placeholders, and unapproved image models produce clear errors without printing secret values.
 
 Do not add real credentials to `.env.example`, source code, browser code, documentation, Jira, screenshots, commits, or pull requests. The repository `.gitignore` excludes `.env` files while retaining the safe `.env.example` template. The OpenAI API key is server-side only and must never use a `NEXT_PUBLIC_` name because Next.js exposes variables with that prefix to browser code. This follows [OpenAI's API authentication guidance](https://developers.openai.com/api/reference/overview), which says API keys must be loaded from an environment variable or key management service on the server.
 
@@ -125,6 +134,13 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `OPENAI_REQUEST_TIMEOUT` | No | No | OpenAI request timeout from 1 to 300 seconds; defaults to 30. |
 | `OPENAI_MAX_OUTPUT_TOKENS` | No | No | Maximum generated output from 1 to 100000 tokens; defaults to 800. |
 | `OPENAI_MAX_RETRIES` | No | No | Extra SDK attempts for eligible temporary failures from 0 to 5; defaults to 2. |
+| `OPENAI_IMAGE_MODEL` | Yes for image generation | No | Reviewed GPT Image model; defaults to `gpt-image-2.5-flare`. |
+| `IMAGE_GENERATION_TIMEOUT` | No | No | Image request deadline from 1 to 300 seconds; defaults to 120. |
+| `IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS` | No | No | Per-process image calls from 1 to 10; defaults to 2. |
+| `IMAGE_GENERATION_MAX_RETRIES` | No | No | Extra explicit rate-limit attempts from 0 to 2; defaults to 1. |
+| `IMAGE_GENERATION_RETRY_BASE_SECONDS` | No | No | Bounded retry fallback delay; defaults to 1 second. |
+| `IMAGE_GENERATION_MAX_RESPONSE_BYTES` | No | No | Maximum accepted inline image size; defaults to 25 MiB. |
+| `IMAGE_GENERATION_DUPLICATE_CACHE_SIZE` | No | No | Per-process completed request cache; defaults to 100. |
 | `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
 
 Operating rules:
@@ -546,6 +562,38 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_safety.py
 
 See the [NFA-49 sensitive-news image safety policy](../../docs/image-safety-policy.md) for categories, decisions, reason codes, provider controls, safe records, tests, and limitations.
 
+### Generate an approved illustration through OpenAI
+
+NFA-50 adds `OpenAIImageGenerationService`, a backend-only boundary around the official asynchronous OpenAI Python SDK and the direct Images API. It accepts the complete NFA-48 prompt package, the current matching AI-generation rights decision, and an NFA-49 allowed safety decision. Any missing, denied, mismatched, documentary-enabled, or moderation-disabled input stops before OpenAI is contacted.
+
+The service uses the reviewed `OPENAI_IMAGE_MODEL`, one output, `moderation="auto"`, an opaque background, a controlled aspect-ratio size, and `low`, `medium`, or `high` quality. It strictly validates Base64 image data or an HTTPS retrieval reference and returns masked data plus content-free model, rights, safety, format, digest, and usage metadata. Timeouts, authentication, quota, rate-limit, moderation, provider availability, request, and invalid-response failures use safe categories without prompt, image, key, or raw error content.
+
+Automatic SDK retries are disabled. Only an explicit rate-limit rejection receives a bounded retry; a timeout, connection error, or server failure is not replayed because an expensive image request may already have been accepted. A bounded in-memory fingerprint cache prevents completed and active duplicates within one process. Multi-process shared idempotency and image storage remain later tasks.
+
+Run the focused checks from the repository root:
+
+```bash
+apps/api/.venv/bin/ruff check \
+  apps/api/app/core/config.py \
+  apps/api/app/core/image_generation_config.py \
+  apps/api/app/models/image_generation.py \
+  apps/api/app/services/openai_image_service.py \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+apps/api/.venv/bin/ruff format --check \
+  apps/api/app/core/config.py \
+  apps/api/app/core/image_generation_config.py \
+  apps/api/app/models/image_generation.py \
+  apps/api/app/services/openai_image_service.py \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+```
+
+See the [NFA-50 OpenAI image generation guide](../../docs/openai-image-generation.md) for configuration, supported models and parameters, gates, response validation, errors, retries, metadata, tests, security, and limitations.
+
 ## Run with Docker Compose
 
 NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
@@ -741,7 +789,7 @@ ruff check --fix .
 ruff format .
 ```
 
-Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, the mocked NFA-38 OpenAI boundary, the NFA-39 LinkedIn prompt builder, the NFA-48 image-prompt composer, and the NFA-49 sensitive-news image safety policy. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
+Ruff checks Python syntax errors, undefined names, import ordering, modern Python usage, and common bug patterns. Ruff also supplies the single Python formatter, avoiding competing formatting tools. Pytest covers health, configuration, accounts, sessions, authorisation, provider boundaries, normalisation, identity, provenance, rights, synchronisation, the article catalogue API, ingestion observability, the NFA-36 complete synthetic pipeline, the mocked NFA-38 OpenAI text boundary, the NFA-39 LinkedIn prompt builder, the NFA-48 image-prompt composer, the NFA-49 sensitive-news image safety policy, and the mocked NFA-50 OpenAI image boundary. Pytest-cov measures branch-aware backend coverage and enforces the documented 75 percent floor.
 
 ## Project structure
 
@@ -758,6 +806,7 @@ apps/api/
 |   |-- api/routes/articles.py  # Authenticated article list and detail APIs
 |   |-- api/dependencies.py     # Shared session and CSRF route protection
 |   |-- core/ai_config.py       # Validated OpenAI settings object
+|   |-- core/image_generation_config.py # Reviewed OpenAI image models and limits
 |   |-- core/config.py          # Environment-based settings
 |   |-- core/errors.py          # Standard JSON exception handlers
 |   |-- core/logging_config.py  # Structured formatting and credential redaction
@@ -777,6 +826,7 @@ apps/api/
 |   |-- models/linkedin_generation.py # Generation request, model output, draft, and API schemas
 |   |-- models/image_prompt.py   # Image style, layout, request, reference, and result schemas
 |   |-- models/image_safety.py   # Image safety capabilities, decisions, results, and records
+|   |-- models/image_generation.py # Image provider request, result, usage, and safe record
 |   |-- jobs/article_sync_job.py # One-shot durable scheduled-job entry point
 |   |-- prompts/linkedin_post.py # Versioned trusted LinkedIn instructions and limits
 |   |-- prompts/image_illustration.py # Versioned safe illustration instructions
@@ -804,6 +854,7 @@ apps/api/
 |   |-- services/prompt_builder.py # Rights-aware grounded prompt construction
 |   |-- services/image_prompt.py # Rights-aware article-or-draft image-prompt composer
 |   |-- services/image_safety.py # Pre-provider safety gate and safe decision recording
+|   |-- services/openai_image_service.py # Secure OpenAI Images API boundary
 |   |-- services/linkedin_generation.py # Authenticated generation orchestration
 |   |-- services/registration.py # Registration workflow
 |   `-- main.py                 # FastAPI application factory and entry point
@@ -820,6 +871,7 @@ apps/api/
 |-- tests/test_article_deduplication_integration.py # Opt-in PostgreSQL deduplication proof
 |-- tests/test_image_prompt.py    # Safe illustration prompt unit tests
 |-- tests/test_image_safety.py    # Sensitive-news policy and provider-gate tests
+|-- tests/test_openai_image_service.py # Mocked image provider and security tests
 |-- tests/test_article_sync.py # Fast scheduled, manual, retry, and checkpoint tests
 |-- tests/test_admin_article_sync.py # Protected manual sync API tests
 |-- tests/test_admin_ingestion_observability.py # Protected operations API tests

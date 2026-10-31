@@ -4,6 +4,8 @@ NewsFlow AI is a planned full-stack application that turns authorised CNN Intern
 
 > Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API. NFA-35 adds safe structured ingestion logs, job and provider durations, operational metrics, protected status APIs, and configurable health thresholds. NFA-36 adds a complete synthetic provider-to-PostgreSQL-to-REST test suite with an enforced backend coverage floor. NFA-38 adds a secure, reusable, bounded, and fully mocked OpenAI Responses API service in FastAPI. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction with injection safeguards and factual evaluation examples. NFA-40 connects those controls through an authenticated, rate-limited, owner-scoped LinkedIn draft generation service with strict structured-output validation and PostgreSQL metadata. NFA-41 adds the secure frontend-facing `POST /api/generations` contract with narrow responses and documented failure handling. NFA-42 adds deterministic factual-grounding checks, safe review warnings, trusted source-reference validation, and persisted validation evidence while keeping human verification mandatory. NFA-43 adds shared daily, concurrency, and duplicate generation controls, safe failure categories, token tracking, and operational guidance. NFA-44 adds a synthetic AI-quality dataset, explainable generation scoring, prompt-version regression detection, and an isolated optional live-model evaluation. NFA-45 adds content-free generation lifecycle auditing, request correlation, duration and token metrics, retention, and administrator-only monitoring endpoints. NFA-46 completes the E4 architecture, joined HTTP-to-draft acceptance verification, final acceptance record, and exact E6 frontend integration contract. NFA-48 adds a rights-aware, versioned image-prompt composer with controlled illustration choices, article-or-draft context, injection separation, restricted-photography protection, and non-deception rules. NFA-49 adds the central pre-provider image safety policy, sensitive-news classifications, documentary-evidence and real-person safeguards, conservative uncertainty, provider-control requirements, AI designation, and content-free decisions. ADR-001 continues to block all live CNN access.
 
+> Current implementation: NFA-50 adds the backend-only OpenAI Images API service with current-model validation, rights and safety enforcement, response validation, bounded concurrency and retries, duplicate protection, usage metadata, and mocked tests.
+
 ## Product workflow
 
 1. Discover recent CNN articles through an authorised source.
@@ -77,6 +79,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/e6-generation-integration-contract.md](docs/e6-generation-integration-contract.md) - exact E6 request, response, security, error, review, and accessibility handoff for the future Next.js interface.
 - [docs/image-prompt-composer.md](docs/image-prompt-composer.md) - NFA-48 supported styles and layouts, source-rights gates, article-or-draft context, prompt separation, non-deception controls, errors, tests, and limitations.
 - [docs/image-safety-policy.md](docs/image-safety-policy.md) - NFA-49 sensitive categories, central decisions, documentary and real-person restrictions, provider controls, safe records, tests, and limitations.
+- [docs/openai-image-generation.md](docs/openai-image-generation.md) - NFA-50 OpenAI image model selection, backend configuration, rights and safety gates, response handling, retries, duplicate controls, tests, and limitations.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -177,6 +180,7 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/e6-generation-integration-contract.md` | Secure request, response, CSRF, error, review, and accessibility contract for E6 |
 | `docs/image-prompt-composer.md` | NFA-48 illustration parameters, rights and context checks, injection separation, safety rules, tests, and limitations |
 | `docs/image-safety-policy.md` | NFA-49 sensitive-news decisions, provider gate, non-deception and person safeguards, metadata, tests, and limitations |
+| `docs/openai-image-generation.md` | NFA-50 OpenAI Images API boundary, controlled configuration, safety and rights gates, response validation, errors, usage, and tests |
 | `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
 | `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
 | `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
@@ -281,6 +285,8 @@ NFA-48 starts the image-generation safety boundary without generating an image. 
 
 NFA-49 evaluates every NFA-48 result before a future provider call. Deterministic rules classify conflict, terrorism, disasters, deaths or serious injuries, health emergencies, elections and political events, criminal allegations, identifiable-person sensitive events, and uncertainty. Only allowed or restricted conceptual decisions can continue. Documentary fabrication, misleading real-person depictions, frontend override attempts, and sensitive requests without essential provider moderation are rejected; uncertain requests stop for review. Every decision keeps photorealism and documentary use disabled, preserves an AI-generated illustration designation, requires human review, and can record only content-free metadata under `image_safety_v1`. See the [image safety policy](docs/image-safety-policy.md).
 
+NFA-50 connects the NFA-48 and NFA-49 outputs to the official asynchronous OpenAI Python SDK through a backend-only Images API service. It accepts only a current matching rights decision and an allowed safety result, forces OpenAI's `auto` moderation, maps the approved aspect ratio to a controlled size, validates Base64 or HTTPS response references, limits response size and concurrency, records available usage without content, and masks generated data. Only explicit rate-limit rejection is retried; ambiguous expensive calls are not automatically replayed. A bounded request fingerprint cache prevents avoidable duplicate calls within one service process. See the [OpenAI image generation integration guide](docs/openai-image-generation.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -298,6 +304,13 @@ OPENAI_MODEL=your_approved_openai_model
 OPENAI_REQUEST_TIMEOUT=30
 OPENAI_MAX_OUTPUT_TOKENS=800
 OPENAI_MAX_RETRIES=2
+OPENAI_IMAGE_MODEL=gpt-image-2.5-flare
+IMAGE_GENERATION_TIMEOUT=120
+IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS=2
+IMAGE_GENERATION_MAX_RETRIES=1
+IMAGE_GENERATION_RETRY_BASE_SECONDS=1
+IMAGE_GENERATION_MAX_RESPONSE_BYTES=26214400
+IMAGE_GENERATION_DUPLICATE_CACHE_SIZE=100
 GENERATION_RATE_LIMIT_ATTEMPTS=10
 GENERATION_RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_DAILY_LIMIT=50
@@ -308,7 +321,7 @@ GENERATION_AUDIT_RETENTION_DAYS=90
 GENERATION_MONITORING_WINDOW_HOURS=24
 ```
 
-The FastAPI backend loads these values through validated settings and stores credentials as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` and `OPENAI_MODEL` are required only when the OpenAI service is initialised; missing or unchanged example values produce clear errors without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. NFA-38 bounds the request timeout, maximum output tokens, and eligible SDK retries. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
+The FastAPI backend loads these values through validated settings and stores credentials as masked secret values. `DATABASE_URL` is required at API startup. `OPENAI_API_KEY` and `OPENAI_MODEL` are required only when the OpenAI text service is initialised; `OPENAI_API_KEY` and the approved `OPENAI_IMAGE_MODEL` are required when image generation is initialised. Missing or unchanged example values produce clear errors without revealing a credential. OpenAI keys remain server-side and must never be placed in a `NEXT_PUBLIC_` variable. NFA-38 bounds text requests. NFA-50 independently bounds image timeouts, concurrency, retries, response size, and duplicate-cache size. `API_INTERNAL_BASE_URL` is a server-only Next.js setting for reaching FastAPI and contains no credentials. `NEWS_SOURCE_MODE` remains `fixture` because live CNN integration is not authorised. See the [backend configuration guide](apps/api/README.md#configure-the-application) for the full variable reference and operating rules.
 
 ### Docker development environment
 
@@ -362,6 +375,8 @@ Detailed commands and automatic-formatting instructions are in the [frontend gui
 
 NFA-26 adds a complete account-security regression journey and a safety-gated PostgreSQL ownership test. NFA-28 to NFA-32 test the provider boundary, disabled CNN access, normalisation, identity, provenance, and rights decisions. NFA-33 adds synchronisation tests. NFA-34 adds authenticated catalogue API tests. NFA-35 adds logging safety, duration, metric, health-threshold, protected monitoring API, and migration tests. NFA-36 adds the complete isolated article pipeline suite and branch-aware coverage enforcement. NFA-38 adds mocked OpenAI success, configuration, usage, error, cost-control, retry, and redaction tests. NFA-39 adds prompt construction, field allowlist, rights, preference, insufficiency, injection, versioning, and grounding-evaluation tests. NFA-40 adds complete orchestration, structured-output validation, authentication, rate-limit, idempotency, failure, source-reference, and private-owner retrieval tests. NFA-41 adds frontend API contract, validation, security, response minimisation, failure-mapping, limit, and OpenAPI tests. NFA-42 adds synthetic tests for valid grounding, empty and malformed output, unsupported numbers, quotations, entities and assertions, source-reference integrity, insufficient context, opinion framing, safe warnings, rejection before persistence, response fields, and migration evidence. NFA-43 tests generation usage limits and safe provider failure handling. NFA-44 adds deterministic scoring and property-based prompt regression tests with a separate opt-in live-model marker. NFA-45 adds lifecycle correlation, rights, validation, rejection, duration, token metric, retention, redaction, and protected administrator API tests. NFA-46 adds joined authenticated HTTP-to-draft acceptance coverage across rights, preferences, source sufficiency, provider failures, grounding, usage controls, audit evidence, trusted source references, mandatory review, and absence of automatic publishing. NFA-48 adds synthetic unit coverage for controlled image styles and layouts, source allowlisting, current rights, restricted and insufficient context, draft association, injection separation, non-deception, and prompt versioning. NFA-49 adds sensitive-category, documentary-fabrication, real-person, override, injection, uncertainty, provider-control, decision-record, designation, and provider-gate tests. GitHub automatically runs the backend, pipeline, and frontend quality checks for pull requests and updates to `main`. See the [testing guide](docs/testing.md) and the feature guides above for targeted commands.
 
+NFA-50 adds mocked official-SDK coverage for image configuration, safety and rights enforcement, response formats, timeouts, provider errors, bounded rate-limit retries, duplicate prevention, usage metadata, and secret-safe logging. Normal tests make no live OpenAI image call and spend no provider credits.
+
 ## Key delivery gates
 
 - **CNN access gate:** document a written, authorised feed, API, licensed service, or other permitted route before connecting the ingestion service to live CNN content. CNN International Commercial provides a route for licensing enquiries, and its published terms restrict unapproved reuse.
@@ -377,7 +392,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 - [OpenAI prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)
 - [OpenAI safety in building agents](https://developers.openai.com/api/docs/guides/agent-builder-safety)
 - [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses)
-- [OpenAI image generation](https://developers.openai.com/api/docs/guides/tools-image-generation)
+- [OpenAI image generation](https://developers.openai.com/api/docs/guides/image-generation)
 - [OpenAI production best practices](https://developers.openai.com/api/docs/guides/production-best-practices)
 - [argon2-cffi password hashing](https://argon2-cffi.readthedocs.io/en/stable/argon2.html)
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
@@ -386,7 +401,7 @@ NFA-26 adds a complete account-security regression journey and a safety-gated Po
 
 ## Current next step
 
-Review the NFA-49 sensitive categories, provider-call gate, decision metadata, provider controls, automated tests, safety rules, and limitations. Then merge the branch and record the final evidence in Jira before implementing an image-provider integration. Live CNN access remains blocked because no authorised method or Go decision exists. Image generation still needs an approved provider and model, secure provider integration, output validation, storage, lifecycle controls, user interface, and human review.
+Review the NFA-50 OpenAI image configuration, rights and safety gates, response validation, retry and duplicate policy, metadata, automated tests, and limitations. Then merge the branch and record the final evidence in Jira. Live CNN access remains blocked because no authorised method or Go decision exists. Image generation still needs persistent storage, a shared lifecycle and idempotency workflow, a protected application endpoint, a user interface, provenance verification, and human review.
 
 ## Licence
 
