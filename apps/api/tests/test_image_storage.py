@@ -119,8 +119,9 @@ class MemoryRepository:
         if self.record is not None:
             return GeneratedImagePersistenceResult(record=self.record, created=False)
         self.record = StoredGeneratedImageRecord(
-            **image.model_dump(),
+            **image.model_dump(exclude={"regeneration_sequence"}),
             article_snapshot_id=ARTICLE_SNAPSHOT_ID,
+            regeneration_sequence=0,
         )
         return GeneratedImagePersistenceResult(record=self.record, created=True)
 

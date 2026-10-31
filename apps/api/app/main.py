@@ -16,6 +16,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.generation_monitoring import router as generation_monitoring_router
 from app.api.routes.generations import router as generations_router
 from app.api.routes.health import router as health_router
+from app.api.routes.image_regeneration import router as image_regeneration_router
 from app.api.routes.ingestion_observability import (
     router as ingestion_observability_router,
 )
@@ -26,6 +27,7 @@ from app.core.errors import register_exception_handlers
 from app.core.logging_config import configure_logging
 from app.database import DatabaseConnection, DatabaseConnectionError, PostgresDatabase
 from app.database.sqlalchemy import SqlAlchemyDatabase
+from app.models.image_safety import ImageProviderSafetyCapabilities
 from app.providers.factory import create_news_provider
 from app.repositories import (
     AuthenticationRepository,
@@ -48,8 +50,12 @@ from app.repositories.article_sync import (
     SqlAlchemyArticleSyncRepository,
 )
 from app.repositories.articles import SqlAlchemyArticleRepository
+from app.repositories.generated_images import SqlAlchemyGeneratedImageRepository
 from app.repositories.generation_audit import SqlAlchemyGenerationAuditRepository
 from app.repositories.generation_usage import SqlAlchemyGenerationUsageRepository
+from app.repositories.image_regeneration import (
+    SqlAlchemyImageRegenerationRepository,
+)
 from app.repositories.linkedin_generation import (
     LinkedInGenerationRepository,
     SqlAlchemyLinkedInGenerationRepository,
@@ -65,14 +71,24 @@ from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
 from app.services.article_rights import ArticleRightsService
 from app.services.article_sync import ArticleSyncService
+from app.services.generated_image_storage import GeneratedImageStorageService
 from app.services.generation_audit import GenerationAuditService
 from app.services.generation_monitoring import GenerationMonitoringService
 from app.services.generation_usage import GenerationUsageService
+from app.services.image_prompt import ImagePromptComposer
+from app.services.image_regeneration import (
+    ImageGeneratorFactory,
+    ImageRegenerationService,
+)
+from app.services.image_safety import ImageSafetyService
+from app.services.image_storage import LocalPrivateImageStorage
+from app.services.image_validation import GeneratedImageValidationService
 from app.services.ingestion_observability import IngestionObservabilityService
 from app.services.linkedin_generation import (
     AITextGeneratorFactory,
     LinkedInGenerationService,
 )
+from app.services.openai_image_service import OpenAIImageGenerationService
 from app.services.openai_service import OpenAIService
 
 logger = logging.getLogger(__name__)
@@ -100,7 +116,9 @@ def create_app(
     generation_usage_service: GenerationUsageService | None = None,
     generation_audit_service: GenerationAuditService | None = None,
     generation_monitoring_service: GenerationMonitoringService | None = None,
+    image_regeneration_service: ImageRegenerationService | None = None,
     openai_factory: AITextGeneratorFactory | None = None,
+    image_generator_factory: ImageGeneratorFactory | None = None,
     generation_rate_limiter: InMemoryRateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure the NewsFlow AI API."""
@@ -153,6 +171,7 @@ def create_app(
         configured_generation_usage_service = generation_usage_service
         configured_generation_audit_service = generation_audit_service
         configured_generation_monitoring_service = generation_monitoring_service
+        configured_image_regeneration_service = image_regeneration_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
@@ -246,6 +265,51 @@ def create_app(
                     usage=configured_generation_usage_service,
                     audit=configured_generation_audit_service,
                 )
+            if (
+                configured_image_regeneration_service is None
+                and application_settings.app_env in {"development", "test"}
+            ):
+                assert configured_article_rights_repository is not None
+                assert configured_linkedin_generation_repository is not None
+                image_storage_configuration = (
+                    application_settings.require_image_storage_configuration()
+                )
+                generated_image_repository = SqlAlchemyGeneratedImageRepository(
+                    sqlalchemy_database
+                )
+                configured_image_regeneration_service = ImageRegenerationService(
+                    images=generated_image_repository,
+                    runs=SqlAlchemyImageRegenerationRepository(sqlalchemy_database),
+                    drafts=configured_linkedin_generation_repository,
+                    rights=ArticleRightsService(configured_article_rights_repository),
+                    prompt_composer=ImagePromptComposer(),
+                    safety=ImageSafetyService(
+                        provider_capabilities=ImageProviderSafetyCapabilities(
+                            prompt_moderation_available=True,
+                            output_moderation_available=True,
+                            strict_safety_level_available=False,
+                            content_credentials_available=False,
+                        )
+                    ),
+                    image_generator_factory=(
+                        image_generator_factory
+                        or (
+                            lambda: OpenAIImageGenerationService.from_settings(
+                                application_settings
+                            )
+                        )
+                    ),
+                    storage=GeneratedImageStorageService(
+                        validator=GeneratedImageValidationService(
+                            image_storage_configuration
+                        ),
+                        storage=LocalPrivateImageStorage(
+                            image_storage_configuration.local_root
+                        ),
+                        repository=generated_image_repository,
+                    ),
+                    usage=configured_generation_usage_service,
+                )
             if configured_article_sync_repository is None:
                 configured_article_sync_repository = SqlAlchemyArticleSyncRepository(
                     sqlalchemy_database
@@ -322,6 +386,9 @@ def create_app(
         application.state.generation_audit_service = configured_generation_audit_service
         application.state.generation_monitoring_service = (
             configured_generation_monitoring_service
+        )
+        application.state.image_regeneration_service = (
+            configured_image_regeneration_service
         )
         application.state.registration_rate_limiter = (
             registration_rate_limiter
@@ -463,6 +530,7 @@ def create_app(
     application.include_router(article_sync_router)
     application.include_router(ingestion_observability_router)
     application.include_router(linkedin_generation_router)
+    application.include_router(image_regeneration_router)
     return application
 
 

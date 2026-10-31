@@ -43,6 +43,13 @@ class GeneratedImageRepository(Protocol):
         request_id: UUID,
     ) -> StoredGeneratedImageRecord | None: ...
 
+    async def get_for_owner(
+        self,
+        *,
+        image_id: UUID,
+        owner_id: UUID,
+    ) -> StoredGeneratedImageRecord | None: ...
+
     async def save(
         self,
         image: GeneratedImageWrite,
@@ -67,6 +74,32 @@ class SqlAlchemyGeneratedImageRepository:
             raise GeneratedImageRepositoryError(
                 "Generated image metadata could not be read."
             ) from exc
+
+    async def get_for_owner(
+        self,
+        *,
+        image_id: UUID,
+        owner_id: UUID,
+    ) -> StoredGeneratedImageRecord | None:
+        """Return an available image only when it belongs to the caller."""
+
+        try:
+            async with self._database.session() as session:
+                row = (
+                    await session.execute(
+                        self._record_statement().where(
+                            GeneratedImageTable.id == image_id,
+                            GeneratedImageTable.user_id == owner_id,
+                            GeneratedImageTable.deleted_at.is_(None),
+                            GeneratedImageTable.status == "available",
+                        )
+                    )
+                ).one_or_none()
+        except SQLAlchemyError as exc:
+            raise GeneratedImageRepositoryError(
+                "Generated image metadata could not be read."
+            ) from exc
+        return None if row is None else self._record_from_row(row)
 
     async def save(
         self,
@@ -94,6 +127,10 @@ class SqlAlchemyGeneratedImageRepository:
                         )
 
                     article_snapshot_id = await self._resolve_context(session, image)
+                    regeneration_sequence = await self._next_regeneration_sequence(
+                        session,
+                        image,
+                    )
                     row = GeneratedImageTable(
                         id=image.id,
                         request_id=image.request_id,
@@ -103,6 +140,8 @@ class SqlAlchemyGeneratedImageRepository:
                         generated_post_id=image.generated_post_id,
                         source_post_version_id=image.source_post_version_id,
                         generation_run_id=image.generation_run_id,
+                        parent_image_id=image.parent_image_id,
+                        regeneration_sequence=regeneration_sequence,
                         storage_provider=image.storage_provider,
                         storage_key=image.storage_key.get_secret_value(),
                         mime_type=image.mime_type,
@@ -125,8 +164,9 @@ class SqlAlchemyGeneratedImageRepository:
                     session.add(row)
                     await session.flush()
                     record = StoredGeneratedImageRecord(
-                        **image.model_dump(),
+                        **image.model_dump(exclude={"regeneration_sequence"}),
                         article_snapshot_id=article_snapshot_id,
+                        regeneration_sequence=regeneration_sequence,
                     )
                     return GeneratedImagePersistenceResult(
                         record=record,
@@ -186,6 +226,48 @@ class SqlAlchemyGeneratedImageRepository:
         return article_snapshot_id
 
     @staticmethod
+    async def _next_regeneration_sequence(
+        session: AsyncSession,
+        image: GeneratedImageWrite,
+    ) -> int:
+        """Serialise image versions per draft and verify the selected parent."""
+
+        await session.execute(
+            select(
+                func.pg_advisory_xact_lock(
+                    func.hashtextextended(str(image.generated_post_id), 0)
+                )
+            )
+        )
+        if image.parent_image_id is not None:
+            parent_exists = (
+                await session.execute(
+                    select(GeneratedImageTable.id).where(
+                        GeneratedImageTable.id == image.parent_image_id,
+                        GeneratedImageTable.user_id == image.owner_id,
+                        GeneratedImageTable.article_id == image.article_id,
+                        GeneratedImageTable.generated_post_id
+                        == image.generated_post_id,
+                        GeneratedImageTable.deleted_at.is_(None),
+                        GeneratedImageTable.status == "available",
+                    )
+                )
+            ).scalar_one_or_none()
+            if parent_exists is None:
+                raise GeneratedImageContextNotFoundError(
+                    "The parent image ownership or version context is not valid."
+                )
+
+        latest = (
+            await session.execute(
+                select(func.max(GeneratedImageTable.regeneration_sequence)).where(
+                    GeneratedImageTable.generated_post_id == image.generated_post_id
+                )
+            )
+        ).scalar_one()
+        return 0 if latest is None else latest + 1
+
+    @staticmethod
     async def _get_by_request_id(
         session: AsyncSession,
         *,
@@ -202,6 +284,10 @@ class SqlAlchemyGeneratedImageRepository:
         ).one_or_none()
         if row is None:
             return None
+        return SqlAlchemyGeneratedImageRepository._record_from_row(row)
+
+    @staticmethod
+    def _record_from_row(row) -> StoredGeneratedImageRecord:
         return StoredGeneratedImageRecord.model_validate(
             {
                 "id": row.id,
@@ -212,6 +298,8 @@ class SqlAlchemyGeneratedImageRepository:
                 "generated_post_id": row.generated_post_id,
                 "source_post_version_id": row.source_post_version_id,
                 "generation_run_id": row.generation_run_id,
+                "parent_image_id": row.parent_image_id,
+                "regeneration_sequence": row.regeneration_sequence,
                 "storage_provider": row.storage_provider,
                 "storage_key": row.storage_key,
                 "mime_type": row.mime_type,
@@ -242,6 +330,8 @@ class SqlAlchemyGeneratedImageRepository:
             GeneratedImageTable.generated_post_id,
             GeneratedImageTable.source_post_version_id,
             GeneratedImageTable.generation_run_id,
+            GeneratedImageTable.parent_image_id,
+            GeneratedImageTable.regeneration_sequence,
             GeneratedImageTable.storage_provider,
             GeneratedImageTable.storage_key,
             GeneratedImageTable.mime_type,
@@ -271,6 +361,7 @@ class SqlAlchemyGeneratedImageRepository:
             and existing.generated_post_id == image.generated_post_id
             and existing.generation_run_id == image.generation_run_id
             and existing.source_post_version_id == image.source_post_version_id
+            and existing.parent_image_id == image.parent_image_id
             and existing.content_sha256 == image.content_sha256
         )
         if not matching:

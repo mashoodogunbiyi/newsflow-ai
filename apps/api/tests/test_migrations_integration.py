@@ -210,6 +210,8 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         "validation_status",
         "generation_status",
         "ai_generated",
+        "parent_image_id",
+        "regeneration_sequence",
     } <= generated_image_columns
     generated_image_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("generated_images")
@@ -217,6 +219,7 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
     assert {
         "ix_generated_images_owner_created",
         "ix_generated_images_article_created",
+        "ix_generated_images_parent_created",
     } <= generated_image_indexes
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")

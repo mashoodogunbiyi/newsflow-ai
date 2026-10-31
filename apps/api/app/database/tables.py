@@ -789,6 +789,10 @@ class GeneratedImageTable(Base):
     generation_run_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=False
     )
+    parent_image_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    regeneration_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     storage_provider: Mapped[str] = mapped_column(String(50), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
