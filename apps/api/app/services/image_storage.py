@@ -14,6 +14,10 @@ class PrivateImageStorageError(RuntimeError):
     """Raised without revealing a filesystem path or storage credential."""
 
 
+class PrivateImageObjectNotFoundError(PrivateImageStorageError):
+    """Raised when an authorised private object no longer exists."""
+
+
 class PrivateImageStorage(Protocol):
     """Backend-only object operations with no public URL operation."""
 
@@ -95,6 +99,10 @@ class LocalPrivateImageStorage:
     def _read_sync(self, storage_key: str) -> bytes:
         try:
             return self._resolve_key(storage_key).read_bytes()
+        except FileNotFoundError as exc:
+            raise PrivateImageObjectNotFoundError(
+                "Generated image is missing from private storage."
+            ) from exc
         except OSError as exc:
             raise PrivateImageStorageError(
                 "Generated image could not be read from private storage."

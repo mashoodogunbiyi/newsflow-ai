@@ -16,6 +16,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.generation_monitoring import router as generation_monitoring_router
 from app.api.routes.generations import router as generations_router
 from app.api.routes.health import router as health_router
+from app.api.routes.image_delivery import router as image_delivery_router
 from app.api.routes.image_regeneration import router as image_regeneration_router
 from app.api.routes.ingestion_observability import (
     router as ingestion_observability_router,
@@ -75,6 +76,7 @@ from app.services.generated_image_storage import GeneratedImageStorageService
 from app.services.generation_audit import GenerationAuditService
 from app.services.generation_monitoring import GenerationMonitoringService
 from app.services.generation_usage import GenerationUsageService
+from app.services.image_delivery import ImageDeliveryService
 from app.services.image_prompt import ImagePromptComposer
 from app.services.image_regeneration import (
     ImageGeneratorFactory,
@@ -116,6 +118,7 @@ def create_app(
     generation_usage_service: GenerationUsageService | None = None,
     generation_audit_service: GenerationAuditService | None = None,
     generation_monitoring_service: GenerationMonitoringService | None = None,
+    image_delivery_service: ImageDeliveryService | None = None,
     image_regeneration_service: ImageRegenerationService | None = None,
     openai_factory: AITextGeneratorFactory | None = None,
     image_generator_factory: ImageGeneratorFactory | None = None,
@@ -171,6 +174,7 @@ def create_app(
         configured_generation_usage_service = generation_usage_service
         configured_generation_audit_service = generation_audit_service
         configured_generation_monitoring_service = generation_monitoring_service
+        configured_image_delivery_service = image_delivery_service
         configured_image_regeneration_service = image_regeneration_service
         if (
             configured_user_repository is None
@@ -264,6 +268,19 @@ def create_app(
                     ),
                     usage=configured_generation_usage_service,
                     audit=configured_generation_audit_service,
+                )
+            if (
+                configured_image_delivery_service is None
+                and application_settings.app_env in {"development", "test"}
+            ):
+                image_storage_configuration = (
+                    application_settings.require_image_storage_configuration()
+                )
+                configured_image_delivery_service = ImageDeliveryService(
+                    images=SqlAlchemyGeneratedImageRepository(sqlalchemy_database),
+                    storage=LocalPrivateImageStorage(
+                        image_storage_configuration.local_root
+                    ),
                 )
             if (
                 configured_image_regeneration_service is None
@@ -387,6 +404,7 @@ def create_app(
         application.state.generation_monitoring_service = (
             configured_generation_monitoring_service
         )
+        application.state.image_delivery_service = configured_image_delivery_service
         application.state.image_regeneration_service = (
             configured_image_regeneration_service
         )
@@ -530,6 +548,7 @@ def create_app(
     application.include_router(article_sync_router)
     application.include_router(ingestion_observability_router)
     application.include_router(linkedin_generation_router)
+    application.include_router(image_delivery_router)
     application.include_router(image_regeneration_router)
     return application
 
