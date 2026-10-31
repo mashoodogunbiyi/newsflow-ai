@@ -111,6 +111,7 @@ class GeneratedImageStorageService:
             generated_post_id=request.generated_post_id,
             source_post_version_id=request.source_post_version_id,
             generation_run_id=request.generation_run_id,
+            parent_image_id=request.parent_image_id,
             storage_provider=stored_object.provider,
             storage_key=stored_object.storage_key,
             mime_type=validated.mime_type,
@@ -174,6 +175,7 @@ class GeneratedImageStorageService:
             and existing.generated_post_id == request.generated_post_id
             and existing.generation_run_id == request.generation_run_id
             and existing.source_post_version_id == request.source_post_version_id
+            and existing.parent_image_id == request.parent_image_id
             and existing.content_sha256 == content_sha256
         ):
             raise GeneratedImageStorageWorkflowError(

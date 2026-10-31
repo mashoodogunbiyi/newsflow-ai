@@ -39,6 +39,7 @@ class GeneratedImageStorageRequest(BaseModel):
     generated_post_id: UUID
     generation_run_id: UUID
     source_post_version_id: UUID | None = None
+    parent_image_id: UUID | None = None
     result: OpenAIImageGenerationResult
     retrieved_image_bytes: SecretBytes | None = Field(default=None, repr=False)
     output_safety_status: ImageSafetyReviewStatus = ImageSafetyReviewStatus.PENDING
@@ -81,6 +82,8 @@ class GeneratedImageWrite(BaseModel):
     generated_post_id: UUID
     source_post_version_id: UUID | None = None
     generation_run_id: UUID
+    parent_image_id: UUID | None = None
+    regeneration_sequence: int | None = Field(default=None, ge=0)
     storage_provider: str
     storage_key: SecretStr = Field(repr=False)
     mime_type: Literal["image/png", "image/jpeg", "image/webp"]
@@ -105,6 +108,7 @@ class StoredGeneratedImageRecord(GeneratedImageWrite):
     """Internal database record with its resolved article snapshot."""
 
     article_snapshot_id: UUID
+    regeneration_sequence: int = Field(ge=0)
 
 
 class GeneratedImagePersistenceResult(BaseModel):
@@ -125,6 +129,8 @@ class StoredGeneratedImage(BaseModel):
     article_id: UUID
     generated_post_id: UUID
     generation_run_id: UUID
+    parent_image_id: UUID | None
+    regeneration_sequence: int
     mime_type: Literal["image/png", "image/jpeg", "image/webp"]
     width: int
     height: int
