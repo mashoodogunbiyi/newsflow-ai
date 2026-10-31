@@ -8,6 +8,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.ai_config import OpenAIServiceConfiguration
+from app.core.image_generation_config import OpenAIImageGenerationConfiguration
 
 
 def find_environment_file() -> Path:
@@ -93,9 +94,25 @@ class Settings(BaseSettings):
     openai_request_timeout: float = Field(default=30.0, ge=1.0, le=300.0)
     openai_max_output_tokens: int = Field(default=800, ge=1, le=100_000)
     openai_max_retries: int = Field(default=2, ge=0, le=5)
+    openai_image_model: str | None = Field(
+        default="gpt-image-2.5-flare",
+        min_length=1,
+        max_length=200,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+    )
+    image_generation_timeout: float = Field(default=120, ge=1, le=300)
+    image_generation_max_concurrent_requests: int = Field(default=2, ge=1, le=10)
+    image_generation_max_retries: int = Field(default=1, ge=0, le=2)
+    image_generation_retry_base_seconds: float = Field(default=1, ge=0, le=10)
+    image_generation_max_response_bytes: int = Field(
+        default=26_214_400,
+        ge=1_048_576,
+        le=52_428_800,
+    )
+    image_generation_duplicate_cache_size: int = Field(default=100, ge=1, le=1_000)
     seed_data_enabled: bool = False
 
-    @field_validator("openai_model", mode="before")
+    @field_validator("openai_model", "openai_image_model", mode="before")
     @classmethod
     def empty_optional_model_is_unconfigured(cls, value: object) -> object:
         """Let non-AI API features start when Compose supplies an empty value."""
@@ -188,6 +205,42 @@ class Settings(BaseSettings):
             max_output_tokens=self.openai_max_output_tokens,
             max_retries=self.openai_max_retries,
         )
+
+    def require_openai_image_configuration(
+        self,
+    ) -> OpenAIImageGenerationConfiguration:
+        """Return the reviewed and bounded OpenAI image configuration."""
+
+        api_key = self.require_openai_api_key()
+        model = (self.openai_image_model or "").strip()
+        if not model:
+            raise OpenAIConfigurationError(
+                "OPENAI_IMAGE_MODEL must be set before image generation can run."
+            )
+        if model.lower() in {
+            "your_openai_image_model_here",
+            "your_approved_openai_image_model_here",
+            "replace_with_your_openai_image_model",
+        }:
+            raise OpenAIConfigurationError(
+                "OPENAI_IMAGE_MODEL still contains the example placeholder. "
+                "Replace it in the ignored .env file before generating images."
+            )
+        try:
+            return OpenAIImageGenerationConfiguration(
+                api_key=api_key,
+                model=model,
+                request_timeout_seconds=self.image_generation_timeout,
+                max_concurrent_requests=(self.image_generation_max_concurrent_requests),
+                max_retries=self.image_generation_max_retries,
+                retry_base_seconds=self.image_generation_retry_base_seconds,
+                max_response_bytes=self.image_generation_max_response_bytes,
+                duplicate_cache_size=self.image_generation_duplicate_cache_size,
+            )
+        except ValueError as exc:
+            raise OpenAIConfigurationError(
+                "OPENAI_IMAGE_MODEL is not an approved image model."
+            ) from exc
 
 
 @lru_cache

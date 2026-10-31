@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, and the NFA-49 sensitive-news image safety policy.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, the NFA-49 sensitive-news image safety policy, and the mocked NFA-50 OpenAI image generation boundary.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -463,6 +463,54 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_safety.py
 
 All scenarios use original synthetic topics and text. The suite makes no CNN, OpenAI, or image-provider request and stores no source or user text in decision records. See the [image safety policy](image-safety-policy.md).
 
+## NFA-50 OpenAI image generation coverage
+
+`test_openai_image_service.py` uses the official SDK exception classes and a mocked `client.images.generate` resource. It passes real NFA-48 and NFA-49 model structures into the NFA-50 provider boundary without making a network request.
+
+| Requirement | Automated evidence |
+|---|---|
+| Official SDK integration | Client factory receives backend key, timeout, and zero SDK retries |
+| Successful generation | Controlled request arguments, masked image bytes, metadata, and review state |
+| Missing credentials | Safe settings error before client construction |
+| Safety enforcement | Rejected safety decision stops before provider access |
+| Rights enforcement | Denied or mismatched rights stop before provider access |
+| Supported settings | Approved models, aspect-ratio sizes, quality enums, formats, and hashed safety identifier |
+| Provider formats | Strict Base64 image validation and masked HTTPS reference handling |
+| Timeout | SDK and application deadline failures with no automatic replay |
+| Authentication and quota | Safe permanent failures with no retry |
+| Rate limiting | One bounded mocked retry and exhausted-budget failure |
+| Temporary availability | Controlled connection failure without ambiguous replay |
+| Moderation | Generic provider moderation failure without sensitive category details |
+| Invalid response | Empty, malformed, wrong-signature, and unsafe-URL rejection |
+| Duplicate protection | Cached completion, active protection, and request-ID conflict handling |
+| Usage tracking | Available total, text, and image token counts plus missing-usage handling |
+| Credential protection | Logs and errors exclude key, prompt, provider detail, image data, and revised prompt |
+| Safe record | Recorder receives content-free IDs, digest, dimensions, and usage only |
+
+Run the focused NFA-50 checks from the repository root:
+
+```bash
+apps/api/.venv/bin/ruff check \
+  apps/api/app/core/config.py \
+  apps/api/app/core/image_generation_config.py \
+  apps/api/app/models/image_generation.py \
+  apps/api/app/services/openai_image_service.py \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+apps/api/.venv/bin/ruff format --check \
+  apps/api/app/core/config.py \
+  apps/api/app/core/image_generation_config.py \
+  apps/api/app/models/image_generation.py \
+  apps/api/app/services/openai_image_service.py \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_config.py \
+  apps/api/tests/test_openai_image_service.py
+```
+
+No focused or normal NFA-50 test requires a real OpenAI key or spends provider credits. See the [OpenAI image generation integration guide](openai-image-generation.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -548,11 +596,11 @@ Do not add real credentials to workflow files. The committed workflow values are
 
 ## Verification record
 
-Verified locally on 30 October 2026:
+Verified locally on 31 October 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 348 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 81.01 percent, above the enforced 75 percent floor.
+- The normal backend run passed 376 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
+- Backend branch-aware coverage measured 84.02 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261030_0010` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -567,10 +615,11 @@ Verified locally on 30 October 2026:
 - The focused NFA-46 E4 acceptance set passed 79 tests and safely skipped the optional live-model test.
 - The focused NFA-48 image-prompt composer run passed 23 tests.
 - The focused NFA-49 sensitive-news image safety run passed 19 tests.
+- The focused NFA-50 configuration and OpenAI image service run passed 44 tests.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, and NFA-49
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, and NFA-50
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

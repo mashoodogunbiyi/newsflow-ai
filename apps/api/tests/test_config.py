@@ -27,6 +27,11 @@ def test_settings_load_secrets_from_environment(
     monkeypatch.setenv("OPENAI_REQUEST_TIMEOUT", "45")
     monkeypatch.setenv("OPENAI_MAX_OUTPUT_TOKENS", "600")
     monkeypatch.setenv("OPENAI_MAX_RETRIES", "1")
+    monkeypatch.setenv("OPENAI_IMAGE_MODEL", "gpt-image-2.5-sunburst")
+    monkeypatch.setenv("IMAGE_GENERATION_TIMEOUT", "90")
+    monkeypatch.setenv("IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS", "3")
+    monkeypatch.setenv("IMAGE_GENERATION_MAX_RETRIES", "2")
+    monkeypatch.setenv("IMAGE_GENERATION_RETRY_BASE_SECONDS", "2")
 
     settings = Settings(_env_file=None)
 
@@ -37,6 +42,12 @@ def test_settings_load_secrets_from_environment(
     assert openai_configuration.request_timeout == 45
     assert openai_configuration.max_output_tokens == 600
     assert openai_configuration.max_retries == 1
+    image_configuration = settings.require_openai_image_configuration()
+    assert image_configuration.model == "gpt-image-2.5-sunburst"
+    assert image_configuration.request_timeout_seconds == 90
+    assert image_configuration.max_concurrent_requests == 3
+    assert image_configuration.max_retries == 2
+    assert image_configuration.retry_base_seconds == 2
 
 
 def test_secret_values_are_masked_in_settings_representation() -> None:
@@ -114,6 +125,40 @@ def test_openai_settings_have_bounded_defaults() -> None:
     assert settings.openai_request_timeout == 30
     assert settings.openai_max_output_tokens == 800
     assert settings.openai_max_retries == 2
+    assert settings.openai_image_model == "gpt-image-2.5-flare"
+    assert settings.image_generation_timeout == 120
+    assert settings.image_generation_max_concurrent_requests == 2
+    assert settings.image_generation_max_retries == 1
+    assert settings.image_generation_retry_base_seconds == 1
+    assert settings.image_generation_max_response_bytes == 26_214_400
+    assert settings.image_generation_duplicate_cache_size == 100
+
+
+def test_unsupported_openai_image_model_is_rejected_safely() -> None:
+    settings = Settings(
+        _env_file=None,
+        openai_api_key="test-openai-key",
+        openai_image_model="retired-image-model",
+    )
+
+    with pytest.raises(
+        OpenAIConfigurationError,
+        match="not an approved image model",
+    ) as error:
+        settings.require_openai_image_configuration()
+
+    assert "test-openai-key" not in str(error.value)
+
+
+def test_missing_openai_image_model_is_rejected_safely() -> None:
+    settings = Settings(
+        _env_file=None,
+        openai_api_key="test-openai-key",
+        openai_image_model="",
+    )
+
+    with pytest.raises(OpenAIConfigurationError, match="OPENAI_IMAGE_MODEL"):
+        settings.require_openai_image_configuration()
 
 
 def test_database_url_placeholder_is_rejected() -> None:
