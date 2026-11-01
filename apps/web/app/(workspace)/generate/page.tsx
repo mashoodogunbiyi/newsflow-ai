@@ -3,10 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SourcePanel } from "@/components/articles/source-panel";
+import { GenerationControls } from "@/components/generation/generation-controls";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { getArticleDetail, type ArticleDetailResult } from "@/lib/article-api";
 
 export const metadata: Metadata = {
@@ -104,26 +104,11 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
       ) : (
         <div className="mt-10 space-y-6">
           <SourcePanel article={result.data} />
-          {result.data.generation.allowed ? (
-            <Card id="generation-controls" tone="muted">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="max-w-2xl">
-                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    Source ready
-                  </p>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
-                    The selected article can continue to draft preferences.
-                  </h2>
-                  <p className="mt-3 text-sm leading-6 text-emerald-950/60">
-                    The article identifier remains in this page URL. Tone, length, and draft
-                    generation controls will build on this source-safe state in the next creation
-                    task.
-                  </p>
-                </div>
-                <StatusBadge tone="success">Selection preserved</StatusBadge>
-              </div>
-            </Card>
-          ) : null}
+          <GenerationControls
+            articleId={result.data.id}
+            availabilityStatus={result.data.generation.status}
+            generationAllowed={result.data.generation.allowed}
+          />
         </div>
       )}
     </>

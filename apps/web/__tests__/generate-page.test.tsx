@@ -4,7 +4,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import GeneratePage from "@/app/(workspace)/generate/page";
 
 const articleApi = vi.hoisted(() => ({ getArticleDetail: vi.fn() }));
-const navigation = vi.hoisted(() => ({ redirect: vi.fn() }));
+const navigation = vi.hoisted(() => ({
+  redirect: vi.fn(),
+  refresh: vi.fn(),
+  replace: vi.fn(),
+}));
 
 vi.mock("@/lib/article-api", () => ({
   getArticleDetail: articleApi.getArticleDetail,
@@ -12,6 +16,7 @@ vi.mock("@/lib/article-api", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: navigation.redirect,
+  useRouter: () => navigation,
 }));
 
 const articleDetail = {
@@ -53,7 +58,10 @@ describe("create-post article selection integration", () => {
 
     expect(articleApi.getArticleDetail).toHaveBeenCalledWith(articleDetail.id);
     expect(screen.getByRole("heading", { name: articleDetail.title })).toBeDefined();
-    expect(screen.getByText("Selection preserved")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Configure your LinkedIn draft." })).toBeDefined();
+    expect((screen.getByRole("radio", { name: /professional/i }) as HTMLInputElement).checked).toBe(
+      true,
+    );
   });
 
   test("asks for a selection without requesting article details", async () => {
@@ -98,5 +106,27 @@ describe("create-post article selection integration", () => {
       GeneratePage({ searchParams: Promise.resolve({ articleId: articleDetail.id }) }),
     ).rejects.toThrow("NEXT_REDIRECT");
     expect(navigation.redirect).toHaveBeenCalledWith("/login?reason=authentication_required");
+  });
+
+  test("shows disabled controls when current source rights restrict generation", async () => {
+    articleApi.getArticleDetail.mockResolvedValue({
+      status: "success",
+      data: {
+        ...articleDetail,
+        generation: { allowed: false, status: "restricted" },
+      },
+    });
+
+    render(
+      await GeneratePage({
+        searchParams: Promise.resolve({ articleId: articleDetail.id }),
+      }),
+    );
+
+    expect(screen.getByText(/source permissions do not allow AI generation/i)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Generate LinkedIn draft" })).toHaveProperty(
+      "disabled",
+      true,
+    );
   });
 });

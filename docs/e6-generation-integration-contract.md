@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This contract defines exactly how the future E6 Next.js interface must use the completed E4 LinkedIn generation backend.
+This contract defines exactly how the E6 Next.js interface must use the completed E4 LinkedIn generation backend. NFA-60 now implements the preference controls, same-origin request gateway, duplicate protection, and controlled submission states described here. Later E6 tasks build the complete editable draft experience on this boundary.
 
 E6 owns presentation and user interaction. FastAPI remains authoritative for sessions, CSRF, request validation, article rights, OpenAI access, output validation, usage limits, ownership, and audit evidence.
 
