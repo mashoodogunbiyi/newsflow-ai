@@ -49,9 +49,9 @@ export function AuthPageShell({
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-amber-300">
             A responsible content workspace
           </p>
-          <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.04em] text-balance xl:text-5xl">
+          <p className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.04em] text-balance xl:text-5xl">
             A clear place to turn trusted facts into thoughtful professional content.
-          </h2>
+          </p>
           <p className="mt-6 max-w-lg text-lg leading-8 text-white/65">
             Your account keeps drafts, source evidence, and editorial decisions together without
             weakening the project&apos;s review-first safeguards.
@@ -72,7 +72,7 @@ export function AuthPageShell({
           </ul>
         </div>
 
-        <p className="relative text-sm text-white/45">Fixture mode - no live CNN content.</p>
+        <p className="relative text-sm text-white/75">Fixture mode - no live CNN content.</p>
       </section>
 
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-8 sm:py-8 lg:px-12 xl:px-20">
@@ -80,7 +80,7 @@ export function AuthPageShell({
           <div className="lg:hidden">
             <BrandMark />
           </div>
-          <div className="flex items-center gap-2 text-sm text-emerald-950/60">
+          <div className="flex items-center gap-2 text-sm text-emerald-950/70">
             <span className="hidden sm:inline">{alternatePrompt}</span>
             <Link
               className="rounded-full border border-emerald-950/15 bg-white px-4 py-2 font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
@@ -98,13 +98,16 @@ export function AuthPageShell({
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-emerald-950 sm:text-5xl">
             {title}
           </h1>
-          <p className="mt-4 max-w-md text-base leading-7 text-emerald-950/60">{description}</p>
+          <p className="mt-4 max-w-md text-base leading-7 text-emerald-950/70">{description}</p>
           <div className="mt-9">{children}</div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-emerald-950/10 pt-5 text-xs text-emerald-950/45 sm:justify-between">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-emerald-950/10 pt-5 text-xs text-emerald-950/70 sm:justify-between">
           <span>Secure cookie-based sessions</span>
-          <Link className="hover:text-emerald-800" href="/">
+          <Link
+            className="rounded-sm hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+            href="/"
+          >
             Return to homepage
           </Link>
         </div>

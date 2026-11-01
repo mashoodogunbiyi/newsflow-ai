@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 
 import type { ApiErrorPayload } from "@/lib/auth-types";
 
@@ -63,9 +63,15 @@ type FieldProps = {
   error?: string;
   autoComplete: string;
   onChange: (value: string) => void;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  helpTextId?: string;
 };
 
-function EmailField({ id, label, value, error, autoComplete, onChange }: FieldProps) {
+function describedBy(errorId: string, error?: string, helpTextId?: string) {
+  return [error ? errorId : null, helpTextId].filter(Boolean).join(" ") || undefined;
+}
+
+function EmailField({ id, label, value, error, autoComplete, onChange, inputRef }: FieldProps) {
   const errorId = `${id}-error`;
   return (
     <div>
@@ -73,16 +79,18 @@ function EmailField({ id, label, value, error, autoComplete, onChange }: FieldPr
         {label}
       </label>
       <input
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={describedBy(errorId, error)}
+        aria-errormessage={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
         autoCapitalize="none"
         autoComplete={autoComplete}
-        className="mt-2 min-h-12 w-full rounded-xl border border-emerald-950/15 bg-white px-4 text-base text-emerald-950 shadow-sm outline-none transition placeholder:text-emerald-950/35 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10 aria-invalid:border-red-700"
+        className="mt-2 min-h-12 w-full rounded-xl border border-emerald-950/15 bg-white px-4 text-base text-emerald-950 shadow-sm outline-none transition placeholder:text-emerald-950/65 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10 aria-invalid:border-red-700"
         id={id}
         inputMode="email"
         name="email"
         onChange={(event) => onChange(event.target.value)}
         placeholder="you@example.com"
+        ref={inputRef}
         type="email"
         value={value}
       />
@@ -95,7 +103,16 @@ function EmailField({ id, label, value, error, autoComplete, onChange }: FieldPr
   );
 }
 
-function PasswordField({ id, label, value, error, autoComplete, onChange }: FieldProps) {
+function PasswordField({
+  id,
+  label,
+  value,
+  error,
+  autoComplete,
+  onChange,
+  inputRef,
+  helpTextId,
+}: FieldProps) {
   const [isVisible, setIsVisible] = useState(false);
   const errorId = `${id}-error`;
   return (
@@ -115,7 +132,8 @@ function PasswordField({ id, label, value, error, autoComplete, onChange }: Fiel
         </button>
       </div>
       <input
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={describedBy(errorId, error, helpTextId)}
+        aria-errormessage={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
         autoComplete={autoComplete}
         className="mt-2 min-h-12 w-full rounded-xl border border-emerald-950/15 bg-white px-4 text-base text-emerald-950 shadow-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10 aria-invalid:border-red-700"
@@ -123,6 +141,7 @@ function PasswordField({ id, label, value, error, autoComplete, onChange }: Fiel
         maxLength={128}
         name="password"
         onChange={(event) => onChange(event.target.value)}
+        ref={inputRef}
         type={isVisible ? "text" : "password"}
         value={value}
       />
@@ -143,7 +162,16 @@ export function CredentialsForm({ mode }: CredentialsFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const formErrorRef = useRef<HTMLDivElement>(null);
   const isRegistration = mode === "register";
+
+  useEffect(() => {
+    if (formError) {
+      formErrorRef.current?.focus();
+    }
+  }, [formError]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -153,6 +181,11 @@ export function CredentialsForm({ mode }: CredentialsFormProps) {
     setFormError(null);
 
     if (Object.keys(errors).length > 0) {
+      if (errors.email) {
+        emailRef.current?.focus();
+      } else if (errors.password) {
+        passwordRef.current?.focus();
+      }
       return;
     }
 
@@ -222,6 +255,8 @@ export function CredentialsForm({ mode }: CredentialsFormProps) {
           aria-live="assertive"
           className="rounded-xl border border-red-700/20 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900"
           role="alert"
+          ref={formErrorRef}
+          tabIndex={-1}
         >
           {formError}
         </div>
@@ -236,6 +271,7 @@ export function CredentialsForm({ mode }: CredentialsFormProps) {
           setEmail(value);
           setFieldErrors((current) => ({ ...current, email: undefined }));
         }}
+        inputRef={emailRef}
         value={email}
       />
       <PasswordField
@@ -243,15 +279,17 @@ export function CredentialsForm({ mode }: CredentialsFormProps) {
         error={fieldErrors.password}
         id={`${mode}-password`}
         label="Password"
+        helpTextId={isRegistration ? `${mode}-password-requirements` : undefined}
         onChange={(value) => {
           setPassword(value);
           setFieldErrors((current) => ({ ...current, password: undefined }));
         }}
+        inputRef={passwordRef}
         value={password}
       />
 
       {isRegistration ? (
-        <p className="text-xs leading-5 text-emerald-950/50">
+        <p className="text-xs leading-5 text-emerald-950/70" id={`${mode}-password-requirements`}>
           Use 12 to 128 characters with uppercase, lowercase, number, and symbol characters.
         </p>
       ) : null}

@@ -62,7 +62,7 @@ function SelectionState({ result }: { result?: ArticleDetailErrorResult }) {
         <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-emerald-950">
           {content.title}
         </h2>
-        <p className="mt-4 leading-7 text-emerald-950/60">{content.description}</p>
+        <p className="mt-4 leading-7 text-emerald-950/70">{content.description}</p>
         <Link className={`${buttonStyles("primary")} mt-7`} href="/dashboard">
           Browse authorised articles
         </Link>

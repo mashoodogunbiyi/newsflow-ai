@@ -32,7 +32,7 @@ export default function DashboardPage({ searchParams }: DashboardPageProps) {
         <StatusBadge tone="warning">Synthetic fixture mode</StatusBadge>
         <StatusBadge>Human review required</StatusBadge>
       </div>
-      <p className="mt-4 max-w-3xl text-sm leading-6 text-emerald-950/60">
+      <p className="mt-4 max-w-3xl text-sm leading-6 text-emerald-950/70">
         Live CNN access is not enabled. The catalogue currently contains synthetic development
         records so the workflow can be tested without implying provider authorisation.
       </p>

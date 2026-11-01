@@ -28,7 +28,7 @@ export function ArticleEmptyState({
               ? "No matching articles were found."
               : "No articles are available right now."}
         </h2>
-        <p className="mt-4 leading-7 text-emerald-950/60">
+        <p className="mt-4 leading-7 text-emerald-950/70">
           {categoryLabel
             ? "No currently permitted articles match this category and search state. Clear the category or choose another one."
             : hasSearch

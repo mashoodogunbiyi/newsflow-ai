@@ -62,7 +62,7 @@ export function GenerationStatus<TResult>({
 
   return (
     <div
-      className="rounded-2xl border border-emerald-950/10 bg-white px-4 py-3 text-sm leading-6 text-emerald-950/60"
+      className="rounded-2xl border border-emerald-950/10 bg-white px-4 py-3 text-sm leading-6 text-emerald-950/70"
       ref={statusRef}
     >
       <p className="font-semibold text-emerald-950">

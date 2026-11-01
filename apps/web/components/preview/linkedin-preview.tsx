@@ -32,7 +32,7 @@ export function LinkedInPreview({
             <p className="truncate text-sm font-semibold text-emerald-950">
               NewsFlow AI content preview
             </p>
-            <p className="text-xs leading-5 text-emerald-950/50">
+            <p className="text-xs leading-5 text-emerald-950/70">
               AI-assisted draft - human review required
             </p>
           </div>
@@ -40,7 +40,7 @@ export function LinkedInPreview({
 
         <p
           className={`min-h-56 whitespace-pre-wrap break-words border-t border-emerald-950/10 px-4 py-5 text-sm leading-7 sm:px-6 ${
-            emptyDraft ? "italic text-emerald-950/45" : "text-emerald-950/80"
+            emptyDraft ? "italic text-emerald-950/70" : "text-emerald-950/80"
           }`}
           data-testid="draft-preview"
         >
@@ -77,12 +77,12 @@ export function LinkedInPreview({
               </ul>
             </>
           )}
-          <p className="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-amber-900/70">
+          <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-amber-900">
             Grounding status: {groundingStatus.replaceAll("_", " ")}
           </p>
         </aside>
 
-        <p className="border-t border-emerald-950/10 bg-stone-50 px-4 py-3 text-[0.68rem] leading-5 text-emerald-950/50 sm:px-6">
+        <p className="border-t border-emerald-950/10 bg-stone-50 px-4 py-3 text-xs leading-5 text-emerald-950/70 sm:px-6">
           This planning preview is not affiliated with LinkedIn and may differ from live platform
           rendering. Nothing is published from this screen.
         </p>

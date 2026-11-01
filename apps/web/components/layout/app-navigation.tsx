@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 
@@ -79,7 +79,7 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
               className={`flex min-h-11 items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 ${
                 isActive
                   ? "bg-white text-emerald-950 shadow-sm"
-                  : "text-white/65 hover:bg-white/10 hover:text-white"
+                  : "text-white/75 hover:bg-white/10 hover:text-white"
               }`}
               href={item.href}
               onClick={onNavigate}
@@ -107,16 +107,25 @@ export function DesktopNavigation() {
 
 export function MobileNavigation({ userEmail }: { userEmail: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigationRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      navigationRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && isOpen) {
         setIsOpen(false);
+        toggleRef.current?.focus();
       }
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
+  }, [isOpen]);
 
   return (
     <div className="relative lg:hidden">
@@ -126,6 +135,7 @@ export function MobileNavigation({ userEmail }: { userEmail: string }) {
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
         className="grid h-11 w-11 place-items-center rounded-2xl border border-emerald-950/10 bg-white text-emerald-950 shadow-sm transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
         onClick={() => setIsOpen((current) => !current)}
+        ref={toggleRef}
         type="button"
       >
         <span aria-hidden="true" className="space-y-1.5">
@@ -139,10 +149,11 @@ export function MobileNavigation({ userEmail }: { userEmail: string }) {
           aria-label="Mobile workspace"
           className="absolute right-0 top-14 z-50 w-[min(19rem,calc(100vw-2.5rem))] rounded-3xl border border-white/10 bg-emerald-950 p-3 shadow-2xl shadow-emerald-950/25"
           id="mobile-workspace-navigation"
+          ref={navigationRef}
         >
           <NavigationLinks onNavigate={() => setIsOpen(false)} />
           <div className="mt-3 border-t border-white/10 px-1 pt-3">
-            <p className="px-3 text-xs text-white/45">Signed in as</p>
+            <p className="px-3 text-xs text-white/75">Signed in as</p>
             <p className="mt-1 truncate px-3 text-sm font-semibold text-white">{userEmail}</p>
             <div className="mt-3 [&_button]:w-full [&_button]:border-white/15 [&_button]:bg-white/10 [&_button]:text-white [&_button]:hover:bg-white/15">
               <LogoutButton />

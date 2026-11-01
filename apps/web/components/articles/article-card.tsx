@@ -22,14 +22,14 @@ export function ArticleCard({ article }: { article: Article }) {
         <div className="border-b border-emerald-950/10 bg-emerald-50/60 px-5 py-4 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
             {article.category ? <StatusBadge>{article.category}</StatusBadge> : null}
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/45">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/70">
               {article.provider}
             </span>
           </div>
         </div>
 
         <div className="flex flex-1 flex-col p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-emerald-950/55">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-emerald-950/70">
             <span className="font-semibold text-emerald-900">
               {article.attribution.display_name}
             </span>
@@ -45,7 +45,7 @@ export function ArticleCard({ article }: { article: Article }) {
             {article.description ?? "No permitted summary is available for this article."}
           </p>
 
-          <div className="mt-6 border-t border-emerald-950/10 pt-4 text-xs leading-5 text-emerald-950/50">
+          <div className="mt-6 border-t border-emerald-950/10 pt-4 text-xs leading-5 text-emerald-950/70">
             <p>{article.attribution.text}</p>
             {article.attribution.byline ? (
               <p className="mt-1">{article.attribution.byline}</p>

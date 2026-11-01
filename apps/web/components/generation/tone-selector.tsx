@@ -10,7 +10,7 @@ export function ToneSelector({ disabled = false, onChange, value }: ToneSelector
   return (
     <fieldset className="min-w-0" disabled={disabled}>
       <legend className="text-base font-semibold text-emerald-950">Writing tone</legend>
-      <p className="mt-1 text-sm leading-6 text-emerald-950/55" id="tone-description">
+      <p className="mt-1 text-sm leading-6 text-emerald-950/70" id="tone-description">
         Choose how the draft should sound. FastAPI will validate this choice again.
       </p>
       <div aria-describedby="tone-description" className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -29,7 +29,7 @@ export function ToneSelector({ disabled = false, onChange, value }: ToneSelector
             />
             <span>
               <span className="block text-sm font-semibold text-emerald-950">{option.label}</span>
-              <span className="mt-1 block text-xs leading-5 text-emerald-950/55">
+              <span className="mt-1 block text-xs leading-5 text-emerald-950/70">
                 {option.description}
               </span>
             </span>

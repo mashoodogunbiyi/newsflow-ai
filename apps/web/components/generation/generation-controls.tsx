@@ -206,7 +206,7 @@ export function GenerationControls({
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
               Configure your LinkedIn draft.
             </h2>
-            <p className="mt-3 text-sm leading-6 text-emerald-950/60" id="generation-help">
+            <p className="mt-3 text-sm leading-6 text-emerald-950/70" id="generation-help">
               Choose a tone and length, then make one deliberate generation request. The backend
               rechecks your session, source rights, and preferences before OpenAI is contacted.
             </p>
@@ -253,7 +253,7 @@ export function GenerationControls({
                       .
                     </p>
                   ) : null}
-                  <p className="mt-2 font-mono text-xs text-emerald-950/50">
+                  <p className="mt-2 break-all font-mono text-xs text-emerald-950/70">
                     Generation ID: {generation.state.result.generation_id}
                   </p>
                 </>
@@ -266,7 +266,7 @@ export function GenerationControls({
           />
 
           <div className="flex flex-col gap-3 border-t border-emerald-950/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl text-xs leading-5 text-emerald-950/50">
+            <p className="max-w-xl text-xs leading-5 text-emerald-950/70">
               Generation creates a private AI draft for review. It never publishes automatically and
               it never sends an OpenAI credential to your browser.
             </p>

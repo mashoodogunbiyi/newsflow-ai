@@ -53,7 +53,7 @@ export function ImagePreferenceControls({
                   <span className="block text-sm font-semibold text-emerald-950">
                     {option.label}
                   </span>
-                  <span className="mt-1 block text-xs leading-5 text-emerald-950/55">
+                  <span className="mt-1 block text-xs leading-5 text-emerald-950/70">
                     {option.description}
                   </span>
                 </span>

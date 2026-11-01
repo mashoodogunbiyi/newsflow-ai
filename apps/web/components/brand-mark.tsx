@@ -7,7 +7,7 @@ type BrandMarkProps = {
 export function BrandMark({ href = "/" }: BrandMarkProps) {
   return (
     <Link
-      className="group inline-flex items-center gap-3"
+      className="group inline-flex items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800"
       href={href}
       aria-label="NewsFlow AI home"
     >

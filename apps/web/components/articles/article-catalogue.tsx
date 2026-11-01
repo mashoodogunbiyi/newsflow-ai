@@ -86,7 +86,7 @@ export function CatalogueControls({
           Search permitted topics
         </label>
         <input
-          className="mt-2 min-h-11 w-full rounded-2xl border border-emerald-950/15 bg-white px-4 py-2.5 text-sm text-emerald-950 outline-none transition placeholder:text-emerald-950/35 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+          className="mt-2 min-h-11 w-full rounded-2xl border border-emerald-950/15 bg-white px-4 py-2.5 text-sm text-emerald-950 outline-none transition placeholder:text-emerald-950/65 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
           defaultValue={search}
           id="article-search"
           maxLength={200}
@@ -144,7 +144,7 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
           >
             Authorised article catalogue
           </h2>
-          <p className="mt-2 text-sm leading-6 text-emerald-950/60">
+          <p className="mt-2 text-sm leading-6 text-emerald-950/70">
             Only approved metadata and required source attribution are displayed.
           </p>
         </div>
@@ -174,7 +174,7 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
               aria-label="Article catalogue pagination"
               className="mt-8 flex flex-col items-center justify-between gap-4 rounded-3xl border border-emerald-950/10 bg-white px-5 py-4 sm:flex-row"
             >
-              <p className="text-sm text-emerald-950/55">
+              <p className="text-sm text-emerald-950/70">
                 Showing up to 9 rights-approved articles on this page.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
@@ -201,7 +201,7 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
                     Next articles
                   </Link>
                 ) : (
-                  <span className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-emerald-950/45">
+                  <span className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-emerald-950/70">
                     End of catalogue
                   </span>
                 )}
