@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "articles": {
+    "permitted_technology": {
+      "title": "Synthetic accessibility technology demonstration",
+      "description": "A fictional software assistant helps teams organise accessibility information in a controlled demonstration.",
+      "category": "Technology",
+      "permitted_content": "The synthetic demonstration describes a conceptual software workflow using no real people, organisations, or events."
+    },
+    "restricted_source": {
+      "title": "Synthetic restricted source record",
+      "description": "This fictional record is present only to verify that restricted information never reaches an image provider.",
+      "category": "Technology",
+      "permitted_content": "Synthetic restricted content that must not be processed."
+    },
+    "sensitive_conflict": {
+      "title": "Synthetic humanitarian planning exercise",
+      "description": "A fictional report discusses humanitarian support planning during an armed conflict exercise.",
+      "category": "World News",
+      "permitted_content": "The synthetic exercise discusses humanitarian logistics without depicting a real event or identifiable person."
+    }
+  },
+  "invalid_images": {
+    "plain_text": "This is not an image.",
+    "truncated_png_hex": "89504e470d0a1a0a0000000d49484452"
+  }
+}

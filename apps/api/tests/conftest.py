@@ -1,6 +1,7 @@
 """Shared pytest fixtures for isolated NewsFlow AI backend tests."""
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from alembic import command
@@ -11,6 +12,10 @@ from tests.support.account_security import (
     AccountSecurityContext,
     AccountSecurityRepository,
     make_account_security_application,
+)
+from tests.support.image_workflow import (
+    SyntheticImageFiles,
+    create_isolated_image_files,
 )
 from tests.support.postgres import (
     DisposablePostgres,
@@ -35,6 +40,13 @@ def account_security_context() -> Iterator[AccountSecurityContext]:
             repository=repository,
             password_hasher=password_hasher,
         )
+
+
+@pytest.fixture
+def image_workflow_files(tmp_path: Path) -> SyntheticImageFiles:
+    """Create isolated synthetic files for image workflow tests."""
+
+    return create_isolated_image_files(tmp_path / "image-fixtures")
 
 
 @pytest.fixture
