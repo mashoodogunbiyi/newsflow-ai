@@ -3,6 +3,7 @@
 :root {
   --background: #f7f6f2;
   --foreground: #0e2b22;
+  --workspace-gutter: clamp(1.25rem, 3vw, 3rem);
 }
 
 @theme inline {
@@ -27,7 +28,37 @@ body {
   font-family: var(--font-sans);
 }
 
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
 ::selection {
   background: #f4bf58;
   color: #0e2b22;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

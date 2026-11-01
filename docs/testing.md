@@ -13,7 +13,7 @@ The test suite is designed to detect security regressions before a pull request 
 | Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, generation orchestration, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
-| Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
+| Frontend interface tests | `apps/web/__tests__` | Registration, login, logout, session restoration, workspace protection, responsive navigation state, reusable UI, loading, and safe error behaviour. |
 | Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs isolated NFA-36 and NFA-54 PostgreSQL suites on GitHub. |
 | AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
@@ -641,7 +641,23 @@ pytest tests/test_account_security_regression.py
 
 Normal tests do not need PostgreSQL, Docker, an OpenAI key, live news content, real user information, or production credentials. OpenAI responses are mocked and external services are not contacted.
 
-## Run the frontend authentication suite
+## NFA-56 frontend application shell coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Shared authenticated application layout | `workspace-layout.test.tsx` and `workspace-components.test.tsx` |
+| Dashboard, Create Post, Content Library, and Account protection | `route-protection.test.ts` |
+| Server validation before private child rendering | `workspace-layout.test.tsx` |
+| Active route and accessible navigation | `workspace-components.test.tsx` |
+| Mobile menu state and Escape-key operation | `workspace-components.test.tsx` |
+| Reusable buttons, inputs, cards, statuses, and loading feedback | `workspace-components.test.tsx` |
+| Safe error boundary and retry action | `workspace-components.test.tsx` |
+| Existing authentication, session, CSRF, and logout behavior | Existing NFA-24 frontend tests |
+| Production route and TypeScript validation | `npm run build` and `npm run typecheck` |
+
+See the [NFA-56 frontend layout guide](frontend-layout.md) for the route structure, component conventions, responsive behavior, accessibility rules, security boundary, results, and limitations.
+
+## Run the frontend suite
 
 Run from `apps/web`:
 
@@ -736,9 +752,10 @@ Verified locally on 1 November 2026:
 - The complete deterministic E5 image set passed 107 tests.
 - The safety-gated NFA-54 PostgreSQL and temporary-private-storage proof passed 1 test against `newsflow_image_pipeline_test`, applied migrations through `20261031_0012`, and rolled the schema back afterwards.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
+- The NFA-56 frontend run passed all 29 tests across 7 files, plus ESLint, Prettier, TypeScript, and the Next.js production build.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, and NFA-54
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, and NFA-56
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
