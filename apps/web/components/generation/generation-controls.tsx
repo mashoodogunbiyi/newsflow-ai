@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
+import { GenerationStatus } from "@/components/generation/generation-status";
 import { LengthSelector } from "@/components/generation/length-selector";
 import { ToneSelector } from "@/components/generation/tone-selector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { type GenerationRunResult, useTextGeneration } from "@/hooks/use-generation";
 import {
   createGenerationRequestKey,
   generateLinkedInDraft,
@@ -20,20 +22,13 @@ import {
   type GenerationLength,
   type GenerationTone,
 } from "@/types/generation";
+import type { GenerationFailure, GenerationOperationResult } from "@/types/generation-state";
 
 type GenerationControlsProps = {
   articleId: string | null;
   availabilityStatus: ArticleGenerationStatus | "missing";
   generationAllowed: boolean;
 };
-
-type Feedback =
-  | { kind: "error"; message: string }
-  | {
-      generationId: string;
-      kind: "success";
-      warningCount: number;
-    };
 
 function unavailableMessage(
   articleId: string | null,
@@ -51,52 +46,38 @@ function unavailableMessage(
   return "Current source permissions do not allow AI generation for this article.";
 }
 
-function FeedbackPanel({
-  feedback,
-  feedbackRef,
-}: {
-  feedback: Feedback;
-  feedbackRef: RefObject<HTMLDivElement | null>;
-}) {
-  if (feedback.kind === "error") {
-    return (
-      <div
-        aria-live="assertive"
-        className="rounded-2xl border border-red-700/20 bg-red-50 px-4 py-4 text-sm leading-6 text-red-900 outline-none"
-        ref={feedbackRef}
-        role="alert"
-        tabIndex={-1}
-      >
-        <p className="font-semibold">The draft could not be generated.</p>
-        <p className="mt-1">{feedback.message}</p>
-      </div>
-    );
-  }
+function generationFailure(
+  result: Extract<GenerationResult, { status: "error" }>,
+): GenerationFailure {
+  const category =
+    result.reason === "authentication_required"
+      ? "authentication"
+      : result.reason === "generation_restricted"
+        ? "permissions"
+        : result.reason === "invalid_request"
+          ? "validation"
+          : result.reason === "request_conflict"
+            ? "conflict"
+            : result.reason === "usage_limited"
+              ? "usage_limit"
+              : result.reason === "timeout"
+                ? "timeout"
+                : result.reason === "network_failure"
+                  ? "network"
+                  : "service";
+  const retryable =
+    category === "conflict" ||
+    category === "usage_limit" ||
+    category === "timeout" ||
+    category === "network" ||
+    category === "service";
 
-  return (
-    <div
-      aria-live="polite"
-      className="rounded-2xl border border-emerald-700/20 bg-emerald-50 px-4 py-4 text-sm leading-6 text-emerald-950 outline-none"
-      ref={feedbackRef}
-      role="status"
-      tabIndex={-1}
-    >
-      <p className="font-semibold">Your private draft has been generated.</p>
-      <p className="mt-1">
-        It requires human review before it is copied, saved, exported, or used. Nothing has been
-        published to LinkedIn.
-      </p>
-      {feedback.warningCount > 0 ? (
-        <p className="mt-2 font-semibold text-amber-900">
-          Automated checks added {feedback.warningCount} review{" "}
-          {feedback.warningCount === 1 ? "warning" : "warnings"}.
-        </p>
-      ) : null}
-      <p className="mt-2 font-mono text-xs text-emerald-950/50">
-        Generation ID: {feedback.generationId}
-      </p>
-    </div>
-  );
+  return {
+    category,
+    message: result.message,
+    retryAfterSeconds: result.retryAfterSeconds,
+    retryable,
+  };
 }
 
 export function GenerationControls({
@@ -107,21 +88,41 @@ export function GenerationControls({
   const router = useRouter();
   const [tone, setTone] = useState<GenerationTone>("professional");
   const [length, setLength] = useState<GenerationLength>("medium");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [retrySeconds, setRetrySeconds] = useState(0);
-  const activeRequestRef = useRef(false);
-  const feedbackRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   const requestKeyRef = useRef<{ key: string; signature: string } | null>(null);
+  const executeGeneration = useCallback(
+    async (
+      request: { article_id: string; tone: GenerationTone; length: GenerationLength },
+      { signal }: { signal: AbortSignal },
+    ): Promise<
+      GenerationOperationResult<Extract<GenerationResult, { status: "success" }>["data"]>
+    > => {
+      const signature = `${request.article_id}:${request.tone}:${request.length}`;
+      if (!requestKeyRef.current || requestKeyRef.current.signature !== signature) {
+        requestKeyRef.current = { key: createGenerationRequestKey(), signature };
+      }
+      const result = await generateLinkedInDraft(request, requestKeyRef.current.key, signal);
+      if (result.status === "success") {
+        return { data: result.data, status: "success" };
+      }
+      if (result.reason === "request_conflict" && result.retryAfterSeconds === null) {
+        requestKeyRef.current = null;
+      }
+      return { error: generationFailure(result), status: "error" };
+    },
+    [],
+  );
+  const generation = useTextGeneration(executeGeneration);
   const validArticle = articleId !== null && isArticleId(articleId);
   const isAvailable = validArticle && generationAllowed && availabilityStatus === "available";
-  const controlsDisabled = !isAvailable || isSubmitting;
+  const controlsDisabled = !isAvailable || generation.isBusy;
 
   useEffect(() => {
-    if (feedback) {
-      feedbackRef.current?.focus();
+    if (generation.state.phase === "completed" || generation.state.phase === "failed") {
+      statusRef.current?.focus();
     }
-  }, [feedback]);
+  }, [generation.state.phase]);
 
   useEffect(() => {
     if (retrySeconds <= 0) {
@@ -136,7 +137,7 @@ export function GenerationControls({
 
   function resetRequestIdentity() {
     requestKeyRef.current = null;
-    setFeedback(null);
+    generation.reset();
   }
 
   function updateTone(value: GenerationTone) {
@@ -151,64 +152,36 @@ export function GenerationControls({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (activeRequestRef.current) {
-      return;
-    }
     if (!isAvailable || !articleId || !isGenerationTone(tone) || !isGenerationLength(length)) {
-      setFeedback({
-        kind: "error",
-        message: unavailableMessage(articleId, availabilityStatus),
-      });
       return;
     }
     if (retrySeconds > 0) {
-      setFeedback({
-        kind: "error",
-        message: `Please wait ${retrySeconds} ${retrySeconds === 1 ? "second" : "seconds"} before trying again.`,
-      });
       return;
     }
+    handleRunResult(await generation.start({ article_id: articleId, tone, length }));
+  }
 
-    activeRequestRef.current = true;
-    setIsSubmitting(true);
-    setFeedback(null);
-    const signature = `${articleId}:${tone}:${length}`;
-    if (!requestKeyRef.current || requestKeyRef.current.signature !== signature) {
-      requestKeyRef.current = { key: createGenerationRequestKey(), signature };
-    }
-
-    let result: GenerationResult;
-    try {
-      result = await generateLinkedInDraft(
-        { article_id: articleId, tone, length },
-        requestKeyRef.current.key,
-      );
-    } finally {
-      activeRequestRef.current = false;
-      setIsSubmitting(false);
-    }
-
-    if (result.status === "success") {
-      setFeedback({
-        generationId: result.data.generation_id,
-        kind: "success",
-        warningCount: result.data.validation_warnings.length,
-      });
+  function handleRunResult(
+    run: GenerationRunResult<Extract<GenerationResult, { status: "success" }>["data"]>,
+  ) {
+    if (!run.accepted || !run.applied || run.outcome.status === "success") {
       return;
     }
-
-    if (result.reason === "authentication_required") {
+    if (run.outcome.error.category === "authentication") {
       router.replace("/login?reason=session_expired");
       router.refresh();
       return;
     }
-    if (result.reason === "request_conflict" && result.retryAfterSeconds === null) {
-      requestKeyRef.current = null;
+    if (run.outcome.error.retryAfterSeconds) {
+      setRetrySeconds(run.outcome.error.retryAfterSeconds);
     }
-    if (result.retryAfterSeconds) {
-      setRetrySeconds(result.retryAfterSeconds);
+  }
+
+  async function retryGeneration() {
+    if (retrySeconds > 0) {
+      return;
     }
-    setFeedback({ kind: "error", message: result.message });
+    handleRunResult(await generation.retry());
   }
 
   const unavailable = unavailableMessage(articleId, availabilityStatus);
@@ -245,7 +218,7 @@ export function GenerationControls({
       ) : null}
 
       <form
-        aria-busy={isSubmitting}
+        aria-busy={generation.isBusy}
         aria-describedby={
           isAvailable ? "generation-help" : "generation-help generation-unavailable"
         }
@@ -256,7 +229,31 @@ export function GenerationControls({
         <ToneSelector disabled={controlsDisabled} onChange={updateTone} value={tone} />
         <LengthSelector disabled={controlsDisabled} onChange={updateLength} value={length} />
 
-        {feedback ? <FeedbackPanel feedback={feedback} feedbackRef={feedbackRef} /> : null}
+        <GenerationStatus
+          completionDetails={
+            generation.state.phase === "completed" ? (
+              <>
+                {generation.state.result.validation_warnings.length > 0 ? (
+                  <p className="mt-2 font-semibold text-amber-900">
+                    Automated checks added {generation.state.result.validation_warnings.length}{" "}
+                    review{" "}
+                    {generation.state.result.validation_warnings.length === 1
+                      ? "warning"
+                      : "warnings"}
+                    .
+                  </p>
+                ) : null}
+                <p className="mt-2 font-mono text-xs text-emerald-950/50">
+                  Generation ID: {generation.state.result.generation_id}
+                </p>
+              </>
+            ) : null
+          }
+          onRetry={() => void retryGeneration()}
+          retrySeconds={retrySeconds}
+          state={generation.state}
+          statusRef={statusRef}
+        />
 
         <div className="flex flex-col gap-3 border-t border-emerald-950/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-xs leading-5 text-emerald-950/50">
@@ -266,20 +263,18 @@ export function GenerationControls({
           <Button
             aria-describedby={isAvailable ? "generation-help" : "generation-unavailable"}
             className="w-full shrink-0 sm:w-auto"
-            disabled={!isAvailable || isSubmitting || retrySeconds > 0}
+            disabled={!isAvailable || generation.isBusy || retrySeconds > 0}
             type="submit"
           >
-            {isSubmitting
-              ? "Generating draft..."
-              : retrySeconds > 0
-                ? `Try again in ${retrySeconds}s`
-                : "Generate LinkedIn draft"}
+            {generation.state.phase === "submitting"
+              ? "Submitting request..."
+              : generation.state.phase === "processing"
+                ? "Generating draft..."
+                : retrySeconds > 0
+                  ? "Generation temporarily limited"
+                  : "Generate LinkedIn draft"}
           </Button>
         </div>
-
-        <p aria-live="polite" className="sr-only">
-          {isSubmitting ? "Your LinkedIn draft generation request is being processed." : ""}
-        </p>
       </form>
     </Card>
   );

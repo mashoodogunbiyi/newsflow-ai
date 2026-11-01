@@ -221,6 +221,26 @@ describe("LinkedIn generation controls", () => {
     expect(screen.queryByText("Your private draft has been generated.")).toBeNull();
   });
 
+  test("shows a provider timeout as a retryable failure", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "openai_timeout",
+            message: "The AI provider took too long to respond.",
+          },
+        }),
+        { status: 504, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    renderAvailableControls();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate LinkedIn draft" }));
+
+    expect(await screen.findByText("The AI provider took too long to respond.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeDefined();
+  });
+
   test("uses native, labelled controls that remain operable without a pointer", () => {
     renderAvailableControls();
 
