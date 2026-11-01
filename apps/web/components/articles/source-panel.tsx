@@ -49,7 +49,7 @@ function GenerationAvailability({ article }: { article: ArticleDetail }) {
           >
             {content.label}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-emerald-950/60">{content.description}</p>
+          <p className="mt-2 text-sm leading-6 text-emerald-950/70">{content.description}</p>
         </div>
         <StatusBadge tone={generation.allowed ? "success" : "warning"}>
           {generation.allowed ? "Available" : "Unavailable"}
@@ -70,7 +70,7 @@ function GenerationAvailability({ article }: { article: ArticleDetail }) {
           Choose another article
         </Link>
       </div>
-      <p className="mt-4 text-xs leading-5 text-emerald-950/50">
+      <p className="mt-4 text-xs leading-5 text-emerald-950/70">
         FastAPI will check the current source permissions again before any AI request is made.
       </p>
     </section>
@@ -99,16 +99,16 @@ export function SourcePanel({ article }: { article: ArticleDetail }) {
         <div className="space-y-7 p-5 sm:p-7">
           <dl className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/45">
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/70">
                 Source provider
               </dt>
               <dd className="mt-2 text-sm font-semibold text-emerald-950">
                 {article.attribution.display_name}
               </dd>
-              <dd className="mt-1 font-mono text-xs text-emerald-950/50">{article.provider}</dd>
+              <dd className="mt-1 font-mono text-xs text-emerald-950/70">{article.provider}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/45">
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/70">
                 Published
               </dt>
               <dd className="mt-2 text-sm font-semibold text-emerald-950">
@@ -118,7 +118,7 @@ export function SourcePanel({ article }: { article: ArticleDetail }) {
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/45">
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/70">
                 Category
               </dt>
               <dd className="mt-2 text-sm font-semibold text-emerald-950">
@@ -126,7 +126,7 @@ export function SourcePanel({ article }: { article: ArticleDetail }) {
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/45">
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-950/70">
                 Article ID
               </dt>
               <dd className="mt-2 break-all font-mono text-xs text-emerald-950/65">{article.id}</dd>
@@ -159,7 +159,7 @@ export function SourcePanel({ article }: { article: ArticleDetail }) {
             >
               Source reference
             </h3>
-            <p className="mt-3 break-all font-mono text-xs leading-5 text-emerald-950/55">
+            <p className="mt-3 break-all font-mono text-xs leading-5 text-emerald-950/70">
               {article.source_url}
             </p>
             <a
@@ -174,7 +174,7 @@ export function SourcePanel({ article }: { article: ArticleDetail }) {
                 ↗
               </span>
             </a>
-            <div className="mt-5 rounded-2xl border border-emerald-950/10 bg-stone-50 px-4 py-3 text-xs leading-5 text-emerald-950/60">
+            <div className="mt-5 rounded-2xl border border-emerald-950/10 bg-stone-50 px-4 py-3 text-xs leading-5 text-emerald-950/70">
               <p>{article.attribution.text}</p>
               {article.attribution.byline ? (
                 <p className="mt-1">{article.attribution.byline}</p>

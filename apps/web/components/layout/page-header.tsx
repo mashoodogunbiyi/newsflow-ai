@@ -17,7 +17,7 @@ export function PageHeader({ actions, description, eyebrow, title }: PageHeaderP
         <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-emerald-950 text-balance sm:text-5xl">
           {title}
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-emerald-950/60 sm:text-lg sm:leading-8">
+        <p className="mt-4 max-w-2xl text-base leading-7 text-emerald-950/70 sm:text-lg sm:leading-8">
           {description}
         </p>
       </div>

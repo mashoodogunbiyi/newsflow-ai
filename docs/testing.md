@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, and the NFA-64 image generation controls.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, and the NFA-65 responsive and accessibility review.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -783,6 +783,22 @@ See the [NFA-63 LinkedIn content preview guide](linkedin-content-preview.md) for
 
 See the [NFA-64 image generation controls guide](image-generation-controls.md) for the request flow, supported preferences, security boundary, immutable version behaviour, accessibility, tests, and limitations.
 
+## NFA-65 responsive and accessibility review coverage
+
+| Requirement                                                                              | Automated evidence                                                    |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Homepage, authentication, shell, dashboard, source, editor, preview, and image semantics | `accessibility-audit.test.tsx` using axe-core                         |
+| Reviewed WCAG AA normal-text contrast tokens                                             | `contrast-and-motion.test.ts`                                         |
+| Reduced-motion animation and scrolling rules                                             | `contrast-and-motion.test.ts`                                         |
+| Mobile-menu focus entry and Escape focus return                                          | `workspace-components.test.tsx`                                       |
+| Invalid-field association and first-error focus                                          | `auth-interface.test.tsx`                                             |
+| Mobile, tablet, and desktop layout contracts                                             | `responsive-review.test.tsx` and existing component tests             |
+| Long identifier, draft, and preview wrapping                                             | `responsive-review.test.tsx`                                          |
+| Labels, statuses, alerts, and image alternatives                                         | Axe audit plus generation, editor, preview, and image component tests |
+| Production TypeScript and route validation                                               | `npm run typecheck` and `npm run build`                               |
+
+See the [NFA-65 responsive and accessibility review](responsive-accessibility-review.md) for the viewport matrix, defect record, evidence, manual keyboard and VoiceOver checklist, limitations, and review decision.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -901,9 +917,13 @@ Verified locally on 1 November 2026:
 - The focused NFA-64 backend initial-image and regeneration run passed 15 tests without a live OpenAI call.
 - The complete frontend run after NFA-64 passed 114 tests across 23 files.
 - The NFA-64 production build passed and the local Next.js login route returned HTTP 200. Native browser automation was unavailable, so final responsive, keyboard, and assistive-technology browser review remains a manual acceptance step.
+- The focused NFA-65 accessibility, contrast, motion, responsive, focus, and authentication run passed 26 tests across 5 files.
+- The complete frontend run after NFA-65 passed 129 tests across 26 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
+- The NFA-65 production server returned HTTP 200 for `/`, `/login`, and `/register`. The protected `/dashboard` route returned 307 to the authentication-required login route.
+- Native browser control was unavailable during NFA-65, so the documented 375 px, 768 px, 1440 px, keyboard, and VoiceOver acceptance record remains pending human review.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, and NFA-64
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, and NFA-65
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

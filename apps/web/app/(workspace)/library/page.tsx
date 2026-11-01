@@ -31,7 +31,7 @@ export default function LibraryPage() {
           <h2 className="mt-5 text-3xl font-semibold tracking-[-0.035em]">
             Your library is ready for its first draft.
           </h2>
-          <p className="mt-4 leading-7 text-emerald-950/55">
+          <p className="mt-4 leading-7 text-emerald-950/70">
             The route and private shell are in place. Saving, filtering, editing, and exporting will
             be connected by their dedicated Jira tasks.
           </p>

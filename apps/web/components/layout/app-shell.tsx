@@ -21,7 +21,7 @@ function AccountSummary({ userEmail }: { userEmail: string }) {
           {userEmail.slice(0, 1)}
         </span>
         <div className="min-w-0">
-          <p className="text-xs text-white/45">Signed in as</p>
+          <p className="text-xs text-white/75">Signed in as</p>
           <p className="truncate text-sm font-semibold text-white">{userEmail}</p>
         </div>
       </div>

@@ -25,7 +25,7 @@ export function GenerationLoading({ state }: { state: ActiveGenerationState }) {
           <p className="font-semibold">
             {state.phase === "submitting" ? submittingMessage : processingMessage}
           </p>
-          <p className="mt-1 text-emerald-950/60">
+          <p className="mt-1 text-emerald-950/70">
             {state.phase === "submitting"
               ? "NewsFlow AI is validating and preparing the request."
               : "This can take a little while. Keep this page open and avoid submitting again."}

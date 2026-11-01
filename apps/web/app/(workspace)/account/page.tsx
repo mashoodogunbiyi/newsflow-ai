@@ -22,7 +22,7 @@ export default function AccountPage() {
         <Card>
           <StatusBadge tone="success">Authenticated session</StatusBadge>
           <h2 className="mt-5 text-2xl font-semibold tracking-[-0.03em]">Session protection</h2>
-          <p className="mt-3 text-sm leading-7 text-emerald-950/55">
+          <p className="mt-3 text-sm leading-7 text-emerald-950/70">
             The browser keeps the session identifier in an HTTP-only cookie. Client-side code does
             not store or display the identifier.
           </p>
@@ -30,7 +30,7 @@ export default function AccountPage() {
         <Card>
           <StatusBadge tone="neutral">Backend enforced</StatusBadge>
           <h2 className="mt-5 text-2xl font-semibold tracking-[-0.03em]">Content ownership</h2>
-          <p className="mt-3 text-sm leading-7 text-emerald-950/55">
+          <p className="mt-3 text-sm leading-7 text-emerald-950/70">
             Navigation visibility does not grant access. FastAPI must still authorise every private
             content request using the authenticated owner.
           </p>

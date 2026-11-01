@@ -51,7 +51,13 @@ const principles = [
 
 export default function Home() {
   return (
-    <main className="overflow-hidden">
+    <main className="overflow-hidden" id="home-content" tabIndex={-1}>
+      <a
+        className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-amber-300 px-4 py-2 text-sm font-bold text-emerald-950 transition focus:translate-y-0 focus:outline-2 focus:outline-offset-2 focus:outline-emerald-950"
+        href="#home-primary-content"
+      >
+        Skip to main content
+      </a>
       <section className="relative border-b border-emerald-950/10 bg-[#f7f6f2]">
         <div
           aria-hidden="true"
@@ -61,39 +67,43 @@ export default function Home() {
           <BrandMark />
           <nav aria-label="Primary navigation" className="hidden items-center gap-8 md:flex">
             <a
-              className="text-sm font-medium text-emerald-950/65 transition hover:text-emerald-950"
+              className="rounded-sm text-sm font-medium text-emerald-950/70 transition hover:text-emerald-950 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800"
               href="#workflow"
             >
               Workflow
             </a>
             <a
-              className="text-sm font-medium text-emerald-950/65 transition hover:text-emerald-950"
+              className="rounded-sm text-sm font-medium text-emerald-950/70 transition hover:text-emerald-950 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800"
               href="#principles"
             >
               Guardrails
             </a>
             <Link
-              className="text-sm font-medium text-emerald-950/65 transition hover:text-emerald-950"
+              className="rounded-sm text-sm font-medium text-emerald-950/70 transition hover:text-emerald-950 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800"
               href="/login"
             >
               Sign in
             </Link>
             <Link
-              className="rounded-full border border-emerald-950/15 bg-white/60 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white"
+              className="rounded-full border border-emerald-950/15 bg-white/60 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
               href="/register"
             >
               Create account
             </Link>
           </nav>
           <Link
-            className="rounded-full border border-emerald-950/15 bg-white/70 px-3.5 py-2 text-xs font-semibold text-emerald-950 md:hidden"
+            className="rounded-full border border-emerald-950/15 bg-white/70 px-3.5 py-2 text-xs font-semibold text-emerald-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 md:hidden"
             href="/register"
           >
             Get started
           </Link>
         </header>
 
-        <div className="mx-auto grid w-full max-w-7xl gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-18 lg:px-12 lg:pb-28 lg:pt-20">
+        <div
+          className="mx-auto grid w-full max-w-7xl gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-18 lg:px-12 lg:pb-28 lg:pt-20"
+          id="home-primary-content"
+          tabIndex={-1}
+        >
           <div className="relative z-10 max-w-2xl">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-white/75 px-3 py-1.5 text-xs font-semibold tracking-wide text-emerald-900 shadow-sm shadow-emerald-950/5">
               <span className="h-2 w-2 rounded-full bg-amber-500" />
@@ -112,7 +122,7 @@ export default function Home() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-emerald-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-900"
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-emerald-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 motion-reduce:hover:translate-y-0"
                 href="/register"
               >
                 Create your account
@@ -121,7 +131,7 @@ export default function Home() {
                 </span>
               </Link>
               <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-emerald-950/15 bg-white/60 px-6 py-3 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white"
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-emerald-950/15 bg-white/60 px-6 py-3 text-sm font-semibold text-emerald-950 transition hover:border-emerald-950/30 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                 href="/login"
               >
                 Sign in
@@ -130,7 +140,7 @@ export default function Home() {
 
             <dl className="mt-12 grid max-w-xl grid-cols-3 border-y border-emerald-950/10 py-5">
               <div>
-                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-emerald-950/45">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-950/70">
                   Source
                 </dt>
                 <dd className="mt-1 text-sm font-semibold text-emerald-950 sm:text-base">
@@ -138,7 +148,7 @@ export default function Home() {
                 </dd>
               </div>
               <div className="border-l border-emerald-950/10 pl-4 sm:pl-6">
-                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-emerald-950/45">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-950/70">
                   Claims
                 </dt>
                 <dd className="mt-1 text-sm font-semibold text-emerald-950 sm:text-base">
@@ -146,7 +156,7 @@ export default function Home() {
                 </dd>
               </div>
               <div className="border-l border-emerald-950/10 pl-4 sm:pl-6">
-                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-emerald-950/45">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-950/70">
                   Publishing
                 </dt>
                 <dd className="mt-1 text-sm font-semibold text-emerald-950 sm:text-base">Manual</dd>
@@ -173,7 +183,7 @@ export default function Home() {
               <div className="bg-emerald-950 p-5 sm:p-6" key={principle.label}>
                 <div className="mb-8 h-1.5 w-8 rounded-full bg-amber-300" />
                 <h3 className="font-semibold">{principle.label}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/60">{principle.detail}</p>
+                <p className="mt-2 text-sm leading-6 text-white/75">{principle.detail}</p>
               </div>
             ))}
           </div>
@@ -191,7 +201,7 @@ export default function Home() {
                 One story. Four deliberate steps.
               </h2>
             </div>
-            <p className="max-w-xl text-lg leading-8 text-emerald-950/60 md:justify-self-end">
+            <p className="max-w-xl text-lg leading-8 text-emerald-950/70 md:justify-self-end">
               The product is designed to reduce context switching while preserving the checks that
               responsible news-based content needs.
             </p>
@@ -214,7 +224,7 @@ export default function Home() {
             <h2 className="mt-4 max-w-md text-4xl font-semibold tracking-[-0.04em] text-emerald-950">
               The foundation is live. The data gate stays closed.
             </h2>
-            <p className="mt-5 max-w-lg leading-7 text-emerald-950/60">
+            <p className="mt-5 max-w-lg leading-7 text-emerald-950/70">
               This interface uses no live CNN content. Development continues with original synthetic
               fixtures until an authorised source and its exact licence terms are approved.
             </p>
@@ -222,7 +232,7 @@ export default function Home() {
 
           <div className="grid overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-xl shadow-emerald-950/5 sm:grid-cols-2">
             <div className="p-7 sm:p-8">
-              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800/60">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
                 Available now
               </p>
               <ul className="mt-6 space-y-4 text-sm text-emerald-950/75">
@@ -267,7 +277,7 @@ export default function Home() {
       </section>
 
       <footer className="bg-[#f7f6f2]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-emerald-950/55 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-emerald-950/70 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <BrandMark />
           <p>Built with a fixture-first, review-first approach.</p>
         </div>

@@ -10,7 +10,7 @@ export function LengthSelector({ disabled = false, onChange, value }: LengthSele
   return (
     <fieldset className="min-w-0" disabled={disabled}>
       <legend className="text-base font-semibold text-emerald-950">Post length</legend>
-      <p className="mt-1 text-sm leading-6 text-emerald-950/55" id="length-description">
+      <p className="mt-1 text-sm leading-6 text-emerald-950/70" id="length-description">
         Choose an approximate size. The backend applies the exact word limits.
       </p>
       <div aria-describedby="length-description" className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -29,7 +29,7 @@ export function LengthSelector({ disabled = false, onChange, value }: LengthSele
             />
             <span>
               <span className="block text-sm font-semibold text-emerald-950">{option.label}</span>
-              <span className="mt-1 block text-xs leading-5 text-emerald-950/55">
+              <span className="mt-1 block text-xs leading-5 text-emerald-950/70">
                 {option.description}
               </span>
             </span>

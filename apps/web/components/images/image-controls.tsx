@@ -148,7 +148,7 @@ export function ImageControls({
       <h3 className="mt-2 text-lg font-semibold text-emerald-950" id="image-controls-title">
         Generate an AI illustration
       </h3>
-      <p className="mt-2 text-xs leading-5 text-emerald-950/60" id="image-generation-help">
+      <p className="mt-2 text-xs leading-5 text-emerald-950/70" id="image-generation-help">
         Choose from the approved styles. The backend rechecks source rights and safety rules. It
         creates an illustration, not authentic news photography, and never publishes it.
       </p>
@@ -167,7 +167,7 @@ export function ImageControls({
         <GenerationStatus
           completionDetails={
             generation.state.phase === "completed" ? (
-              <p className="mt-2 text-xs text-emerald-950/60">
+              <p className="mt-2 text-xs text-emerald-950/70">
                 Safety status: {generation.state.result.safetyStatus}. Human review remains
                 required.
               </p>
@@ -189,7 +189,7 @@ export function ImageControls({
         ) : null}
 
         <div className="flex flex-col gap-3 border-t border-emerald-950/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-emerald-950/50">
+          <p className="text-xs leading-5 text-emerald-950/70">
             Each request may use your generation allowance. Regeneration keeps every earlier
             version.
           </p>

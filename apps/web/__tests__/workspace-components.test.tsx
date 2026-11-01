@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import WorkspaceError from "@/app/(workspace)/error";
@@ -49,7 +49,7 @@ describe("NFA-56 workspace components", () => {
     );
   });
 
-  test("opens and closes the mobile navigation with button and keyboard controls", () => {
+  test("opens and closes mobile navigation while managing keyboard focus", async () => {
     render(
       <AppShell userEmail="member@example.com">
         <p>Workspace</p>
@@ -60,13 +60,20 @@ describe("NFA-56 workspace components", () => {
     expect(openButton.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(openButton);
-    expect(screen.getByRole("navigation", { name: "Mobile workspace" })).toBeDefined();
+    const mobileNavigation = screen.getByRole("navigation", { name: "Mobile workspace" });
+    expect(mobileNavigation).toBeDefined();
     expect(
       screen.getByRole("button", { name: "Close navigation" }).getAttribute("aria-expanded"),
     ).toBe("true");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(mobileNavigation).getByRole("link", { name: "Dashboard" }),
+      ),
+    );
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("navigation", { name: "Mobile workspace" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open navigation" }));
   });
 
   test("marks the selected route after the pathname changes", () => {

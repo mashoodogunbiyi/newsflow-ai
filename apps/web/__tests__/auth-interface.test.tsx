@@ -74,7 +74,10 @@ describe("frontend authentication interface", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     expect(await screen.findByText("Enter a valid email address.")).toBeDefined();
-    expect(screen.getByLabelText("Email address").getAttribute("aria-invalid")).toBe("true");
+    const email = screen.getByLabelText("Email address");
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    expect(email.getAttribute("aria-errormessage")).toBe("register-email-error");
+    expect(document.activeElement).toBe(email);
     expect(screen.getByText(/your password still needs/i)).toBeDefined();
     expect(fetchMock).not.toHaveBeenCalled();
   });

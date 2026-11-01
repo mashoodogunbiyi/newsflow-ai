@@ -21,7 +21,7 @@ export function ArticleErrorState({ invalidRequest = false }: { invalidRequest?:
             ? "This article page link is not valid."
             : "Articles could not be loaded."}
         </h2>
-        <p className="mt-4 leading-7 text-emerald-950/60">
+        <p className="mt-4 leading-7 text-emerald-950/70">
           {invalidRequest
             ? "Return to the first page and continue browsing the authorised catalogue."
             : "The backend may be temporarily unavailable. No account or article information has been changed."}

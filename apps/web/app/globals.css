@@ -28,6 +28,15 @@ body {
   font-family: var(--font-sans);
 }
 
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 3px;
+}
+
+:where(main, section, article, aside, nav, header, footer, div, p, li, dd) {
+  min-width: 0;
+}
+
 button,
 input,
 textarea,
@@ -58,7 +67,15 @@ p {
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline-color: CanvasText;
   }
 }

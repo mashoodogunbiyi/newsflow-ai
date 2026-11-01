@@ -13,7 +13,7 @@ export function ProductPreview() {
               <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+            <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Fixture mode
             </div>
@@ -22,17 +22,17 @@ export function ProductPreview() {
           <div className="grid min-h-[29rem] lg:grid-cols-[0.82fr_1.18fr]">
             <div className="border-b border-emerald-950/10 p-5 sm:p-6 lg:border-b-0 lg:border-r">
               <div className="flex items-center justify-between">
-                <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-emerald-800/55">
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
                   Source record
                 </p>
-                <span className="rounded-full border border-amber-500/30 bg-amber-50 px-2 py-1 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-amber-800">
+                <span className="rounded-full border border-amber-500/30 bg-amber-50 px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-amber-800">
                   Synthetic
                 </span>
               </div>
               <h2 className="mt-6 text-2xl font-semibold leading-tight tracking-[-0.03em] text-emerald-950">
                 A verified source becomes a focused professional story.
               </h2>
-              <p className="mt-4 text-sm leading-6 text-emerald-950/55">
+              <p className="mt-4 text-sm leading-6 text-emerald-950/70">
                 A bounded fixture demonstrates how title, date, category, source URL, and permitted
                 facts stay attached throughout generation.
               </p>
@@ -43,7 +43,7 @@ export function ProductPreview() {
                   ["Attribution", "Required"],
                 ].map(([label, value]) => (
                   <div className="flex items-center justify-between gap-4" key={label}>
-                    <span className="text-xs text-emerald-950/45">{label}</span>
+                    <span className="text-xs text-emerald-950/70">{label}</span>
                     <span className="text-xs font-semibold text-emerald-950">{value}</span>
                   </div>
                 ))}
@@ -52,22 +52,20 @@ export function ProductPreview() {
 
             <div className="flex flex-col p-5 sm:p-6">
               <div className="flex items-center justify-between gap-4">
-                <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-emerald-800/55">
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
                   Draft workspace
                 </p>
-                <span className="text-[0.62rem] font-semibold text-emerald-700">
-                  Review required
-                </span>
+                <span className="text-xs font-semibold text-emerald-700">Review required</span>
               </div>
 
               <div className="mt-5 rounded-2xl border border-emerald-950/10 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-950 text-[0.65rem] font-bold text-white">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-950 text-xs font-bold text-white">
                     NF
                   </span>
                   <div>
                     <p className="text-xs font-semibold text-emerald-950">NewsFlow draft</p>
-                    <p className="text-[0.62rem] text-emerald-950/40">Professional · concise</p>
+                    <p className="text-xs text-emerald-950/70">Professional · concise</p>
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-emerald-950/70">
@@ -76,7 +74,7 @@ export function ProductPreview() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {["#ResponsibleAI", "#ContentWorkflow", "#NewsTech"].map((tag) => (
-                    <span className="text-[0.65rem] font-medium text-emerald-700" key={tag}>
+                    <span className="text-xs font-medium text-emerald-700" key={tag}>
                       {tag}
                     </span>
                   ))}
@@ -87,28 +85,28 @@ export function ProductPreview() {
                 <div className="relative min-h-28 overflow-hidden rounded-2xl bg-emerald-950 p-3">
                   <span className="absolute -right-5 -top-5 h-20 w-20 rounded-full border-[14px] border-amber-300/90" />
                   <span className="absolute bottom-3 left-3 h-10 w-10 rotate-45 rounded-lg border border-white/40" />
-                  <p className="absolute bottom-3 right-3 text-[0.55rem] font-semibold uppercase tracking-[0.12em] text-white/60">
+                  <p className="absolute bottom-3 right-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     AI concept
                   </p>
                 </div>
                 <div className="flex flex-col justify-between rounded-2xl border border-emerald-950/10 bg-[#eeeade] p-3.5">
-                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-emerald-800/55">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-800">
                     Claim check
                   </p>
                   <div>
                     <p className="text-xl font-semibold tracking-[-0.03em] text-emerald-950">
                       6 / 6
                     </p>
-                    <p className="text-[0.65rem] text-emerald-950/45">facts mapped</p>
+                    <p className="text-xs text-emerald-950/70">facts mapped</p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-auto flex items-center justify-between pt-5">
-                <span className="rounded-full border border-emerald-950/10 px-3 py-2 text-[0.65rem] font-semibold text-emerald-950/55">
+                <span className="rounded-full border border-emerald-950/10 px-3 py-2 text-xs font-semibold text-emerald-950/70">
                   Edit draft
                 </span>
-                <span className="rounded-full bg-emerald-950 px-3 py-2 text-[0.65rem] font-semibold text-white">
+                <span className="rounded-full bg-emerald-950 px-3 py-2 text-xs font-semibold text-white">
                   Review output
                 </span>
               </div>

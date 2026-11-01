@@ -34,7 +34,7 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
             The generated draft could not be loaded.
           </h2>
-          <p className="mt-3 text-sm leading-6 text-emerald-950/60">
+          <p className="mt-3 text-sm leading-6 text-emerald-950/70">
             Return to the generation controls and request a valid draft. No content has been saved
             or published.
           </p>
@@ -59,7 +59,7 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
             Review and edit before use.
           </h2>
-          <p className="mt-3 text-sm leading-6 text-emerald-950/60" id="draft-editor-help">
+          <p className="mt-3 text-sm leading-6 text-emerald-950/70" id="draft-editor-help">
             This content may contain errors. Edit the wording, then verify its claims, source
             reference, and context. Nothing is saved or published automatically.
           </p>
@@ -114,14 +114,14 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
           </div>
           <textarea
             aria-describedby="draft-editor-help draft-editor-format-help"
-            className="mt-3 min-h-80 w-full resize-y rounded-2xl border border-emerald-950/15 bg-white px-4 py-4 text-base leading-7 text-emerald-950 shadow-sm transition placeholder:text-emerald-950/35 focus:border-emerald-700 focus:outline-2 focus:outline-offset-2 focus:outline-emerald-700"
+            className="mt-3 min-h-80 w-full resize-y rounded-2xl border border-emerald-950/15 bg-white px-4 py-4 text-base leading-7 text-emerald-950 shadow-sm transition placeholder:text-emerald-950/65 focus:border-emerald-700 focus:outline-2 focus:outline-offset-2 focus:outline-emerald-700"
             id="linkedin-draft-editor"
             onChange={(event) => editor.updateText(event.target.value)}
             placeholder="Add or revise the LinkedIn draft here."
             spellCheck
             value={editor.editedText}
           />
-          <p className="mt-2 text-xs leading-5 text-emerald-950/50" id="draft-editor-format-help">
+          <p className="mt-2 text-xs leading-5 text-emerald-950/70" id="draft-editor-format-help">
             Line breaks are preserved in the preview. Text is displayed literally, so HTML-like
             content is not executed.
           </p>
@@ -160,7 +160,7 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
         />
       </div>
 
-      <p className="mt-6 border-t border-emerald-950/10 pt-5 text-xs leading-5 text-emerald-950/50">
+      <p className="mt-6 border-t border-emerald-950/10 pt-5 text-xs leading-5 text-emerald-950/70">
         Edits currently remain only in this browser page. Persistent saving and draft history will
         be added under E7. Leaving this page with local edits triggers a discard warning.
       </p>

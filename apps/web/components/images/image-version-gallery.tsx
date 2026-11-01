@@ -22,7 +22,7 @@ export function ImageVersionGallery({
   return (
     <fieldset className="mt-5" disabled={disabled}>
       <legend className="text-sm font-semibold text-emerald-950">Illustration versions</legend>
-      <p className="mt-1 text-xs leading-5 text-emerald-950/55">
+      <p className="mt-1 text-xs leading-5 text-emerald-950/70">
         The original remains available. Select the version shown in the LinkedIn preview.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -52,7 +52,7 @@ export function ImageVersionGallery({
                   <span className="block text-sm font-semibold text-emerald-950">
                     {versionLabel}
                   </span>
-                  <span className="block text-xs text-emerald-950/55">
+                  <span className="block text-xs text-emerald-950/70">
                     AI-generated - review required
                   </span>
                 </span>

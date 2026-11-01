@@ -17,7 +17,7 @@ export function AuthenticationUnavailable() {
         <h1 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-emerald-950">
           We cannot confirm your session right now.
         </h1>
-        <p className="mt-4 leading-7 text-emerald-950/60">
+        <p className="mt-4 leading-7 text-emerald-950/70">
           Your account has not been changed. Check that the backend is running, then try again.
         </p>
         <Link className={`${buttonStyles("primary")} mt-7`} href="/dashboard">

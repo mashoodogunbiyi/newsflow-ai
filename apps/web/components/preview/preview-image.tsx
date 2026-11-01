@@ -24,7 +24,7 @@ function ImageFallback({ unavailable = false }: { unavailable?: boolean }) {
         <p className="mt-4 text-sm font-semibold text-emerald-950">
           {unavailable ? "Illustration unavailable" : "No illustration selected"}
         </p>
-        <p className="mt-1 text-xs leading-5 text-emerald-950/55">
+        <p className="mt-1 text-xs leading-5 text-emerald-950/70">
           {unavailable
             ? "The private image could not be displayed. The draft and source remain available for review."
             : "The text and source can still be reviewed without an image."}

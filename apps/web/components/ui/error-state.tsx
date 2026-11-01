@@ -25,7 +25,7 @@ export function ErrorState({
         <h1 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-emerald-950">
           {title}
         </h1>
-        <p className="mt-4 leading-7 text-emerald-950/60">{description}</p>
+        <p className="mt-4 leading-7 text-emerald-950/70">{description}</p>
         {onRetry ? (
           <Button className="mt-7" onClick={onRetry}>
             Try again
