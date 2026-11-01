@@ -7,12 +7,14 @@ import {
   type GenerationResponse,
 } from "@/types/generation";
 
-type GenerationFailureReason =
+export type GenerationFailureReason =
   | "authentication_required"
   | "generation_restricted"
   | "invalid_request"
   | "request_conflict"
   | "usage_limited"
+  | "timeout"
+  | "network_failure"
   | "unavailable";
 
 export type GenerationResult =
@@ -112,6 +114,12 @@ function failureForStatus(status: number): {
       reason: "usage_limited",
     };
   }
+  if (status === 504) {
+    return {
+      fallback: "The AI provider took too long to respond. Please try again deliberately.",
+      reason: "timeout",
+    };
+  }
 
   return {
     fallback: "Draft generation is temporarily unavailable. Your selections are still here.",
@@ -126,6 +134,7 @@ export function createGenerationRequestKey() {
 export async function generateLinkedInDraft(
   request: GenerationRequest,
   idempotencyKey: string,
+  signal?: AbortSignal,
 ): Promise<GenerationResult> {
   if (
     !isArticleId(request.article_id) ||
@@ -162,11 +171,12 @@ export async function generateLinkedInDraft(
         "X-CSRF-Token": csrfToken,
       },
       body: JSON.stringify(request),
+      signal,
     });
   } catch {
     return {
       message: "Draft generation is temporarily unavailable. Your selections are still here.",
-      reason: "unavailable",
+      reason: "network_failure",
       retryAfterSeconds: null,
       status: "error",
     };

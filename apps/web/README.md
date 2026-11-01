@@ -1,6 +1,6 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection.
 
 The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, and lets an authorised user request a private LinkedIn draft using supported tone and length choices. The browser sends the request to FastAPI through a narrow same-origin route and never receives an OpenAI credential.
 
@@ -75,7 +75,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, generation preferences, duplicate protection, usage limits, authentication recovery, and generation gateway allowlists. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, generation preferences, duplicate protection, usage limits, authentication recovery, generation gateway allowlists, state transitions, provider timeouts, deliberate retries, stale-response protection, and text-specific and image-specific status messages. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -108,6 +108,7 @@ apps/web/
 │   ├── brand-mark.tsx       # Reusable project identity
 │   ├── product-preview.tsx  # Fixture-mode product demonstration
 │   └── workflow-step.tsx    # Reusable workflow item
+├── hooks/                   # Reusable text and image generation lifecycle hooks
 ├── lib/                     # Authentication, article, and generation API utilities
 ├── types/                   # Runtime-validated frontend data contracts
 ├── public/                  # Static assets
@@ -186,6 +187,22 @@ The complete selection flow, detail contract, generation states, controlled erro
 - Never automatically publish a generated result or describe automated checks as factual verification.
 
 The exact request contract, state mapping, duplicate controls, accessibility rules, tests, and limitations are documented in [the NFA-60 LinkedIn generation controls guide](../../docs/linkedin-generation-controls.md).
+
+## NFA-61 generation state conventions
+
+- Use `useGeneration` for the shared lifecycle and `useTextGeneration` or `useImageGeneration` for operation-specific controls.
+- Keep the supported states truthful: idle, submitting, processing, completed, and failed.
+- Do not expose cancellation until FastAPI can confirm provider-side cancellation.
+- Do not invent progress percentages, polling, or a background-job endpoint.
+- Acquire the active-request lock before awaiting work so rapid clicks cannot start a duplicate operation.
+- Use the request identifier and abort signal to stop an outdated result from replacing current state.
+- Preserve the user's input after a controlled failure and retry only after an explicit user action.
+- Do not retry authentication, permission, or validation failures as if they were temporary.
+- Respect a valid `Retry-After` delay for usage limits.
+- Use polite status announcements for progress and completion, and assertive alerts for failures.
+- Keep FastAPI authoritative for authentication, rights, limits, idempotency, provider access, and persistence.
+
+The complete model, transitions, failure and retry policy, stale-response design, accessibility behaviour, test coverage, and current cancellation limitation are documented in [the NFA-61 frontend generation states guide](../../docs/generation-states.md).
 
 ## Configuration and security
 
