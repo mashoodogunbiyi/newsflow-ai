@@ -1,8 +1,8 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states.
 
-The application contains a responsive homepage, registration and login pages, a protected dashboard, session restoration, and logout. It uses original static demonstration content and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; that interface is not implemented in this task.
+The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. It uses original static demonstration content and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; the NFA-56 Create Post route is intentionally a disabled scaffold rather than a false implementation of that interface.
 
 The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
@@ -41,9 +41,12 @@ Open [http://localhost:3000](http://localhost:3000). The browser sends authentic
 | `/register`          | Validates account details and creates an account through FastAPI.                               | Public                   |
 | `/login`             | Verifies credentials and starts a secure session.                                               | Public                   |
 | `/dashboard`         | Restores the session from the HTTP-only cookie and displays the account workspace.              | Authenticated users only |
+| `/generate`          | Provides the protected foundation for authorised article selection and post generation.         | Authenticated users only |
+| `/library`           | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
+| `/account`           | Displays account security and ownership information.                                            | Authenticated users only |
 | `/api/auth/[action]` | Same-origin server gateway for the FastAPI register, login, logout, and current-user endpoints. | Internal frontend route  |
 
-The dashboard is protected in two layers. `proxy.ts` quickly redirects requests that have no session cookie. The dashboard then asks FastAPI to validate any presented session before returning account content. FastAPI remains the authority for identity and access control.
+The workspace is protected in two layers. `proxy.ts` quickly redirects requests that have no session cookie. The shared server layout then asks FastAPI to validate any presented session before returning account content. FastAPI remains the authority for identity and access control.
 
 Logout reads the separate, non-secret CSRF cookie and submits it in the required `X-CSRF-Token` header. The secure session identifier remains in an HTTP-only cookie and is not accessible to client-side JavaScript. The frontend does not put passwords, session identifiers, or account secrets in `localStorage` or `sessionStorage`.
 
@@ -71,7 +74,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, and dashboard route protection. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, and server-layout authentication. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -89,7 +92,7 @@ apps/web/
 ├── __tests__/              # Homepage and authentication tests
 ├── app/
 │   ├── api/auth/[action]/   # Same-origin FastAPI authentication gateway
-│   ├── dashboard/           # Protected account workspace
+│   ├── (workspace)/          # Shared protected layout, boundaries, and application routes
 │   ├── login/               # Login page
 │   ├── register/            # Registration page
 │   ├── globals.css          # Tailwind import and global design tokens
@@ -97,12 +100,14 @@ apps/web/
 │   └── page.tsx             # Public homepage
 ├── components/
 │   ├── auth/                # Reusable forms, page shell, and logout control
+│   ├── layout/              # Application shell, navigation, page header, and auth fallback
+│   ├── ui/                  # Buttons, inputs, cards, statuses, loading, and errors
 │   ├── brand-mark.tsx       # Reusable project identity
 │   ├── product-preview.tsx  # Fixture-mode product demonstration
 │   └── workflow-step.tsx    # Reusable workflow item
 ├── lib/                     # Authentication contracts and server utilities
 ├── public/                  # Static assets
-├── proxy.ts                 # Optimistic dashboard cookie check
+├── proxy.ts                 # Optimistic protected-workspace cookie check
 ├── eslint.config.mjs        # Next.js and TypeScript linting
 ├── next.config.ts           # Next.js and Tailwind build configuration
 ├── package.json             # Frontend scripts and dependencies
@@ -114,6 +119,18 @@ apps/web/
 ```
 
 Add future routes under `app`, shared interface elements under `components`, and framework-independent contracts or utilities under `lib`.
+
+## NFA-56 layout conventions
+
+- Add authenticated application routes inside `app/(workspace)` so the server session check and shell remain consistent.
+- Keep public authentication and marketing routes outside that group.
+- Use `PageHeader`, `Card`, `Button`, `Input`, `StatusBadge`, `LoadingState`, and `ErrorState` before introducing another visual pattern.
+- Add primary navigation items only in `components/layout/app-navigation.tsx` so desktop and mobile remain aligned.
+- Keep active navigation available to assistive technology with `aria-current="page"`.
+- Never rely on the shell or proxy as the only authorisation control. FastAPI must authorise private data access.
+- Keep unfinished functionality visibly disabled or described as upcoming rather than presenting placeholder interactions as complete.
+
+The complete component, route, spacing, accessibility, and test conventions are documented in [the NFA-56 frontend layout guide](../../docs/frontend-layout.md).
 
 ## Configuration and security
 

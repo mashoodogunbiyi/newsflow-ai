@@ -1,17 +1,28 @@
 import { describe, expect, test } from "vitest";
 
-import { shouldOptimisticallyRedirectFromDashboard } from "@/lib/route-protection";
+import {
+  isProtectedWorkspaceRoute,
+  shouldOptimisticallyRedirectFromWorkspace,
+} from "@/lib/route-protection";
 
-describe("dashboard route protection", () => {
-  test("redirects a dashboard request with no session cookie", () => {
-    expect(shouldOptimisticallyRedirectFromDashboard("/dashboard", false)).toBe(true);
+describe("workspace route protection", () => {
+  test.each(["/dashboard", "/generate", "/library", "/account"])(
+    "redirects an unauthenticated request for %s",
+    (pathname) => {
+      expect(shouldOptimisticallyRedirectFromWorkspace(pathname, false)).toBe(true);
+    },
+  );
+
+  test("protects nested workspace routes without matching similarly named public routes", () => {
+    expect(isProtectedWorkspaceRoute("/library/123")).toBe(true);
+    expect(isProtectedWorkspaceRoute("/library-public")).toBe(false);
   });
 
-  test("lets the dashboard perform the authoritative check when a cookie exists", () => {
-    expect(shouldOptimisticallyRedirectFromDashboard("/dashboard", true)).toBe(false);
+  test("lets the server layout perform the authoritative check when a cookie exists", () => {
+    expect(shouldOptimisticallyRedirectFromWorkspace("/dashboard", true)).toBe(false);
   });
 
   test("does not redirect unrelated public pages", () => {
-    expect(shouldOptimisticallyRedirectFromDashboard("/login", false)).toBe(false);
+    expect(shouldOptimisticallyRedirectFromWorkspace("/login", false)).toBe(false);
   });
 });
