@@ -1,6 +1,6 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state.
 
 The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; the Create Post route remains an honest scaffold until its dedicated integration task.
 
@@ -40,7 +40,7 @@ Open [http://localhost:3000](http://localhost:3000). The browser sends authentic
 | -------------------- | ----------------------------------------------------------------------------------------------- | ------------------------ |
 | `/register`          | Validates account details and creates an account through FastAPI.                               | Public                   |
 | `/login`             | Verifies credentials and starts a secure session.                                               | Public                   |
-| `/dashboard`         | Displays the searchable, paginated, rights-approved article catalogue from FastAPI.             | Authenticated users only |
+| `/dashboard`         | Displays the searchable, category-filtered, paginated, rights-approved article catalogue.       | Authenticated users only |
 | `/generate`          | Provides the protected foundation for authorised article selection and post generation.         | Authenticated users only |
 | `/library`           | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
 | `/account`           | Displays account security and ownership information.                                            | Authenticated users only |
@@ -74,7 +74,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, pagination, and dashboard states. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, and dashboard states. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -89,7 +89,7 @@ apps/web/
 ├── .dockerignore          # Files excluded from the image build context
 ├── .prettierignore        # Files excluded from formatting checks
 ├── Dockerfile             # Next.js development image
-├── __tests__/              # Homepage, authentication, shell, and article-dashboard tests
+├── __tests__/              # Homepage, authentication, shell, dashboard, and filtering tests
 ├── app/
 │   ├── api/auth/[action]/   # Same-origin FastAPI authentication gateway
 │   ├── (workspace)/          # Shared protected layout, boundaries, dashboard, and application routes
@@ -145,6 +145,18 @@ The complete component, route, spacing, accessibility, and test conventions are 
 - Keep fixture mode and the live CNN authorisation limitation visible.
 
 The full data requirements, states, security rules, test approach, and manual verification steps are documented in [the NFA-57 article dashboard guide](../../docs/article-dashboard.md).
+
+## NFA-58 article filtering conventions
+
+- Use the approved category identifiers from `types/article.ts`; never build database filters from display labels.
+- Keep category, search, ordering, and cursor state in the URL so refresh and browser navigation restore the view.
+- Use the native GET filter form and omit the existing cursor when filters are submitted so changed filters restart at page one.
+- Preserve the approved category, search, and ordering values in pagination links without altering the opaque backend cursor.
+- Reject unsupported category values before the frontend calls FastAPI. FastAPI must independently validate every request.
+- Apply category filtering in PostgreSQL before pagination; do not filter only the records loaded in the browser.
+- Keep the category selector visibly labelled, keyboard operable, and responsive without custom browser storage.
+
+The complete category contract, state flow, empty and invalid states, tests, and manual verification steps are documented in [the NFA-58 article filtering guide](../../docs/article-filtering.md).
 
 ## Configuration and security
 

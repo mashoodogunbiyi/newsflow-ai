@@ -56,18 +56,23 @@ describe("article dashboard integration", () => {
 
     render(
       await ArticleCatalogue({
-        searchParams: Promise.resolve({ search: "technology", sort: "oldest" }),
+        searchParams: Promise.resolve({
+          category: "technology",
+          search: "technology",
+          sort: "oldest",
+        }),
       }),
     );
 
     expect(screen.getByRole("heading", { name: article.title })).toBeDefined();
     expect(articleApi.getArticlePage).toHaveBeenCalledWith({
+      category: "technology",
       cursor: undefined,
       search: "technology",
       sort: "oldest",
     });
     expect(screen.getByRole("link", { name: "Next articles" }).getAttribute("href")).toBe(
-      "/dashboard?cursor=next+cursor&search=technology&sort=oldest",
+      "/dashboard?cursor=next+cursor&category=technology&search=technology&sort=oldest",
     );
   });
 

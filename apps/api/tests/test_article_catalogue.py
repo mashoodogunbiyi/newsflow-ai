@@ -9,7 +9,11 @@ from fastapi.testclient import TestClient
 from app.api.dependencies import require_authenticated_session
 from app.api.routes.articles import router
 from app.core.errors import ApplicationError, register_exception_handlers
-from app.models.article_catalogue import ArticleCatalogueQuery, ArticleCatalogueSort
+from app.models.article_catalogue import (
+    ArticleCatalogueCategory,
+    ArticleCatalogueQuery,
+    ArticleCatalogueSort,
+)
 from app.repositories import AuthenticatedSession
 from app.repositories.article_catalogue import (
     ArticleCatalogueCursor,
@@ -154,6 +158,7 @@ def test_list_endpoint_returns_only_public_rights_approved_metadata() -> None:
         "/api/articles",
         params={
             "search": "technology",
+            "category": "technology",
             "provider": "FIXTURE-V1",
             "published_from": "2026-10-01T00:00:00Z",
             "published_to": "2026-10-30T00:00:00Z",
@@ -193,6 +198,7 @@ def test_list_endpoint_returns_only_public_rights_approved_metadata() -> None:
     )
     filters, cursor, checked_at, requested_limit = repository.list_calls[0]
     assert filters.search == "technology"
+    assert filters.category == "technology"
     assert filters.provider == "fixture-v1"
     assert filters.published_from == datetime(2026, 10, 1, tzinfo=UTC)
     assert filters.published_to == datetime(2026, 10, 30, tzinfo=UTC)
@@ -277,6 +283,18 @@ def test_cursor_pagination_is_opaque_stable_and_bound_to_filters() -> None:
     assert changed_query.status_code == 422
     assert changed_query.json()["error"]["code"] == "invalid_article_cursor"
 
+    changed_category = client.get(
+        "/api/articles",
+        params={
+            "limit": 2,
+            "sort": "newest",
+            "category": "technology",
+            "cursor": cursor,
+        },
+    )
+    assert changed_category.status_code == 422
+    assert changed_category.json()["error"]["code"] == "invalid_article_cursor"
+
     tampered = client.get(
         "/api/articles",
         params={"limit": 2, "sort": "newest", "cursor": f"{cursor}!"},
@@ -301,6 +319,9 @@ def test_invalid_query_parameters_use_standard_validation_response() -> None:
 
     invalid_limit = client.get("/api/articles", params={"limit": 0})
     invalid_provider = client.get("/api/articles", params={"provider": "bad value"})
+    invalid_category = client.get(
+        "/api/articles", params={"category": "unapproved-category"}
+    )
     invalid_range = client.get(
         "/api/articles",
         params={
@@ -311,6 +332,7 @@ def test_invalid_query_parameters_use_standard_validation_response() -> None:
 
     assert invalid_limit.status_code == 422
     assert invalid_provider.status_code == 422
+    assert invalid_category.status_code == 422
     assert invalid_range.status_code == 422
     assert invalid_limit.json()["error"]["code"] == "validation_error"
 
@@ -354,6 +376,7 @@ def test_openapi_documents_catalogue_parameters_security_and_responses() -> None
         "limit",
         "cursor",
         "search",
+        "category",
         "provider",
         "published_from",
         "published_to",
@@ -364,8 +387,13 @@ def test_openapi_documents_catalogue_parameters_security_and_responses() -> None
     assert "404" in detail["responses"]
 
 
-def test_query_model_normalises_oldest_sort_and_provider() -> None:
-    query = ArticleCatalogueQuery(provider="FIXTURE-V1", sort="oldest")
+def test_query_model_normalises_oldest_sort_provider_and_category() -> None:
+    query = ArticleCatalogueQuery(
+        provider="FIXTURE-V1",
+        category="technology",
+        sort="oldest",
+    )
 
     assert query.provider == "fixture-v1"
+    assert query.category == ArticleCatalogueCategory.TECHNOLOGY
     assert query.sort == ArticleCatalogueSort.OLDEST

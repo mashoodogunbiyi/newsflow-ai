@@ -4,10 +4,13 @@ import { redirect } from "next/navigation";
 import { ArticleEmptyState } from "@/components/articles/article-empty-state";
 import { ArticleErrorState } from "@/components/articles/article-error-state";
 import { ArticleGrid } from "@/components/articles/article-grid";
+import { CategoryFilter } from "@/components/articles/category-filter";
 import { buttonStyles } from "@/components/ui/button";
 import { getArticlePage, type ArticleSort } from "@/lib/article-api";
+import { getArticleCategoryLabel, isArticleCategory, type ArticleCategory } from "@/types/article";
 
 export type DashboardSearchParams = {
+  category?: string | string[];
   cursor?: string | string[];
   search?: string | string[];
   sort?: string | string[];
@@ -30,18 +33,28 @@ function normaliseSort(value: string | string[] | undefined): ArticleSort {
   return firstValue(value) === "oldest" ? "oldest" : "newest";
 }
 
+function normaliseCategory(value: string | string[] | undefined) {
+  const cleaned = firstValue(value)?.trim();
+  return cleaned || undefined;
+}
+
 function dashboardHref({
   cursor,
+  category,
   search,
   sort,
 }: {
   cursor?: string;
+  category?: ArticleCategory;
   search?: string;
   sort: ArticleSort;
 }) {
   const parameters = new URLSearchParams();
   if (cursor) {
     parameters.set("cursor", cursor);
+  }
+  if (category) {
+    parameters.set("category", category);
   }
   if (search) {
     parameters.set("search", search);
@@ -53,11 +66,19 @@ function dashboardHref({
   return query ? `/dashboard?${query}` : "/dashboard";
 }
 
-function CatalogueControls({ search, sort }: { search?: string; sort: ArticleSort }) {
+export function CatalogueControls({
+  category,
+  search,
+  sort,
+}: {
+  category?: ArticleCategory;
+  search?: string;
+  sort: ArticleSort;
+}) {
   return (
     <form
       action="/dashboard"
-      className="grid gap-4 rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-sm sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end sm:p-6"
+      className="grid gap-4 rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-sm sm:grid-cols-2 sm:items-end sm:p-6 xl:grid-cols-[minmax(0,1fr)_12rem_11rem_auto]"
       method="get"
     >
       <div>
@@ -74,6 +95,7 @@ function CatalogueControls({ search, sort }: { search?: string; sort: ArticleSor
           type="search"
         />
       </div>
+      <CategoryFilter selectedCategory={category} />
       <div>
         <label className="text-sm font-semibold text-emerald-950" htmlFor="article-sort">
           Publication order
@@ -98,9 +120,15 @@ function CatalogueControls({ search, sort }: { search?: string; sort: ArticleSor
 export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) {
   const parameters = await searchParams;
   const cursor = firstValue(parameters.cursor)?.trim() || undefined;
+  const categoryParameter = normaliseCategory(parameters.category);
+  const category = isArticleCategory(categoryParameter) ? categoryParameter : undefined;
+  const duplicateCategory = Array.isArray(parameters.category) && parameters.category.length !== 1;
+  const invalidCategory = duplicateCategory || Boolean(categoryParameter && !category);
   const search = normaliseSearch(parameters.search);
   const sort = normaliseSort(parameters.sort);
-  const result = await getArticlePage({ cursor, search, sort });
+  const result = invalidCategory
+    ? ({ status: "error", reason: "invalid_request" } as const)
+    : await getArticlePage({ category, cursor, search, sort });
 
   if (result.status === "error" && result.reason === "authentication_required") {
     redirect("/login?reason=authentication_required");
@@ -121,19 +149,24 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
           </p>
         </div>
         {search ? (
-          <Link className={buttonStyles("quiet")} href="/dashboard">
+          <Link className={buttonStyles("quiet")} href={dashboardHref({ category, sort })}>
             Clear search
           </Link>
         ) : null}
       </div>
 
-      <CatalogueControls search={search} sort={sort} />
+      <CatalogueControls category={category} search={search} sort={sort} />
 
       <div className="mt-5">
         {result.status === "error" ? (
           <ArticleErrorState invalidRequest={result.reason === "invalid_request"} />
         ) : result.data.items.length === 0 ? (
-          <ArticleEmptyState hasSearch={Boolean(search)} />
+          <ArticleEmptyState
+            categoryLabel={category ? getArticleCategoryLabel(category) : undefined}
+            clearCategoryHref={category ? dashboardHref({ search, sort }) : undefined}
+            clearSearchHref={search ? dashboardHref({ category, sort }) : undefined}
+            hasSearch={Boolean(search)}
+          />
         ) : (
           <>
             <ArticleGrid articles={result.data.items} />
@@ -148,7 +181,7 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
                 {cursor ? (
                   <Link
                     className={buttonStyles("secondary")}
-                    href={dashboardHref({ search, sort })}
+                    href={dashboardHref({ category, search, sort })}
                     prefetch={false}
                   >
                     First page
@@ -157,7 +190,12 @@ export async function ArticleCatalogue({ searchParams }: ArticleCatalogueProps) 
                 {result.data.next_cursor ? (
                   <Link
                     className={buttonStyles("primary")}
-                    href={dashboardHref({ cursor: result.data.next_cursor, search, sort })}
+                    href={dashboardHref({
+                      category,
+                      cursor: result.data.next_cursor,
+                      search,
+                      sort,
+                    })}
                     prefetch={false}
                   >
                     Next articles

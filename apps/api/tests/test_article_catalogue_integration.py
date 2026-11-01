@@ -126,6 +126,11 @@ def test_postgresql_catalogue_filters_pages_and_hides_restricted_articles(
             assert len(search.items) == 1
             assert "energy-efficient" in search.items[0].title
 
+            technology = await catalogue.list_articles(
+                ArticleCatalogueQuery(category="technology")
+            )
+            assert [item.category for item in technology.items] == ["Technology"]
+
             filtered = await catalogue.list_articles(
                 ArticleCatalogueQuery(
                     provider="fixture-v1",

@@ -657,6 +657,23 @@ Normal tests do not need PostgreSQL, Docker, an OpenAI key, live news content, r
 
 See the [NFA-56 frontend layout guide](frontend-layout.md) for the route structure, component conventions, responsive behavior, accessibility rules, security boundary, results, and limitations.
 
+## NFA-58 article filtering and browsing-state coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Approved category options and accessible native selection | `article-filtering.test.tsx` |
+| URL category restoration and one catalogue request | `article-filtering.test.tsx` |
+| Category, search, and sort preservation | `article-filtering.test.tsx` and `article-dashboard.test.tsx` |
+| Cursor removal when filters change | `article-filtering.test.tsx` |
+| Invalid or duplicated category handling without a frontend API request | `article-filtering.test.tsx` |
+| Frontend category query validation | `article-api.test.ts` |
+| FastAPI category validation and OpenAPI contract | `test_article_catalogue.py` |
+| Cursor rejection when category state changes | `test_article_catalogue.py` |
+| PostgreSQL category filtering before pagination | `test_article_catalogue_integration.py` |
+| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+
+See the [NFA-58 article filtering guide](article-filtering.md) for the approved identifiers, URL-state flow, pagination rules, empty and invalid states, accessibility, results, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -715,10 +732,10 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, and run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, and run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, and build Next.js.
 
-The NFA-36 and NFA-54 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
+The NFA-36, NFA-58, and NFA-54 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
 Do not add real credentials to workflow files. The committed workflow values are disposable CI-only values and must never be reused outside that isolated job.
 
@@ -728,7 +745,7 @@ Verified locally on 1 November 2026:
 
 - Backend linting and formatting passed.
 - The normal backend run passed 416 tests, safely skipped 13 opt-in PostgreSQL tests, and deselected the optional live-model test.
-- Backend branch-aware coverage measured 81.10 percent, above the enforced 75 percent floor.
+- Backend branch-aware coverage measured 81.08 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261031_0011` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -752,10 +769,12 @@ Verified locally on 1 November 2026:
 - The complete deterministic E5 image set passed 107 tests.
 - The safety-gated NFA-54 PostgreSQL and temporary-private-storage proof passed 1 test against `newsflow_image_pipeline_test`, applied migrations through `20261031_0012`, and rolled the schema back afterwards.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
-- The NFA-56 frontend run passed all 29 tests across 7 files, plus ESLint, Prettier, TypeScript, and the Next.js production build.
+- The focused NFA-58 backend article-catalogue run passed 10 tests.
+- The NFA-58 frontend run passed all 47 tests across 11 files, plus ESLint, Prettier, TypeScript, route type generation, and the Next.js production build.
+- The NFA-58 PostgreSQL test is safety-gated for the disposable `newsflow_article_catalogue_test` database and will run automatically in GitHub Actions after this branch is pushed.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, and NFA-56
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, and NFA-58
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

@@ -64,7 +64,7 @@ The dashboard requests nine records at a time from:
 GET /api/articles?limit=9&sort=newest
 ```
 
-Search, publication order, and the opaque continuation cursor are added only when present. The frontend never edits or interprets a cursor. `Next articles` sends the returned cursor to the next server render, while `First page` clears it.
+Search, category, publication order, and the opaque continuation cursor are added only when present. The frontend never edits or interprets a cursor. `Next articles` sends the returned cursor to the next server render, while `First page` clears it. NFA-58 makes the approved category identifier part of the URL and backend query.
 
 Article data uses `cache: no-store` because it is authenticated and rights-sensitive. One server fetch supplies each rendered page. Pagination links set `prefetch={false}` so Next.js does not make an unnecessary protected catalogue request before the user chooses to continue.
 
@@ -100,6 +100,7 @@ Authentication rejection redirects to login. Invalid cursors and filters produce
 | `apps/web/app/(workspace)/dashboard/loading.tsx` | Route-level loading interface |
 | `apps/web/components/articles/article-catalogue.tsx` | Controls, server fetch orchestration, states, and pagination |
 | `apps/web/components/articles/article-card.tsx` | Reusable permitted article presentation and actions |
+| `apps/web/components/articles/category-filter.tsx` | Approved responsive category selector |
 | `apps/web/components/articles/article-grid.tsx` | Responsive article layout |
 | `apps/web/components/articles/article-dashboard-skeleton.tsx` | Accessible loading skeleton |
 | `apps/web/components/articles/article-empty-state.tsx` | Empty and no-match states |
@@ -131,6 +132,7 @@ The focused tests cover:
 - Responsive grid breakpoints.
 - Empty, error, retry, and redirect states.
 - Cursor propagation for the next page.
+- Category selection, clearing, URL restoration, pagination reset, and invalid values.
 
 All tests use synthetic records and mocked network responses. They make no live CNN or OpenAI request.
 

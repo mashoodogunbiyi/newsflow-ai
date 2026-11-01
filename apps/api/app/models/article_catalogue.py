@@ -21,6 +21,16 @@ class ArticleCatalogueSort(str, Enum):
     OLDEST = "oldest"
 
 
+class ArticleCatalogueCategory(str, Enum):
+    """Stable category identifiers approved by the source data contract."""
+
+    TECHNOLOGY = "technology"
+    BUSINESS = "business"
+    WORLD_NEWS = "world_news"
+    SCIENCE = "science"
+    OTHER = "other"
+
+
 def _normalise_utc(value: datetime | None, field_name: str) -> datetime | None:
     if value is None:
         return None
@@ -37,6 +47,7 @@ class ArticleCatalogueQuery(BaseModel):
     limit: int = Field(default=20, ge=1, le=100)
     cursor: str | None = Field(default=None, min_length=1, max_length=512)
     search: str | None = Field(default=None, min_length=1, max_length=200)
+    category: ArticleCatalogueCategory | None = None
     provider: str | None = Field(
         default=None,
         min_length=1,
