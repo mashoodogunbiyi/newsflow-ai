@@ -70,6 +70,20 @@ jobs:
           ALLOW_DATABASE_RESET_FOR_TESTS: "true"
         run: pytest -m integration tests/test_catalogue_pipeline_e2e.py
 
+      - name: Create isolated article-catalogue database
+        env:
+          PGPASSWORD: newsflow_test_password
+        run: >-
+          createdb --host=127.0.0.1 --port=5432
+          --username=newsflow_test newsflow_article_catalogue_test
+
+      - name: Run isolated article-catalogue tests
+        working-directory: apps/api
+        env:
+          TEST_DATABASE_URL: postgresql://newsflow_test:newsflow_test_password@localhost:5432/newsflow_article_catalogue_test
+          ALLOW_DATABASE_RESET_FOR_TESTS: "true"
+        run: pytest -m integration tests/test_article_catalogue_integration.py
+
       - name: Create isolated E5 image-workflow database
         env:
           PGPASSWORD: newsflow_test_password

@@ -21,6 +21,24 @@ export type ArticlePage = {
   next_cursor: string | null;
 };
 
+export const ARTICLE_CATEGORIES = [
+  { id: "technology", label: "Technology" },
+  { id: "business", label: "Business" },
+  { id: "world_news", label: "World News" },
+  { id: "science", label: "Science" },
+  { id: "other", label: "Other" },
+] as const;
+
+export type ArticleCategory = (typeof ARTICLE_CATEGORIES)[number]["id"];
+
+export function isArticleCategory(value: string | undefined): value is ArticleCategory {
+  return ARTICLE_CATEGORIES.some((category) => category.id === value);
+}
+
+export function getArticleCategoryLabel(categoryId: ArticleCategory) {
+  return ARTICLE_CATEGORIES.find((category) => category.id === categoryId)?.label ?? "Other";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-NFA-34 gives the NewsFlow AI frontend a secure way to browse and retrieve authorised article metadata from PostgreSQL.
+NFA-34 gives the NewsFlow AI frontend a secure way to browse and retrieve authorised article metadata from PostgreSQL. NFA-58 extends the list endpoint with an approved category filter for the dashboard browsing workflow.
 
 The frontend never connects directly to PostgreSQL. It sends an HTTP request to FastAPI, FastAPI applies authentication and rights rules, and the repository builds parameterised SQLAlchemy queries against the current stored article records.
 
@@ -55,6 +55,7 @@ GET /api/articles
 | `limit` | `20` | Integer from 1 to 100 |
 | `cursor` | None | Opaque continuation cursor returned by the previous page |
 | `search` | None | 1 to 200 characters; searches permitted title and description metadata |
+| `category` | None | One approved stable identifier: `technology`, `business`, `world_news`, `science`, or `other` |
 | `provider` | None | Exact approved source-profile key, such as `fixture-v1` |
 | `published_from` | None | Inclusive RFC 3339 timestamp with a timezone |
 | `published_to` | None | Inclusive RFC 3339 timestamp with a timezone |
@@ -65,7 +66,7 @@ GET /api/articles
 Example:
 
 ```text
-GET /api/articles?limit=20&search=technology&provider=fixture-v1&sort=newest
+GET /api/articles?limit=20&search=platform&category=technology&provider=fixture-v1&sort=newest
 ```
 
 Example synthetic response:
@@ -150,13 +151,13 @@ The stable ordering is:
 
 Newest order uses both values descending. Oldest order uses both ascending. This prevents articles with the same publication time from being omitted or repeated between pages.
 
-The cursor is URL-safe, opaque to clients, versioned, and bound to the current search, filters, and sort selection. Changing those values while reusing a cursor returns HTTP 422. Clients should store and return the cursor unchanged rather than trying to edit it.
+The cursor is URL-safe, opaque to clients, versioned, and bound to the current search, category, provider, dates, and sort selection. Changing any of those values while reusing a cursor returns HTTP 422. Clients should store and return the cursor unchanged rather than trying to edit it.
 
 Migration `20261029_0005` adds a PostgreSQL index on publication time and article ID to support this ordering.
 
 ## Search and SQL safety
 
-Search covers only the permitted current title and description. SQLAlchemy sends search text, provider values, dates, IDs, and cursor positions as bound parameters. SQL-like user input is treated as text rather than executable SQL.
+Search covers only the permitted current title and description. Category filtering compares the approved stable identifier with the normalised category stored on the current article snapshot. SQLAlchemy sends search text, category and provider values, dates, IDs, and cursor positions as bound parameters. SQL-like user input is treated as text rather than executable SQL.
 
 The initial MVP uses PostgreSQL case-insensitive metadata matching. A separate search service is not required at this stage.
 
@@ -231,7 +232,7 @@ Verified on 29 October 2026:
 ## Acceptance status
 
 - Article list and detail REST endpoints - complete.
-- Cursor pagination, search, provider and publication-date filtering, and sorting - complete.
+- Cursor pagination, search, category, provider and publication-date filtering, and sorting - complete.
 - Authentication and rights-aware visibility - complete.
 - Public response schemas and source attribution - complete.
 - Safe SQLAlchemy queries and controlled errors - complete.

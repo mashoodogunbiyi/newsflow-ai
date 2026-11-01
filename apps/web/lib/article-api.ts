@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 
-import { isArticlePage, type ArticlePage } from "@/types/article";
+import {
+  isArticleCategory,
+  isArticlePage,
+  type ArticleCategory,
+  type ArticlePage,
+} from "@/types/article";
 
 const SESSION_COOKIE_NAME = "newsflow_session";
 const ARTICLE_PAGE_SIZE = 9;
@@ -8,6 +13,7 @@ const ARTICLE_PAGE_SIZE = 9;
 export type ArticleSort = "newest" | "oldest";
 
 export type ArticlePageOptions = {
+  category?: ArticleCategory;
   cursor?: string;
   search?: string;
   sort?: ArticleSort;
@@ -33,6 +39,7 @@ function hasValidOptions(options: ArticlePageOptions) {
   return (
     (!options.cursor || options.cursor.length <= 512) &&
     (!options.search || options.search.length <= 200) &&
+    (!options.category || isArticleCategory(options.category)) &&
     (!options.sort || options.sort === "newest" || options.sort === "oldest")
   );
 }
@@ -45,6 +52,9 @@ function buildArticleUrl(options: ArticlePageOptions) {
 
   if (options.cursor) {
     searchParameters.set("cursor", options.cursor);
+  }
+  if (options.category) {
+    searchParameters.set("category", options.category);
   }
   if (options.search) {
     searchParameters.set("search", options.search);

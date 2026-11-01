@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { getArticlePage } from "@/lib/article-api";
+import type { ArticleCategory } from "@/types/article";
 
 const cookieState = vi.hoisted(() => ({ session: undefined as string | undefined }));
 
@@ -55,12 +56,17 @@ describe("article catalogue API client", () => {
     );
 
     await expect(
-      getArticlePage({ cursor: "cursor-value", search: "technology", sort: "oldest" }),
+      getArticlePage({
+        category: "technology",
+        cursor: "cursor-value",
+        search: "technology",
+        sort: "oldest",
+      }),
     ).resolves.toEqual({ status: "success", data: articlePage });
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
-      "http://backend:8000/api/articles?limit=9&sort=oldest&cursor=cursor-value&search=technology",
+      "http://backend:8000/api/articles?limit=9&sort=oldest&cursor=cursor-value&category=technology&search=technology",
       {
         headers: {
           Accept: "application/json",
@@ -83,6 +89,12 @@ describe("article catalogue API client", () => {
 
   test("maps invalid queries and unavailable services to controlled states", async () => {
     await expect(getArticlePage({ search: "x".repeat(201) })).resolves.toEqual({
+      status: "error",
+      reason: "invalid_request",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+
+    await expect(getArticlePage({ category: "not-approved" as ArticleCategory })).resolves.toEqual({
       status: "error",
       reason: "invalid_request",
     });

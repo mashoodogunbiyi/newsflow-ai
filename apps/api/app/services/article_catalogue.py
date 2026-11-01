@@ -70,6 +70,7 @@ class ArticleCatalogueService:
         records = await self._repository.list_visible(
             filters=ArticleCatalogueFilters(
                 search=query.search,
+                category=None if query.category is None else query.category.value,
                 provider=query.provider,
                 published_from=query.published_from,
                 published_to=query.published_to,
