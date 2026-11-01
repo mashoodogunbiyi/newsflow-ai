@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { ArticleSelection } from "@/components/articles/article-selection";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -57,13 +56,7 @@ export function ArticleCard({ article }: { article: Article }) {
           </div>
 
           <div className="mt-auto flex flex-col gap-2 pt-6 sm:flex-row">
-            <Link
-              className={`${buttonStyles("primary")} flex-1`}
-              href={`/generate?articleId=${encodeURIComponent(article.id)}`}
-              prefetch={false}
-            >
-              Select article
-            </Link>
+            <ArticleSelection articleId={article.id} className="flex-1" />
             <a
               aria-label={`View original source for ${article.title}`}
               className={`${buttonStyles("secondary")} flex-1`}

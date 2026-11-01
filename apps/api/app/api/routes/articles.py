@@ -10,7 +10,7 @@ from app.core.errors import ApplicationError
 from app.models.article_catalogue import (
     ArticleCatalogueQuery,
     ArticleCollectionResponse,
-    ArticleResponse,
+    ArticleDetailResponse,
 )
 from app.repositories import AuthenticatedSession
 from app.repositories.article_catalogue import ArticleCatalogueRepositoryError
@@ -91,11 +91,12 @@ async def list_articles(
 
 @router.get(
     "/{article_id}",
-    response_model=ArticleResponse,
+    response_model=ArticleDetailResponse,
     summary="Retrieve one authorised article",
     description=(
         "Return current permitted metadata and required attribution for one "
-        "article. Missing and non-disclosable records both return 404."
+        "article, plus a safe current generation-availability state. Missing "
+        "and non-disclosable records both return 404."
     ),
     responses={
         401: {"description": "Authentication is required."},
@@ -112,7 +113,7 @@ async def get_article(
         AuthenticatedSession,
         Depends(require_authenticated_session),
     ],
-) -> ArticleResponse:
+) -> ArticleDetailResponse:
     try:
         result = await _service(request).get_article(article_id)
     except ArticleCatalogueNotFoundError as exc:

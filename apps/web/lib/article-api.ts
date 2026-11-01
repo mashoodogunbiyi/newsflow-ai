@@ -2,13 +2,16 @@ import { cookies } from "next/headers";
 
 import {
   isArticleCategory,
+  isArticleDetail,
   isArticlePage,
   type ArticleCategory,
+  type ArticleDetail,
   type ArticlePage,
 } from "@/types/article";
 
 const SESSION_COOKIE_NAME = "newsflow_session";
 const ARTICLE_PAGE_SIZE = 9;
+const ARTICLE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type ArticleSort = "newest" | "oldest";
 
@@ -23,6 +26,13 @@ export type ArticlePageResult =
   | { data: ArticlePage; status: "success" }
   | {
       reason: "authentication_required" | "invalid_request" | "unavailable";
+      status: "error";
+    };
+
+export type ArticleDetailResult =
+  | { data: ArticleDetail; status: "success" }
+  | {
+      reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
       status: "error";
     };
 
@@ -97,6 +107,51 @@ export async function getArticlePage(options: ArticlePageOptions = {}): Promise<
       return { status: "error", reason: "unavailable" };
     }
 
+    return { status: "success", data: payload };
+  } catch {
+    return { status: "error", reason: "unavailable" };
+  }
+}
+
+export async function getArticleDetail(articleId: string): Promise<ArticleDetailResult> {
+  if (!ARTICLE_ID_PATTERN.test(articleId)) {
+    return { status: "error", reason: "invalid_request" };
+  }
+
+  const sessionCookie = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!sessionCookie) {
+    return { status: "error", reason: "authentication_required" };
+  }
+
+  try {
+    const response = await fetch(
+      `${getBackendBaseUrl()}/api/articles/${encodeURIComponent(articleId)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Cookie: `${SESSION_COOKIE_NAME}=${encodeURIComponent(sessionCookie)}`,
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (response.status === 401) {
+      return { status: "error", reason: "authentication_required" };
+    }
+    if (response.status === 404) {
+      return { status: "error", reason: "not_found" };
+    }
+    if (response.status === 422) {
+      return { status: "error", reason: "invalid_request" };
+    }
+    if (!response.ok) {
+      return { status: "error", reason: "unavailable" };
+    }
+
+    const payload: unknown = await response.json();
+    if (!isArticleDetail(payload)) {
+      return { status: "error", reason: "unavailable" };
+    }
     return { status: "success", data: payload };
   } catch {
     return { status: "error", reason: "unavailable" };

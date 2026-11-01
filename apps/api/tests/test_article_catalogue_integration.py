@@ -130,6 +130,9 @@ def test_postgresql_catalogue_filters_pages_and_hides_restricted_articles(
                 ArticleCatalogueQuery(category="technology")
             )
             assert [item.category for item in technology.items] == ["Technology"]
+            selected = await catalogue.get_article(technology.items[0].id)
+            assert selected.generation.allowed is True
+            assert selected.generation.status == "available"
 
             filtered = await catalogue.list_articles(
                 ArticleCatalogueQuery(

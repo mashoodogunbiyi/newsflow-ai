@@ -31,6 +31,14 @@ class ArticleCatalogueCategory(str, Enum):
     OTHER = "other"
 
 
+class ArticleGenerationStatus(str, Enum):
+    """Safe frontend state for the current article generation decision."""
+
+    AVAILABLE = "available"
+    RESTRICTED = "restricted"
+    INSUFFICIENT_SOURCE_INFORMATION = "insufficient_source_information"
+
+
 def _normalise_utc(value: datetime | None, field_name: str) -> datetime | None:
     if value is None:
         return None
@@ -117,6 +125,27 @@ class ArticleResponse(BaseModel):
     published_at: datetime
     category: str
     attribution: ArticleAttributionResponse
+
+
+class ArticleGenerationAvailabilityResponse(BaseModel):
+    """Minimal current permission result without confidential rights details."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    allowed: bool
+    status: ArticleGenerationStatus
+
+    @model_validator(mode="after")
+    def validate_allowed_status(self) -> "ArticleGenerationAvailabilityResponse":
+        if self.allowed != (self.status == ArticleGenerationStatus.AVAILABLE):
+            raise ValueError("Generation availability and status must agree.")
+        return self
+
+
+class ArticleDetailResponse(ArticleResponse):
+    """Permitted article detail plus a safe current generation decision."""
+
+    generation: ArticleGenerationAvailabilityResponse
 
 
 class ArticleCollectionResponse(BaseModel):
