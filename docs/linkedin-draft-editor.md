@@ -12,7 +12,7 @@ The editor treats every generated result as an AI-assisted draft. It does not de
 2. The existing generation boundary validates the FastAPI response before it reaches the editor.
 3. The editor loads the generated text, source reference, configured length, grounding status, and validation warnings.
 4. The user edits the draft in a native multiline textarea.
-5. A text-only LinkedIn-style preview updates immediately without another backend or OpenAI request.
+5. The NFA-63 LinkedIn-inspired content preview updates immediately without another backend or OpenAI request.
 6. The user reviews the source and every warning before later save or export features are used.
 
 ## Component structure
@@ -136,7 +136,7 @@ All tests use synthetic responses and local events. They do not contact CNN, Ope
 
 - Edits are local to the mounted page and are not yet stored in PostgreSQL.
 - Persistent saving, version history, copying, and exporting belong to E7 and later tasks.
-- The preview is intentionally text-only and does not attempt to reproduce every LinkedIn interface detail.
+- The NFA-63 preview now supports a selected private AI-generated illustration while retaining a documented no-image state. It does not attempt to reproduce every LinkedIn interface detail.
 - Users must still compare the edited draft with the selected source.
 - Live CNN access remains blocked by ADR-001.
 

@@ -53,6 +53,20 @@ describe("LinkedIn draft editor", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  test("integrates a selected illustration into the live preview", () => {
+    const selectedImage = {
+      altText: "Conceptual illustration of a reviewed information network",
+      id: "10000000-0000-4000-8000-000000000031",
+    };
+    render(<LinkedInEditor draft={draft} selectedImage={selectedImage} />);
+
+    const image = screen.getByRole("img", { name: selectedImage.altText });
+    expect(new URL(image.getAttribute("src") ?? "").pathname).toBe(
+      `/api/images/${selectedImage.id}/content`,
+    );
+    expect(screen.getByText("AI-generated illustration")).toBeDefined();
+  });
+
   test("handles an empty draft and keeps the textarea available", () => {
     render(<LinkedInEditor draft={{ ...draft, generatedText: "" }} />);
 
