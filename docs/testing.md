@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, the NFA-48 safe image-prompt composer, the NFA-49 sensitive-news image safety policy, the mocked NFA-50 OpenAI image generation boundary, and NFA-51 secure image validation and private storage.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, and the NFA-54 complete E5 image-workflow suite.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -15,9 +15,10 @@ The test suite is designed to detect security regressions before a pull request 
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
 | Frontend authentication tests | `apps/web/__tests__` | Registration, login, logout, error, loading, session restoration, gateway, and protected-route behaviour. |
 | Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
-| Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs the isolated NFA-36 PostgreSQL suite on GitHub. |
+| Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs isolated NFA-36 and NFA-54 PostgreSQL suites on GitHub. |
 | AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
 | Generation monitoring and audit | `apps/api/tests/test_generation_audit.py` and `test_admin_generation_monitoring.py` | Checks lifecycle correlation, duration, metrics, token aggregation, retention, safe records, and administrator-only inspection. |
+| Complete E5 image workflow | `apps/api/tests/test_image_workflow_acceptance.py` and `test_image_workflow_integration.py` | Joins the mocked prompt-to-provider-to-storage-to-delivery path, regeneration, PostgreSQL metadata, versioning, and owner isolation. |
 
 ## NFA-26 coverage
 
@@ -544,6 +545,84 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_migrations_integration.py
 
 See the [secure generated-image storage guide](image-storage.md) for the validation, storage, database, idempotency, cleanup, and lifecycle design.
 
+## NFA-52 image regeneration coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Authentication, CSRF, and owner-scoped parent access | `test_image_regeneration.py` |
+| Current article and rights checks before provider access | `test_image_regeneration.py` |
+| Prompt and sensitive-news safety reapplied | Regeneration service tests |
+| New immutable image and parent-child version relationship | Regeneration tests and NFA-54 joined workflow |
+| Original preserved on provider, validation, and storage failures | Regeneration tests and NFA-54 failed-regeneration scenario |
+| Burst, daily, concurrent, and duplicate controls | `test_image_regeneration.py` |
+| Safe response and error fields | Regeneration API tests |
+
+Run the focused set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q apps/api/tests/test_image_regeneration.py
+```
+
+## NFA-53 secure image delivery coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Owner-scoped metadata, content, and download access | `test_image_delivery.py` |
+| Unauthenticated and cross-owner denial | Delivery and NFA-54 joined tests |
+| Same missing response for absent and differently owned images | `test_image_delivery.py` |
+| Stored length and SHA-256 integrity verification | `test_image_delivery.py` |
+| Approved MIME type and server-generated safe filename | `test_image_delivery.py` |
+| Private no-store caching and security headers | `test_image_delivery.py` |
+| Missing, corrupt, and unavailable private objects | `test_image_delivery.py` |
+| Storage key, path, credential, and unrestricted URL exclusion | Delivery response-schema tests |
+
+Run the focused set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q apps/api/tests/test_image_delivery.py
+```
+
+## NFA-54 complete E5 image workflow coverage
+
+NFA-54 adds reusable synthetic article and image fixtures, a deterministic mocked OpenAI Images client, a joined prompt-to-delivery acceptance workflow, and an isolated PostgreSQL/private-storage proof.
+
+| Requirement | Automated evidence |
+|---|---|
+| Permitted prompt, safety, mocked provider, validation, storage, and delivery path | `test_image_workflow_acceptance.py` |
+| Regeneration creates a child and preserves its parent | Joined acceptance workflow and PostgreSQL proof |
+| Rights and sensitive-news rejection before provider access | Joined acceptance workflow |
+| Valid, invalid, corrupt, and oversized reusable files | `tests/support/image_workflow.py` and joined fixture test |
+| Authentication and cross-owner access denial | Joined acceptance and delivery tests |
+| Failed regeneration leaves original available | Joined acceptance workflow |
+| Real migrations, PostgreSQL metadata, version sequence, and owner isolation | `test_image_workflow_integration.py` |
+| Temporary private storage and relative unpredictable keys | Joined tests and PostgreSQL proof |
+| CI execution without live credentials | `.github/workflows/quality.yml` |
+
+Run the complete deterministic E5 set from the repository root:
+
+```bash
+apps/api/.venv/bin/pytest -q \
+  apps/api/tests/test_image_prompt.py \
+  apps/api/tests/test_image_safety.py \
+  apps/api/tests/test_openai_image_service.py \
+  apps/api/tests/test_image_validation.py \
+  apps/api/tests/test_image_storage.py \
+  apps/api/tests/test_image_regeneration.py \
+  apps/api/tests/test_image_delivery.py \
+  apps/api/tests/test_image_workflow_acceptance.py
+```
+
+The destructive integration fixture accepts only a URL containing `newsflow_image_pipeline_test` and explicit reset permission:
+
+```bash
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/newsflow_image_pipeline_test" \
+ALLOW_DATABASE_RESET_FOR_TESTS=true \
+apps/api/.venv/bin/pytest -q -m integration \
+  apps/api/tests/test_image_workflow_integration.py
+```
+
+The complete strategy, matrix, results, isolation rules, and limitations are in [the E5 image testing guide](e5-image-testing.md).
+
 ## Run the normal backend suite
 
 Activate the backend virtual environment, then run from `apps/api`:
@@ -620,20 +699,20 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, and run the NFA-36 pipeline suite against `newsflow_pipeline_test`.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, and run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, and build Next.js.
 
-The NFA-36 workflow step receives test-only credentials and reset permission only for the short-lived `newsflow_pipeline_test` service database. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
+The NFA-36 and NFA-54 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
 Do not add real credentials to workflow files. The committed workflow values are disposable CI-only values and must never be reused outside that isolated job.
 
 ## Verification record
 
-Verified locally on 31 October 2026:
+Verified locally on 1 November 2026:
 
 - Backend linting and formatting passed.
-- The normal backend run passed 390 tests and safely skipped 13 opt-in PostgreSQL and live-model tests.
-- Backend branch-aware coverage measured 83.85 percent, above the enforced 75 percent floor.
+- The normal backend run passed 416 tests, safely skipped 13 opt-in PostgreSQL tests, and deselected the optional live-model test.
+- Backend branch-aware coverage measured 81.10 percent, above the enforced 75 percent floor.
 - The isolated NFA-36 PostgreSQL pipeline suite passed 3 tests.
 - Each NFA-36 test applies all migrations through `20261031_0011` and rolls the disposable schema back afterwards.
 - The focused NFA-38 configuration and OpenAI service run passed 27 tests.
@@ -651,10 +730,15 @@ Verified locally on 31 October 2026:
 - The focused NFA-50 configuration and OpenAI image service run passed 44 tests.
 - The focused NFA-51 configuration, validation, private storage, idempotency, and cleanup run passed 32 tests.
 - The NFA-51 migration applied, rolled back, and reapplied successfully against the disposable `newsflow_migration_test` PostgreSQL database.
+- The focused NFA-52 immutable-regeneration run passed 10 tests.
+- The focused NFA-53 secure-delivery run passed 12 tests.
+- The NFA-54 joined acceptance workflow passed 4 tests.
+- The complete deterministic E5 image set passed 107 tests.
+- The safety-gated NFA-54 PostgreSQL and temporary-private-storage proof passed 1 test against `newsflow_image_pipeline_test`, applied migrations through `20261031_0012`, and rolled the schema back afterwards.
 - No test used live CNN content, a live OpenAI request, real user data, or production credentials.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, and NFA-51
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, and NFA-54
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
