@@ -23,6 +23,7 @@ from app.api.routes.ingestion_observability import (
 )
 from app.api.routes.library import router as library_router
 from app.api.routes.linkedin_generation import router as linkedin_generation_router
+from app.api.routes.saved_drafts import router as saved_drafts_router
 from app.core.config import DatabaseConfigurationError, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging_config import configure_logging
@@ -33,8 +34,10 @@ from app.providers.factory import create_news_provider
 from app.repositories import (
     AuthenticationRepository,
     SavedContentRepository,
+    SavedDraftRepository,
     SqlAlchemyAuthenticationRepository,
     SqlAlchemySavedContentRepository,
+    SqlAlchemySavedDraftRepository,
     SqlAlchemyUserRepository,
     UserRepository,
 )
@@ -67,7 +70,12 @@ from app.security import (
     PasswordHasher,
     RateLimitExceeded,
 )
-from app.services import AuthenticationService, RegistrationService, SavedContentService
+from app.services import (
+    AuthenticationService,
+    RegistrationService,
+    SavedContentService,
+    SavedDraftService,
+)
 from app.services.article_catalogue import ArticleCatalogueService
 from app.services.article_deduplication import ArticleDeduplicationService
 from app.services.article_rights import ArticleRightsService
@@ -106,6 +114,7 @@ def create_app(
     authentication_repository: AuthenticationRepository | None = None,
     login_rate_limiter: InMemoryRateLimiter | None = None,
     saved_content_repository: SavedContentRepository | None = None,
+    saved_draft_repository: SavedDraftRepository | None = None,
     article_catalogue_repository: ArticleCatalogueRepository | None = None,
     article_catalogue_service: ArticleCatalogueService | None = None,
     article_sync_repository: ArticleSyncRepository | None = None,
@@ -163,6 +172,7 @@ def create_app(
         configured_user_repository = user_repository
         configured_authentication_repository = authentication_repository
         configured_saved_content_repository = saved_content_repository
+        configured_saved_draft_repository = saved_draft_repository
         configured_article_catalogue_repository = article_catalogue_repository
         configured_article_catalogue_service = article_catalogue_service
         configured_article_sync_repository = article_sync_repository
@@ -180,6 +190,7 @@ def create_app(
             configured_user_repository is None
             or configured_authentication_repository is None
             or configured_saved_content_repository is None
+            or configured_saved_draft_repository is None
             or configured_article_catalogue_service is None
             or configured_linkedin_generation_service is None
             or (
@@ -207,6 +218,10 @@ def create_app(
                 )
             if configured_saved_content_repository is None:
                 configured_saved_content_repository = SqlAlchemySavedContentRepository(
+                    sqlalchemy_database
+                )
+            if configured_saved_draft_repository is None:
+                configured_saved_draft_repository = SqlAlchemySavedDraftRepository(
                     sqlalchemy_database
                 )
             if configured_article_catalogue_repository is None:
@@ -389,6 +404,9 @@ def create_app(
         application.state.saved_content_service = SavedContentService(
             configured_saved_content_repository
         )
+        application.state.saved_draft_service = SavedDraftService(
+            configured_saved_draft_repository
+        )
         application.state.article_catalogue_service = (
             configured_article_catalogue_service
         )
@@ -467,7 +485,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=[application_settings.frontend_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
     )
 
@@ -544,6 +562,7 @@ def create_app(
     application.include_router(generations_router)
     application.include_router(generation_monitoring_router)
     application.include_router(library_router)
+    application.include_router(saved_drafts_router)
     application.include_router(articles_router)
     application.include_router(article_sync_router)
     application.include_router(ingestion_observability_router)

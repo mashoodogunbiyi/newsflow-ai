@@ -14,6 +14,15 @@ from app.repositories.library import (
     SavedContentRepositoryError,
     SqlAlchemySavedContentRepository,
 )
+from app.repositories.saved_drafts import (
+    SavedDraft,
+    SavedDraftDuplicateError,
+    SavedDraftIdempotencyConflict,
+    SavedDraftRepository,
+    SavedDraftRepositoryError,
+    SavedDraftVersionConflict,
+    SqlAlchemySavedDraftRepository,
+)
 from app.repositories.users import (
     DuplicateUserEmailError,
     RegisteredUser,
@@ -33,8 +42,15 @@ __all__ = [
     "SavedContentConflictError",
     "SavedContentRepository",
     "SavedContentRepositoryError",
+    "SavedDraft",
+    "SavedDraftDuplicateError",
+    "SavedDraftIdempotencyConflict",
+    "SavedDraftRepository",
+    "SavedDraftRepositoryError",
+    "SavedDraftVersionConflict",
     "SqlAlchemyAuthenticationRepository",
     "SqlAlchemySavedContentRepository",
+    "SqlAlchemySavedDraftRepository",
     "SqlAlchemyUserRepository",
     "UserRepository",
     "UserRepositoryError",

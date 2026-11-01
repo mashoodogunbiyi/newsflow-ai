@@ -836,6 +836,9 @@ class SavedContentItemTable(Base):
     generated_post_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=False
     )
+    source_generation_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
     selected_post_version_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=False
     )
@@ -843,6 +846,11 @@ class SavedContentItemTable(Base):
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
     library_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("1")
+    )
+    save_key_hash: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
+    save_payload_hash: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
     saved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

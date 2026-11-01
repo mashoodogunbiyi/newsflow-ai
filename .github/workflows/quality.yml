@@ -98,6 +98,20 @@ jobs:
           ALLOW_DATABASE_RESET_FOR_TESTS: "true"
         run: pytest -m integration tests/test_image_workflow_integration.py
 
+      - name: Create isolated saved-draft database
+        env:
+          PGPASSWORD: newsflow_test_password
+        run: >-
+          createdb --host=127.0.0.1 --port=5432
+          --username=newsflow_test newsflow_saved_draft_test
+
+      - name: Run isolated saved-draft persistence tests
+        working-directory: apps/api
+        env:
+          TEST_DATABASE_URL: postgresql://newsflow_test:newsflow_test_password@localhost:5432/newsflow_saved_draft_test
+          ALLOW_DATABASE_RESET_FOR_TESTS: "true"
+        run: pytest -m integration tests/test_saved_draft_integration.py
+
   frontend:
     name: Frontend lint, format, types, tests, and build
     runs-on: ubuntu-latest

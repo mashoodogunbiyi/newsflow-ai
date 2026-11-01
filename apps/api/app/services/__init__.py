@@ -14,6 +14,7 @@ from app.services.authorization import (
 )
 from app.services.library import SavedContentService
 from app.services.registration import RegistrationService
+from app.services.saved_drafts import SavedDraftService
 
 __all__ = [
     "AuthenticationRequiredError",
@@ -24,6 +25,7 @@ __all__ = [
     "PrivateResourceNotFoundError",
     "RegistrationService",
     "SavedContentService",
+    "SavedDraftService",
     "hash_session_token",
     "require_owned_resource",
 ]
