@@ -2,40 +2,40 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, and the NFA-63 combined content preview.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, and the NFA-64 image generation controls.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
 ## Test layers
 
-| Layer | Location | Purpose |
-|---|---|---|
-| Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, generation orchestration, CSRF, safe errors, and authorisation. |
-| Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
-| PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
-| Frontend interface tests | `apps/web/__tests__` | Registration, login, logout, session restoration, workspace protection, responsive navigation state, reusable UI, generation transitions, draft editing, private image preview, loading, and safe error behaviour. |
-| Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
-| Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs isolated NFA-36 and NFA-54 PostgreSQL suites on GitHub. |
-| AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
-| Generation monitoring and audit | `apps/api/tests/test_generation_audit.py` and `test_admin_generation_monitoring.py` | Checks lifecycle correlation, duration, metrics, token aggregation, retention, safe records, and administrator-only inspection. |
-| Complete E5 image workflow | `apps/api/tests/test_image_workflow_acceptance.py` and `test_image_workflow_integration.py` | Joins the mocked prompt-to-provider-to-storage-to-delivery path, regeneration, PostgreSQL metadata, versioning, and owner isolation. |
+| Layer                             | Location                                                                                    | Purpose                                                                                                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Backend unit and API tests        | `apps/api/tests/test_*.py`                                                                  | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, generation orchestration, CSRF, safe errors, and authorisation.                  |
+| Account-security regression tests | `apps/api/tests/test_account_security_regression.py`                                        | One integrated in-memory journey from registration through private-content access and logout.                                                                                                                      |
+| PostgreSQL integration tests      | `apps/api/tests/*_integration.py`                                                           | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries.                                                                |
+| Frontend interface tests          | `apps/web/__tests__`                                                                        | Registration, login, logout, session restoration, workspace protection, responsive navigation state, reusable UI, generation transitions, draft editing, private image preview, loading, and safe error behaviour. |
+| Complete article pipeline         | `apps/api/tests/test_catalogue_pipeline_e2e.py`                                             | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion.                                                                                     |
+| Pull-request quality checks       | `.github/workflows/quality.yml`                                                             | Runs backend and frontend quality checks, enforces backend coverage, and runs isolated NFA-36 and NFA-54 PostgreSQL suites on GitHub.                                                                              |
+| AI generation evaluation          | `apps/api/tests/evaluation`                                                                 | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests.                                                                                 |
+| Generation monitoring and audit   | `apps/api/tests/test_generation_audit.py` and `test_admin_generation_monitoring.py`         | Checks lifecycle correlation, duration, metrics, token aggregation, retention, safe records, and administrator-only inspection.                                                                                    |
+| Complete E5 image workflow        | `apps/api/tests/test_image_workflow_acceptance.py` and `test_image_workflow_integration.py` | Joins the mocked prompt-to-provider-to-storage-to-delivery path, regeneration, PostgreSQL metadata, versioning, and owner isolation.                                                                               |
 
 ## NFA-26 coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Successful and invalid registration | `test_registration.py` and the account-security regression suite |
-| Duplicate registration | `test_registration.py`, PostgreSQL registration integration, and regression suite |
-| Argon2id password hashing | `test_passwords.py`, registration tests, and regression suite |
-| Successful and failed login | `test_authentication.py` and regression suite |
-| Session creation and secure cookies | `test_authentication.py` and PostgreSQL authentication integration |
-| Session expiry, logout, and reuse prevention | Authentication tests and regression suite |
-| Unauthenticated protected access | Authentication, authorisation, and regression tests |
+| Requirement                                                       | Automated evidence                                                                     |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Successful and invalid registration                               | `test_registration.py` and the account-security regression suite                       |
+| Duplicate registration                                            | `test_registration.py`, PostgreSQL registration integration, and regression suite      |
+| Argon2id password hashing                                         | `test_passwords.py`, registration tests, and regression suite                          |
+| Successful and failed login                                       | `test_authentication.py` and regression suite                                          |
+| Session creation and secure cookies                               | `test_authentication.py` and PostgreSQL authentication integration                     |
+| Session expiry, logout, and reuse prevention                      | Authentication tests and regression suite                                              |
+| Unauthenticated protected access                                  | Authentication, authorisation, and regression tests                                    |
 | Cross-user read, update, delete, export, and collection filtering | `test_authorization.py`, regression suite, and PostgreSQL account-security integration |
-| Client-supplied owner manipulation | Authorisation and regression tests |
-| Sensitive response exclusion | Registration, authentication, authorisation, and regression tests |
-| Frontend authentication behaviour | Vitest tests in `apps/web/__tests__` |
-| Automated quality process | GitHub Actions quality workflow |
+| Client-supplied owner manipulation                                | Authorisation and regression tests                                                     |
+| Sensitive response exclusion                                      | Registration, authentication, authorisation, and regression tests                      |
+| Frontend authentication behaviour                                 | Vitest tests in `apps/web/__tests__`                                                   |
+| Automated quality process                                         | GitHub Actions quality workflow                                                        |
 
 ## Reusable isolated fixtures
 
@@ -54,18 +54,18 @@ The `account_security_postgres` fixture is available only to the opt-in integrat
 
 ## NFA-33 synchronisation coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Scheduled and manual workflows share one service | `test_article_sync.py` |
-| Administrator-only manual trigger and CSRF dependency | `test_admin_article_sync.py` |
-| Manual request throttling | `test_admin_article_sync.py` |
-| Pagination, statistics, and incremental checkpoint | `test_article_sync.py` and PostgreSQL sync integration |
-| Duplicate article and active-job prevention | Sync unit tests and PostgreSQL sync integration |
-| Temporary retry and permanent failure policy | `test_article_sync.py` |
-| Partial failure does not advance the checkpoint | `test_article_sync.py` |
-| Expired worker recovery | `test_article_sync.py` |
-| Live CNN remains disabled | Existing CNN adapter tests and source-profile checks |
-| Real jobs, articles, provenance, rights, and checkpoints | `test_article_sync_integration.py` |
+| Requirement                                              | Automated evidence                                     |
+| -------------------------------------------------------- | ------------------------------------------------------ |
+| Scheduled and manual workflows share one service         | `test_article_sync.py`                                 |
+| Administrator-only manual trigger and CSRF dependency    | `test_admin_article_sync.py`                           |
+| Manual request throttling                                | `test_admin_article_sync.py`                           |
+| Pagination, statistics, and incremental checkpoint       | `test_article_sync.py` and PostgreSQL sync integration |
+| Duplicate article and active-job prevention              | Sync unit tests and PostgreSQL sync integration        |
+| Temporary retry and permanent failure policy             | `test_article_sync.py`                                 |
+| Partial failure does not advance the checkpoint          | `test_article_sync.py`                                 |
+| Expired worker recovery                                  | `test_article_sync.py`                                 |
+| Live CNN remains disabled                                | Existing CNN adapter tests and source-profile checks   |
+| Real jobs, articles, provenance, rights, and checkpoints | `test_article_sync_integration.py`                     |
 
 Run the fast NFA-33 tests from `apps/api`:
 
@@ -75,18 +75,18 @@ pytest tests/test_article_sync.py tests/test_admin_article_sync.py
 
 ## NFA-34 article catalogue coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Authenticated list and detail endpoints | `test_article_catalogue.py` |
-| Public response schema and internal-field exclusion | `test_article_catalogue.py` |
-| Cursor pagination and query binding | Fast tests and PostgreSQL catalogue integration |
-| Search, provider and publication-date filtering | Fast tests and PostgreSQL catalogue integration |
-| Newest and oldest stable sorting | Fast tests and PostgreSQL catalogue integration |
-| Missing, restricted, and expired record protection | Fast tests and PostgreSQL catalogue integration |
-| Invalid parameter and cursor handling | `test_article_catalogue.py` |
-| Parameterised handling of SQL-injection-like text | Fast tests and PostgreSQL catalogue integration |
-| Controlled database failure response | `test_article_catalogue.py` |
-| OpenAPI parameters, security, schemas, and responses | `test_article_catalogue.py` |
+| Requirement                                          | Automated evidence                              |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| Authenticated list and detail endpoints              | `test_article_catalogue.py`                     |
+| Public response schema and internal-field exclusion  | `test_article_catalogue.py`                     |
+| Cursor pagination and query binding                  | Fast tests and PostgreSQL catalogue integration |
+| Search, provider and publication-date filtering      | Fast tests and PostgreSQL catalogue integration |
+| Newest and oldest stable sorting                     | Fast tests and PostgreSQL catalogue integration |
+| Missing, restricted, and expired record protection   | Fast tests and PostgreSQL catalogue integration |
+| Invalid parameter and cursor handling                | `test_article_catalogue.py`                     |
+| Parameterised handling of SQL-injection-like text    | Fast tests and PostgreSQL catalogue integration |
+| Controlled database failure response                 | `test_article_catalogue.py`                     |
+| OpenAPI parameters, security, schemas, and responses | `test_article_catalogue.py`                     |
 
 Run the focused NFA-34 tests from `apps/api`:
 
@@ -96,18 +96,18 @@ pytest tests/test_article_catalogue.py
 
 ## NFA-35 ingestion observability coverage
 
-| Requirement | Automated evidence |
-|---|---|
+| Requirement                                                               | Automated evidence                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | Structured start, request, retry, completion, partial, and failure events | `test_article_sync.py` and `test_ingestion_observability.py` |
-| Safe job IDs, counts, timings, categories, and stages | Sync and observability unit tests |
-| Credential redaction and structured-field allowlist | `test_ingestion_observability.py` |
-| Provider request and total job duration | `test_article_sync.py` and observability service tests |
-| Job and article aggregate metrics | `test_ingestion_observability.py` |
-| Provider and database failure tracking | `test_ingestion_observability.py` |
-| Repeated failure, stale success, long runtime, and rejection thresholds | `test_ingestion_observability.py` |
-| Protected recent-job, detail, metrics, and health APIs | `test_admin_ingestion_observability.py` |
-| Observability settings and safe defaults | `test_config.py` |
-| Versioned columns, constraints, indexes, rollback, and rebuild | `test_migrations_integration.py` |
+| Safe job IDs, counts, timings, categories, and stages                     | Sync and observability unit tests                            |
+| Credential redaction and structured-field allowlist                       | `test_ingestion_observability.py`                            |
+| Provider request and total job duration                                   | `test_article_sync.py` and observability service tests       |
+| Job and article aggregate metrics                                         | `test_ingestion_observability.py`                            |
+| Provider and database failure tracking                                    | `test_ingestion_observability.py`                            |
+| Repeated failure, stale success, long runtime, and rejection thresholds   | `test_ingestion_observability.py`                            |
+| Protected recent-job, detail, metrics, and health APIs                    | `test_admin_ingestion_observability.py`                      |
+| Observability settings and safe defaults                                  | `test_config.py`                                             |
+| Versioned columns, constraints, indexes, rollback, and rebuild            | `test_migrations_integration.py`                             |
 
 Run the focused NFA-35 tests from `apps/api`:
 
@@ -119,34 +119,34 @@ pytest tests/test_article_sync.py \
 
 ## NFA-36 complete article pipeline coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Reusable valid, invalid, missing-field, update, and duplicate fixtures | `tests/fixtures`, `tests/support/article_pipeline.py`, and `test_article_pipeline_fixtures.py` |
-| Provider, normalisation, identity, rights, sync, and API unit coverage | Existing focused backend suites plus `test_article_sync.py` timeout coverage |
-| Complete provider-to-PostgreSQL-to-REST workflow | `test_catalogue_pipeline_e2e.py` |
-| Valid insert, permitted update, duplicate, repeat, and concurrent ingestion | Fixture tests and PostgreSQL end-to-end tests |
-| Invalid record and database failure safety | PostgreSQL end-to-end tests |
-| Provenance, rights, restricted AI use, and public-only API fields | PostgreSQL end-to-end tests |
-| Manual authentication and source-authorisation enforcement | End-to-end test plus `test_admin_article_sync.py` |
-| Schedule, timeout, checkpoint, interruption, and recovery policy | `test_article_sync.py` |
-| Accurate statistics, metrics, structured job logs, and redaction | End-to-end test and observability suites |
-| Live CNN remains inaccessible | CNN adapter tests and the end-to-end disabled-source assertion |
+| Requirement                                                                 | Automated evidence                                                                             |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Reusable valid, invalid, missing-field, update, and duplicate fixtures      | `tests/fixtures`, `tests/support/article_pipeline.py`, and `test_article_pipeline_fixtures.py` |
+| Provider, normalisation, identity, rights, sync, and API unit coverage      | Existing focused backend suites plus `test_article_sync.py` timeout coverage                   |
+| Complete provider-to-PostgreSQL-to-REST workflow                            | `test_catalogue_pipeline_e2e.py`                                                               |
+| Valid insert, permitted update, duplicate, repeat, and concurrent ingestion | Fixture tests and PostgreSQL end-to-end tests                                                  |
+| Invalid record and database failure safety                                  | PostgreSQL end-to-end tests                                                                    |
+| Provenance, rights, restricted AI use, and public-only API fields           | PostgreSQL end-to-end tests                                                                    |
+| Manual authentication and source-authorisation enforcement                  | End-to-end test plus `test_admin_article_sync.py`                                              |
+| Schedule, timeout, checkpoint, interruption, and recovery policy            | `test_article_sync.py`                                                                         |
+| Accurate statistics, metrics, structured job logs, and redaction            | End-to-end test and observability suites                                                       |
+| Live CNN remains inaccessible                                               | CNN adapter tests and the end-to-end disabled-source assertion                                 |
 
 The full strategy, exact disposable-database command, results, and limitations are recorded in [the NFA-36 pipeline testing guide](article-pipeline-testing.md).
 
 ## NFA-38 OpenAI integration coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Successful structured generation result | `test_openai_service.py` |
-| Official SDK client configuration | `test_openai_service.py` |
-| Missing key and model handling | `test_config.py` and `test_openai_service.py` |
-| Configurable timeout, output cap, and retry budget | `test_config.py` and `test_openai_service.py` |
-| Authentication, rate-limit, timeout, and unavailable errors | `test_openai_service.py` |
-| Incomplete and empty response handling | `test_openai_service.py` |
-| Token-usage capture and missing usage | `test_openai_service.py` |
-| Prompt, credential, and provider-detail log protection | `test_openai_service.py` |
-| No live or billable request | Fake SDK client injected by every service test |
+| Requirement                                                 | Automated evidence                             |
+| ----------------------------------------------------------- | ---------------------------------------------- |
+| Successful structured generation result                     | `test_openai_service.py`                       |
+| Official SDK client configuration                           | `test_openai_service.py`                       |
+| Missing key and model handling                              | `test_config.py` and `test_openai_service.py`  |
+| Configurable timeout, output cap, and retry budget          | `test_config.py` and `test_openai_service.py`  |
+| Authentication, rate-limit, timeout, and unavailable errors | `test_openai_service.py`                       |
+| Incomplete and empty response handling                      | `test_openai_service.py`                       |
+| Token-usage capture and missing usage                       | `test_openai_service.py`                       |
+| Prompt, credential, and provider-detail log protection      | `test_openai_service.py`                       |
+| No live or billable request                                 | Fake SDK client injected by every service test |
 
 Run the focused NFA-38 tests from `apps/api`:
 
@@ -158,20 +158,20 @@ The tests construct real OpenAI SDK exception types around synthetic HTTP respon
 
 ## NFA-39 LinkedIn prompt coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Professional, conversational, and analytical tones | `test_prompt_builder.py` |
-| Short, medium, and long word and token limits | `test_prompt_builder.py` |
-| Exact permitted source-field allowlist | `test_prompt_builder.py` |
-| Higher-priority instructions separated from untrusted source data | `test_prompt_builder.py` |
-| Unsupported facts, statistics, quotations, names, dates, and events prohibited | `test_prompt_builder.py` |
-| Exact article reference kept outside generated prose | `test_prompt_builder.py` |
-| Title-only and missing information declined | `test_prompt_builder.py` |
-| Restricted and denied-rights content rejected | `test_prompt_builder.py` |
-| Injection text remains untrusted data | `test_prompt_builder.py` |
-| Invalid preferences and extra fields rejected | `test_prompt_builder.py` |
-| Prompt version and masked request representation | `test_prompt_builder.py` |
-| Versioned supported and forbidden factual claims | `fixtures/linkedin_prompt_evaluations.json` and `test_prompt_builder.py` |
+| Requirement                                                                    | Automated evidence                                                       |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Professional, conversational, and analytical tones                             | `test_prompt_builder.py`                                                 |
+| Short, medium, and long word and token limits                                  | `test_prompt_builder.py`                                                 |
+| Exact permitted source-field allowlist                                         | `test_prompt_builder.py`                                                 |
+| Higher-priority instructions separated from untrusted source data              | `test_prompt_builder.py`                                                 |
+| Unsupported facts, statistics, quotations, names, dates, and events prohibited | `test_prompt_builder.py`                                                 |
+| Exact article reference kept outside generated prose                           | `test_prompt_builder.py`                                                 |
+| Title-only and missing information declined                                    | `test_prompt_builder.py`                                                 |
+| Restricted and denied-rights content rejected                                  | `test_prompt_builder.py`                                                 |
+| Injection text remains untrusted data                                          | `test_prompt_builder.py`                                                 |
+| Invalid preferences and extra fields rejected                                  | `test_prompt_builder.py`                                                 |
+| Prompt version and masked request representation                               | `test_prompt_builder.py`                                                 |
+| Versioned supported and forbidden factual claims                               | `fixtures/linkedin_prompt_evaluations.json` and `test_prompt_builder.py` |
 
 Run the focused NFA-39 tests from `apps/api`:
 
@@ -183,20 +183,20 @@ The tests construct prompts from original synthetic fixture data. They do not ca
 
 ## NFA-40 LinkedIn generation coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Article, rights, prompt, OpenAI, validation, and persistence orchestration | `test_linkedin_generation_service.py` |
-| Authentication and validated tone and length input | `test_linkedin_generation_api.py` |
-| Missing article and denied or missing rights | `test_linkedin_generation_service.py` |
-| Insufficient permitted source information | `test_linkedin_generation_service.py` |
-| Strict Responses API JSON Schema forwarding | `test_openai_service.py` and `test_linkedin_generation_service.py` |
-| Empty, malformed, contradictory, and out-of-range output rejection | `test_linkedin_generation_service.py` |
-| OpenAI timeout and safe failure handling | Service and API tests |
-| Per-user rate limit and retry delay | `test_linkedin_generation_api.py` |
-| Idempotent completed requests | `test_linkedin_generation_service.py` |
-| Exact source and rights-version preservation | `test_linkedin_generation_service.py` |
-| Owner-only private draft retrieval | `test_linkedin_generation_service.py` |
-| Human review and no automatic publication | Service and API response tests |
+| Requirement                                                                | Automated evidence                                                 |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Article, rights, prompt, OpenAI, validation, and persistence orchestration | `test_linkedin_generation_service.py`                              |
+| Authentication and validated tone and length input                         | `test_linkedin_generation_api.py`                                  |
+| Missing article and denied or missing rights                               | `test_linkedin_generation_service.py`                              |
+| Insufficient permitted source information                                  | `test_linkedin_generation_service.py`                              |
+| Strict Responses API JSON Schema forwarding                                | `test_openai_service.py` and `test_linkedin_generation_service.py` |
+| Empty, malformed, contradictory, and out-of-range output rejection         | `test_linkedin_generation_service.py`                              |
+| OpenAI timeout and safe failure handling                                   | Service and API tests                                              |
+| Per-user rate limit and retry delay                                        | `test_linkedin_generation_api.py`                                  |
+| Idempotent completed requests                                              | `test_linkedin_generation_service.py`                              |
+| Exact source and rights-version preservation                               | `test_linkedin_generation_service.py`                              |
+| Owner-only private draft retrieval                                         | `test_linkedin_generation_service.py`                              |
+| Human review and no automatic publication                                  | Service and API response tests                                     |
 
 Run the focused NFA-40 tests from `apps/api`:
 
@@ -211,19 +211,19 @@ The OpenAI client, model result, article, rights decision, and users are synthet
 
 ## NFA-41 generation REST API coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| `POST /api/generations` and 201 response | `test_generation_api.py` |
-| Authentication and CSRF enforcement | `test_generation_api.py` plus existing authentication tests |
-| Article UUID, tone, length, extra-field, and header validation | `test_generation_api.py` |
-| Authenticated user identity passed to the service | `test_generation_api.py` |
-| NFA-40 service reuse and pre-provider rights enforcement | Generation API and NFA-40 service tests |
-| Minimal response and internal-field exclusion | `test_generation_api.py` |
-| Missing, restricted, and insufficient articles | API and NFA-40 service tests |
-| Safe 502, 503, and 504 provider failures | `test_generation_api.py` |
-| Per-user rate limit and retry delay | `test_generation_api.py` |
-| Idempotency header validation and delegation | `test_generation_api.py` |
-| OpenAPI request, response, security, and error documentation | `test_generation_api.py` |
+| Requirement                                                    | Automated evidence                                          |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| `POST /api/generations` and 201 response                       | `test_generation_api.py`                                    |
+| Authentication and CSRF enforcement                            | `test_generation_api.py` plus existing authentication tests |
+| Article UUID, tone, length, extra-field, and header validation | `test_generation_api.py`                                    |
+| Authenticated user identity passed to the service              | `test_generation_api.py`                                    |
+| NFA-40 service reuse and pre-provider rights enforcement       | Generation API and NFA-40 service tests                     |
+| Minimal response and internal-field exclusion                  | `test_generation_api.py`                                    |
+| Missing, restricted, and insufficient articles                 | API and NFA-40 service tests                                |
+| Safe 502, 503, and 504 provider failures                       | `test_generation_api.py`                                    |
+| Per-user rate limit and retry delay                            | `test_generation_api.py`                                    |
+| Idempotency header validation and delegation                   | `test_generation_api.py`                                    |
+| OpenAPI request, response, security, and error documentation   | `test_generation_api.py`                                    |
 
 Run the focused NFA-41 tests from `apps/api`:
 
@@ -237,18 +237,18 @@ These tests use synthetic records and provider doubles. They make no live OpenAI
 
 ## NFA-42 factual-grounding coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Strict structured output and empty-result rejection | `test_generation_validator.py` and `test_linkedin_generation_service.py` |
-| Trusted article ID and canonical URL | `test_generation_validator.py` |
-| Unsupported numbers and quotations | `test_generation_validator.py` |
-| Named entities and low-support factual assertions | `test_generation_validator.py` |
-| Clearly framed commentary distinguished from factual claims | `test_generation_validator.py` |
-| Insufficient permitted context | `test_generation_validator.py` and prompt-builder tests |
-| Safe warning text without source or claim excerpts | `test_generation_validator.py` |
-| Blocking result rejected before persistence | `test_linkedin_generation_service.py` |
-| Grounding status and warnings in API responses | Generation API tests |
-| Grounding migration fields and index | `test_migrations_integration.py` |
+| Requirement                                                 | Automated evidence                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Strict structured output and empty-result rejection         | `test_generation_validator.py` and `test_linkedin_generation_service.py` |
+| Trusted article ID and canonical URL                        | `test_generation_validator.py`                                           |
+| Unsupported numbers and quotations                          | `test_generation_validator.py`                                           |
+| Named entities and low-support factual assertions           | `test_generation_validator.py`                                           |
+| Clearly framed commentary distinguished from factual claims | `test_generation_validator.py`                                           |
+| Insufficient permitted context                              | `test_generation_validator.py` and prompt-builder tests                  |
+| Safe warning text without source or claim excerpts          | `test_generation_validator.py`                                           |
+| Blocking result rejected before persistence                 | `test_linkedin_generation_service.py`                                    |
+| Grounding status and warnings in API responses              | Generation API tests                                                     |
+| Grounding migration fields and index                        | `test_migrations_integration.py`                                         |
 
 Run the focused NFA-42 tests from `apps/api`:
 
@@ -263,18 +263,18 @@ All grounding fixtures are original synthetic records. The validator does not ca
 
 ## NFA-43 generation operations coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Configurable daily, concurrent, lease, retention, timeout, retry, and token controls | `test_config.py`, `test_generation_usage.py`, and `test_openai_service.py` |
-| Shared daily and concurrent enforcement | `test_generation_usage_integration.py` against safety-gated PostgreSQL |
-| Active duplicate protection | Generation usage unit and PostgreSQL integration tests |
-| Successful status and available token recording | `test_generation_usage.py` and `test_linkedin_generation_service.py` |
-| Failed status and safe category recording | Generation usage, OpenAI service, and LinkedIn generation tests |
-| Authentication before provider use | Generation API authentication tests |
-| Safe HTTP errors and retry headers | `test_generation_api.py` and `test_linkedin_generation_api.py` |
-| OpenAI authentication, temporary rate limit, quota, timeout, availability, and invalid-response handling | `test_openai_service.py` |
-| Sensitive prompt, content, credential, and provider-detail protection | OpenAI service, generation usage, and API tests |
-| Migration fields, constraints, indexes, upgrade, and rollback | `test_migrations_integration.py` |
+| Requirement                                                                                              | Automated evidence                                                         |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Configurable daily, concurrent, lease, retention, timeout, retry, and token controls                     | `test_config.py`, `test_generation_usage.py`, and `test_openai_service.py` |
+| Shared daily and concurrent enforcement                                                                  | `test_generation_usage_integration.py` against safety-gated PostgreSQL     |
+| Active duplicate protection                                                                              | Generation usage unit and PostgreSQL integration tests                     |
+| Successful status and available token recording                                                          | `test_generation_usage.py` and `test_linkedin_generation_service.py`       |
+| Failed status and safe category recording                                                                | Generation usage, OpenAI service, and LinkedIn generation tests            |
+| Authentication before provider use                                                                       | Generation API authentication tests                                        |
+| Safe HTTP errors and retry headers                                                                       | `test_generation_api.py` and `test_linkedin_generation_api.py`             |
+| OpenAI authentication, temporary rate limit, quota, timeout, availability, and invalid-response handling | `test_openai_service.py`                                                   |
+| Sensitive prompt, content, credential, and provider-detail protection                                    | OpenAI service, generation usage, and API tests                            |
+| Migration fields, constraints, indexes, upgrade, and rollback                                            | `test_migrations_integration.py`                                           |
 
 Run the normal focused NFA-43 tests from the repository root:
 
@@ -301,18 +301,18 @@ No NFA-43 test makes a live or billable OpenAI request. Provider responses, user
 
 ## NFA-44 AI evaluation and regression coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Reusable synthetic article dataset | `fixtures/evaluation_articles.json` and its schema-validation tests |
-| Mocked deterministic generation cases | `fixtures/expected_generation_cases.json` |
-| Structure, tone, length, and writing quality | `evaluation/test_generation_quality.py` |
-| Grounding, numbers, quotations, source references, and insufficient context | `evaluation/test_grounding_and_safety.py` |
-| Prompt injection and restricted information | Evaluation safety tests plus prompt-builder and generation-service tests |
-| Prompt-version comparison | `evaluation/test_prompt_regression.py` |
-| Generation API failures and invalid preferences | `test_generation_api.py` and `test_linkedin_generation_api.py` |
-| Usage limits, concurrency, and duplicates | `test_generation_usage.py` and the safety-gated PostgreSQL test |
-| Authentication, CSRF, rights, and authorisation | Generation API, service, prompt-builder, and ownership tests |
-| Optional live model remains separate | `evaluation/test_live_model_evaluation.py` with the `live_ai` marker and explicit environment gate |
+| Requirement                                                                 | Automated evidence                                                                                 |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Reusable synthetic article dataset                                          | `fixtures/evaluation_articles.json` and its schema-validation tests                                |
+| Mocked deterministic generation cases                                       | `fixtures/expected_generation_cases.json`                                                          |
+| Structure, tone, length, and writing quality                                | `evaluation/test_generation_quality.py`                                                            |
+| Grounding, numbers, quotations, source references, and insufficient context | `evaluation/test_grounding_and_safety.py`                                                          |
+| Prompt injection and restricted information                                 | Evaluation safety tests plus prompt-builder and generation-service tests                           |
+| Prompt-version comparison                                                   | `evaluation/test_prompt_regression.py`                                                             |
+| Generation API failures and invalid preferences                             | `test_generation_api.py` and `test_linkedin_generation_api.py`                                     |
+| Usage limits, concurrency, and duplicates                                   | `test_generation_usage.py` and the safety-gated PostgreSQL test                                    |
+| Authentication, CSRF, rights, and authorisation                             | Generation API, service, prompt-builder, and ownership tests                                       |
+| Optional live model remains separate                                        | `evaluation/test_live_model_evaluation.py` with the `live_ai` marker and explicit environment gate |
 
 Run the complete deterministic NFA-44 evidence set from `apps/api`:
 
@@ -336,17 +336,17 @@ See [the AI generation evaluation guide](ai-generation-evaluation.md) for scorin
 
 ## NFA-45 generation monitoring and audit coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Start, completion, and failure events | `test_generation_audit.py` and `test_linkedin_generation_service.py` |
-| Rights, validation, and usage-rejection events | Audit service and generation workflow tests |
-| Correlation identifier and duration | `test_generation_audit.py` |
-| Success, failure, timeout, rate-limit, rejection, and average-duration metrics | `test_generation_audit.py` |
-| Available NFA-43 token totals | Monitoring aggregation test |
-| Safe fields and sensitive-data minimisation | Audit redaction test |
-| Administrator access and ordinary-user denial | `test_admin_generation_monitoring.py` |
-| Retention and configuration bounds | Audit and configuration tests |
-| PostgreSQL table, columns, indexes, upgrade, and rollback | `test_migrations_integration.py` |
+| Requirement                                                                    | Automated evidence                                                   |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Start, completion, and failure events                                          | `test_generation_audit.py` and `test_linkedin_generation_service.py` |
+| Rights, validation, and usage-rejection events                                 | Audit service and generation workflow tests                          |
+| Correlation identifier and duration                                            | `test_generation_audit.py`                                           |
+| Success, failure, timeout, rate-limit, rejection, and average-duration metrics | `test_generation_audit.py`                                           |
+| Available NFA-43 token totals                                                  | Monitoring aggregation test                                          |
+| Safe fields and sensitive-data minimisation                                    | Audit redaction test                                                 |
+| Administrator access and ordinary-user denial                                  | `test_admin_generation_monitoring.py`                                |
+| Retention and configuration bounds                                             | Audit and configuration tests                                        |
+| PostgreSQL table, columns, indexes, upgrade, and rollback                      | `test_migrations_integration.py`                                     |
 
 Run the focused NFA-45 evidence set from the repository root:
 
@@ -366,17 +366,17 @@ The focused suite uses only synthetic IDs, article information, drafts, and prov
 
 `test_generation_workflow_acceptance.py` sends synthetic requests through the real FastAPI generation route and real generation orchestration. It uses the real article-rights service, prompt builder, grounding validator, usage calls, and generation audit service while replacing OpenAI and persistence with deterministic test doubles.
 
-| Requirement | Automated evidence |
-|---|---|
+| Requirement                                             | Automated evidence                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
 | Successful authenticated HTTP-to-private-draft workflow | Complete success scenario and exact public response-field assertion |
-| Session and CSRF enforcement | Missing-session and invalid-CSRF scenarios |
-| Rights denied before provider access | Restricted-article scenario and zero OpenAI-call assertion |
-| Preference and source-context validation | Invalid-enum and insufficient-context scenarios |
-| Safe OpenAI and malformed-output failures | Unavailable-provider and invalid-structured-output scenarios |
-| Shared usage rejection | Limit-exceeded scenario, `Retry-After`, and zero provider access |
-| Trusted source reference and mandatory review | Success response assertions |
-| Content-free correlated audit evidence | Recorded start, rights, validation, completion, and failure events |
-| Human control and no automatic publishing | Draft status, review requirement, and route inspection |
+| Session and CSRF enforcement                            | Missing-session and invalid-CSRF scenarios                          |
+| Rights denied before provider access                    | Restricted-article scenario and zero OpenAI-call assertion          |
+| Preference and source-context validation                | Invalid-enum and insufficient-context scenarios                     |
+| Safe OpenAI and malformed-output failures               | Unavailable-provider and invalid-structured-output scenarios        |
+| Shared usage rejection                                  | Limit-exceeded scenario, `Retry-After`, and zero provider access    |
+| Trusted source reference and mandatory review           | Success response assertions                                         |
+| Content-free correlated audit evidence                  | Recorded start, rights, validation, completion, and failure events  |
+| Human control and no automatic publishing               | Draft status, review requirement, and route inspection              |
 
 Run the focused NFA-46 evidence set from the repository root:
 
@@ -396,18 +396,18 @@ The suite uses only original synthetic article content and mocked OpenAI output.
 
 `test_image_prompt.py` verifies the internal image-prompt package without calling an image provider.
 
-| Requirement | Automated evidence |
-|---|---|
-| Valid structured prompt | Article-context result, version, reference, and review flags |
-| Defined styles and composition | Every style, aspect ratio, and composition mapping |
-| Strict parameters | Unsupported enums and extra free-text property rejection |
-| Current source rights | Allowed, denied, mismatched, incomplete-attribution, and restricted-content scenarios |
-| Permitted fields only | Exact article-context allowlist and excluded source metadata |
-| Insufficient information | Safe rejection rather than invented visual details |
-| Article-or-draft context | Matching draft, missing draft, generation mismatch, validation rejection, and size bound |
-| Prompt-injection separation | Malicious synthetic content remains outside trusted instructions |
-| Restricted photography and non-deception | Mandatory original-illustration and non-documentary rules |
-| Version and safe representation | `image_prompt_v1` and masked context fields |
+| Requirement                              | Automated evidence                                                                       |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Valid structured prompt                  | Article-context result, version, reference, and review flags                             |
+| Defined styles and composition           | Every style, aspect ratio, and composition mapping                                       |
+| Strict parameters                        | Unsupported enums and extra free-text property rejection                                 |
+| Current source rights                    | Allowed, denied, mismatched, incomplete-attribution, and restricted-content scenarios    |
+| Permitted fields only                    | Exact article-context allowlist and excluded source metadata                             |
+| Insufficient information                 | Safe rejection rather than invented visual details                                       |
+| Article-or-draft context                 | Matching draft, missing draft, generation mismatch, validation rejection, and size bound |
+| Prompt-injection separation              | Malicious synthetic content remains outside trusted instructions                         |
+| Restricted photography and non-deception | Mandatory original-illustration and non-documentary rules                                |
+| Version and safe representation          | `image_prompt_v1` and masked context fields                                              |
 
 Run the focused NFA-48 checks from the repository root:
 
@@ -431,20 +431,20 @@ The test data is original and synthetic. The suite makes no CNN or image-provide
 
 `test_image_safety.py` evaluates real NFA-48 prompt packages through the central NFA-49 service without calling an image provider.
 
-| Requirement | Automated evidence |
-|---|---|
-| Ordinary topic | Allowed conceptual technology scenario |
-| Sensitive categories | Parameterised conflict, terrorism, disaster, injury, health, political, and criminal scenarios |
-| Misleading documentary imagery | Conflict and disaster fabrication rejection |
-| Conceptual alternative | Sensitive requests restricted to conceptual, non-photorealistic treatment |
-| Identifiable real person | Sensitive person misrepresentation rejection |
-| Frontend override prevention | Extra safety fields rejected and text override denied |
-| Prompt injection | Article instruction remains untrusted and cannot enable photorealism |
-| Uncertain classification | Conservative review-required provider gate |
-| Provider safety | Missing moderation blocks or pauses provider access |
-| Safe policy record | Content-free recorder assertions |
-| AI designation and review | Required result fields in ordinary and sensitive decisions |
-| Provider call gate | Allowed decisions continue; rejected and review-required decisions stop |
+| Requirement                    | Automated evidence                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Ordinary topic                 | Allowed conceptual technology scenario                                                         |
+| Sensitive categories           | Parameterised conflict, terrorism, disaster, injury, health, political, and criminal scenarios |
+| Misleading documentary imagery | Conflict and disaster fabrication rejection                                                    |
+| Conceptual alternative         | Sensitive requests restricted to conceptual, non-photorealistic treatment                      |
+| Identifiable real person       | Sensitive person misrepresentation rejection                                                   |
+| Frontend override prevention   | Extra safety fields rejected and text override denied                                          |
+| Prompt injection               | Article instruction remains untrusted and cannot enable photorealism                           |
+| Uncertain classification       | Conservative review-required provider gate                                                     |
+| Provider safety                | Missing moderation blocks or pauses provider access                                            |
+| Safe policy record             | Content-free recorder assertions                                                               |
+| AI designation and review      | Required result fields in ordinary and sensitive decisions                                     |
+| Provider call gate             | Allowed decisions continue; rejected and review-required decisions stop                        |
 
 Run the focused NFA-49 checks from the repository root:
 
@@ -468,25 +468,25 @@ All scenarios use original synthetic topics and text. The suite makes no CNN, Op
 
 `test_openai_image_service.py` uses the official SDK exception classes and a mocked `client.images.generate` resource. It passes real NFA-48 and NFA-49 model structures into the NFA-50 provider boundary without making a network request.
 
-| Requirement | Automated evidence |
-|---|---|
-| Official SDK integration | Client factory receives backend key, timeout, and zero SDK retries |
-| Successful generation | Controlled request arguments, masked image bytes, metadata, and review state |
-| Missing credentials | Safe settings error before client construction |
-| Safety enforcement | Rejected safety decision stops before provider access |
-| Rights enforcement | Denied or mismatched rights stop before provider access |
-| Supported settings | Approved models, aspect-ratio sizes, quality enums, formats, and hashed safety identifier |
-| Provider formats | Strict Base64 image validation and masked HTTPS reference handling |
-| Timeout | SDK and application deadline failures with no automatic replay |
-| Authentication and quota | Safe permanent failures with no retry |
-| Rate limiting | One bounded mocked retry and exhausted-budget failure |
-| Temporary availability | Controlled connection failure without ambiguous replay |
-| Moderation | Generic provider moderation failure without sensitive category details |
-| Invalid response | Empty, malformed, wrong-signature, and unsafe-URL rejection |
-| Duplicate protection | Cached completion, active protection, and request-ID conflict handling |
-| Usage tracking | Available total, text, and image token counts plus missing-usage handling |
-| Credential protection | Logs and errors exclude key, prompt, provider detail, image data, and revised prompt |
-| Safe record | Recorder receives content-free IDs, digest, dimensions, and usage only |
+| Requirement              | Automated evidence                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| Official SDK integration | Client factory receives backend key, timeout, and zero SDK retries                        |
+| Successful generation    | Controlled request arguments, masked image bytes, metadata, and review state              |
+| Missing credentials      | Safe settings error before client construction                                            |
+| Safety enforcement       | Rejected safety decision stops before provider access                                     |
+| Rights enforcement       | Denied or mismatched rights stop before provider access                                   |
+| Supported settings       | Approved models, aspect-ratio sizes, quality enums, formats, and hashed safety identifier |
+| Provider formats         | Strict Base64 image validation and masked HTTPS reference handling                        |
+| Timeout                  | SDK and application deadline failures with no automatic replay                            |
+| Authentication and quota | Safe permanent failures with no retry                                                     |
+| Rate limiting            | One bounded mocked retry and exhausted-budget failure                                     |
+| Temporary availability   | Controlled connection failure without ambiguous replay                                    |
+| Moderation               | Generic provider moderation failure without sensitive category details                    |
+| Invalid response         | Empty, malformed, wrong-signature, and unsafe-URL rejection                               |
+| Duplicate protection     | Cached completion, active protection, and request-ID conflict handling                    |
+| Usage tracking           | Available total, text, and image token counts plus missing-usage handling                 |
+| Credential protection    | Logs and errors exclude key, prompt, provider detail, image data, and revised prompt      |
+| Safe record              | Recorder receives content-free IDs, digest, dimensions, and usage only                    |
 
 Run the focused NFA-50 checks from the repository root:
 
@@ -547,15 +547,15 @@ See the [secure generated-image storage guide](image-storage.md) for the validat
 
 ## NFA-52 image regeneration coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Authentication, CSRF, and owner-scoped parent access | `test_image_regeneration.py` |
-| Current article and rights checks before provider access | `test_image_regeneration.py` |
-| Prompt and sensitive-news safety reapplied | Regeneration service tests |
-| New immutable image and parent-child version relationship | Regeneration tests and NFA-54 joined workflow |
+| Requirement                                                      | Automated evidence                                         |
+| ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| Authentication, CSRF, and owner-scoped parent access             | `test_image_regeneration.py`                               |
+| Current article and rights checks before provider access         | `test_image_regeneration.py`                               |
+| Prompt and sensitive-news safety reapplied                       | Regeneration service tests                                 |
+| New immutable image and parent-child version relationship        | Regeneration tests and NFA-54 joined workflow              |
 | Original preserved on provider, validation, and storage failures | Regeneration tests and NFA-54 failed-regeneration scenario |
-| Burst, daily, concurrent, and duplicate controls | `test_image_regeneration.py` |
-| Safe response and error fields | Regeneration API tests |
+| Burst, daily, concurrent, and duplicate controls                 | `test_image_regeneration.py`                               |
+| Safe response and error fields                                   | Regeneration API tests                                     |
 
 Run the focused set from the repository root:
 
@@ -565,16 +565,16 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_regeneration.py
 
 ## NFA-53 secure image delivery coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Owner-scoped metadata, content, and download access | `test_image_delivery.py` |
-| Unauthenticated and cross-owner denial | Delivery and NFA-54 joined tests |
-| Same missing response for absent and differently owned images | `test_image_delivery.py` |
-| Stored length and SHA-256 integrity verification | `test_image_delivery.py` |
-| Approved MIME type and server-generated safe filename | `test_image_delivery.py` |
-| Private no-store caching and security headers | `test_image_delivery.py` |
-| Missing, corrupt, and unavailable private objects | `test_image_delivery.py` |
-| Storage key, path, credential, and unrestricted URL exclusion | Delivery response-schema tests |
+| Requirement                                                   | Automated evidence               |
+| ------------------------------------------------------------- | -------------------------------- |
+| Owner-scoped metadata, content, and download access           | `test_image_delivery.py`         |
+| Unauthenticated and cross-owner denial                        | Delivery and NFA-54 joined tests |
+| Same missing response for absent and differently owned images | `test_image_delivery.py`         |
+| Stored length and SHA-256 integrity verification              | `test_image_delivery.py`         |
+| Approved MIME type and server-generated safe filename         | `test_image_delivery.py`         |
+| Private no-store caching and security headers                 | `test_image_delivery.py`         |
+| Missing, corrupt, and unavailable private objects             | `test_image_delivery.py`         |
+| Storage key, path, credential, and unrestricted URL exclusion | Delivery response-schema tests   |
 
 Run the focused set from the repository root:
 
@@ -586,17 +586,17 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_image_delivery.py
 
 NFA-54 adds reusable synthetic article and image fixtures, a deterministic mocked OpenAI Images client, a joined prompt-to-delivery acceptance workflow, and an isolated PostgreSQL/private-storage proof.
 
-| Requirement | Automated evidence |
-|---|---|
-| Permitted prompt, safety, mocked provider, validation, storage, and delivery path | `test_image_workflow_acceptance.py` |
-| Regeneration creates a child and preserves its parent | Joined acceptance workflow and PostgreSQL proof |
-| Rights and sensitive-news rejection before provider access | Joined acceptance workflow |
-| Valid, invalid, corrupt, and oversized reusable files | `tests/support/image_workflow.py` and joined fixture test |
-| Authentication and cross-owner access denial | Joined acceptance and delivery tests |
-| Failed regeneration leaves original available | Joined acceptance workflow |
-| Real migrations, PostgreSQL metadata, version sequence, and owner isolation | `test_image_workflow_integration.py` |
-| Temporary private storage and relative unpredictable keys | Joined tests and PostgreSQL proof |
-| CI execution without live credentials | `.github/workflows/quality.yml` |
+| Requirement                                                                       | Automated evidence                                        |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Permitted prompt, safety, mocked provider, validation, storage, and delivery path | `test_image_workflow_acceptance.py`                       |
+| Regeneration creates a child and preserves its parent                             | Joined acceptance workflow and PostgreSQL proof           |
+| Rights and sensitive-news rejection before provider access                        | Joined acceptance workflow                                |
+| Valid, invalid, corrupt, and oversized reusable files                             | `tests/support/image_workflow.py` and joined fixture test |
+| Authentication and cross-owner access denial                                      | Joined acceptance and delivery tests                      |
+| Failed regeneration leaves original available                                     | Joined acceptance workflow                                |
+| Real migrations, PostgreSQL metadata, version sequence, and owner isolation       | `test_image_workflow_integration.py`                      |
+| Temporary private storage and relative unpredictable keys                         | Joined tests and PostgreSQL proof                         |
+| CI execution without live credentials                                             | `.github/workflows/quality.yml`                           |
 
 Run the complete deterministic E5 set from the repository root:
 
@@ -643,128 +643,145 @@ Normal tests do not need PostgreSQL, Docker, an OpenAI key, live news content, r
 
 ## NFA-56 frontend application shell coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Shared authenticated application layout | `workspace-layout.test.tsx` and `workspace-components.test.tsx` |
-| Dashboard, Create Post, Content Library, and Account protection | `route-protection.test.ts` |
-| Server validation before private child rendering | `workspace-layout.test.tsx` |
-| Active route and accessible navigation | `workspace-components.test.tsx` |
-| Mobile menu state and Escape-key operation | `workspace-components.test.tsx` |
-| Reusable buttons, inputs, cards, statuses, and loading feedback | `workspace-components.test.tsx` |
-| Safe error boundary and retry action | `workspace-components.test.tsx` |
-| Existing authentication, session, CSRF, and logout behavior | Existing NFA-24 frontend tests |
-| Production route and TypeScript validation | `npm run build` and `npm run typecheck` |
+| Requirement                                                     | Automated evidence                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| Shared authenticated application layout                         | `workspace-layout.test.tsx` and `workspace-components.test.tsx` |
+| Dashboard, Create Post, Content Library, and Account protection | `route-protection.test.ts`                                      |
+| Server validation before private child rendering                | `workspace-layout.test.tsx`                                     |
+| Active route and accessible navigation                          | `workspace-components.test.tsx`                                 |
+| Mobile menu state and Escape-key operation                      | `workspace-components.test.tsx`                                 |
+| Reusable buttons, inputs, cards, statuses, and loading feedback | `workspace-components.test.tsx`                                 |
+| Safe error boundary and retry action                            | `workspace-components.test.tsx`                                 |
+| Existing authentication, session, CSRF, and logout behavior     | Existing NFA-24 frontend tests                                  |
+| Production route and TypeScript validation                      | `npm run build` and `npm run typecheck`                         |
 
 See the [NFA-56 frontend layout guide](frontend-layout.md) for the route structure, component conventions, responsive behavior, accessibility rules, security boundary, results, and limitations.
 
 ## NFA-58 article filtering and browsing-state coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Approved category options and accessible native selection | `article-filtering.test.tsx` |
-| URL category restoration and one catalogue request | `article-filtering.test.tsx` |
-| Category, search, and sort preservation | `article-filtering.test.tsx` and `article-dashboard.test.tsx` |
-| Cursor removal when filters change | `article-filtering.test.tsx` |
-| Invalid or duplicated category handling without a frontend API request | `article-filtering.test.tsx` |
-| Frontend category query validation | `article-api.test.ts` |
-| FastAPI category validation and OpenAPI contract | `test_article_catalogue.py` |
-| Cursor rejection when category state changes | `test_article_catalogue.py` |
-| PostgreSQL category filtering before pagination | `test_article_catalogue_integration.py` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                                            | Automated evidence                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Approved category options and accessible native selection              | `article-filtering.test.tsx`                                  |
+| URL category restoration and one catalogue request                     | `article-filtering.test.tsx`                                  |
+| Category, search, and sort preservation                                | `article-filtering.test.tsx` and `article-dashboard.test.tsx` |
+| Cursor removal when filters change                                     | `article-filtering.test.tsx`                                  |
+| Invalid or duplicated category handling without a frontend API request | `article-filtering.test.tsx`                                  |
+| Frontend category query validation                                     | `article-api.test.ts`                                         |
+| FastAPI category validation and OpenAPI contract                       | `test_article_catalogue.py`                                   |
+| Cursor rejection when category state changes                           | `test_article_catalogue.py`                                   |
+| PostgreSQL category filtering before pagination                        | `test_article_catalogue_integration.py`                       |
+| Production TypeScript and route validation                             | `npm run typecheck` and `npm run build`                       |
 
 See the [NFA-58 article filtering guide](article-filtering.md) for the approved identifiers, URL-state flow, pagination rules, empty and invalid states, accessibility, results, and limitations.
 
 ## NFA-59 article selection and source-panel coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| UUID-only article selection URL | `article-selection.test.tsx` and `article-card.test.tsx` |
-| Authenticated detail retrieval and response validation | `article-api.test.ts` |
-| Title, provider, date, category, summary, attribution, and source link | `source-panel.test.tsx` |
-| Available, restricted, and insufficient generation states | `source-panel.test.tsx` and `test_article_catalogue.py` |
-| Restricted continuation disabled | `source-panel.test.tsx` |
-| Missing, invalid, duplicated, and inaccessible selection states | `generate-page.test.tsx` and `test_article_catalogue.py` |
-| HTML-like source values rendered as text | `source-panel.test.tsx` |
-| Responsive metadata layout and accessible structure | `source-panel.test.tsx` |
-| PostgreSQL current detail and readiness | `test_article_catalogue_integration.py` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                                            | Automated evidence                                       |
+| ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| UUID-only article selection URL                                        | `article-selection.test.tsx` and `article-card.test.tsx` |
+| Authenticated detail retrieval and response validation                 | `article-api.test.ts`                                    |
+| Title, provider, date, category, summary, attribution, and source link | `source-panel.test.tsx`                                  |
+| Available, restricted, and insufficient generation states              | `source-panel.test.tsx` and `test_article_catalogue.py`  |
+| Restricted continuation disabled                                       | `source-panel.test.tsx`                                  |
+| Missing, invalid, duplicated, and inaccessible selection states        | `generate-page.test.tsx` and `test_article_catalogue.py` |
+| HTML-like source values rendered as text                               | `source-panel.test.tsx`                                  |
+| Responsive metadata layout and accessible structure                    | `source-panel.test.tsx`                                  |
+| PostgreSQL current detail and readiness                                | `test_article_catalogue_integration.py`                  |
+| Production TypeScript and route validation                             | `npm run typecheck` and `npm run build`                  |
 
 See the [NFA-59 article selection guide](article-selection.md) for the detail contract, source panel, safe states, accessibility, security boundary, results, and limitations.
 
 ## NFA-60 LinkedIn generation controls coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Professional and medium defaults with exact supported choices | `generation-controls.test.tsx` |
-| Tone, length, and article UUID in the request | `generation-controls.test.tsx` |
-| CSRF proof and random idempotency header | `generation-controls.test.tsx` |
-| Missing, invalid, restricted, and insufficient source handling | `generation-controls.test.tsx` and `generate-page.test.tsx` |
-| Active loading state and synchronous duplicate prevention | `generation-controls.test.tsx` |
-| Authentication recovery and usage-limit retry lock | `generation-controls.test.tsx` |
-| Runtime-validated success and mandatory review receipt | `generation-controls.test.tsx` and `types/generation.ts` |
-| Native labelled radio groups, keyboard operation, live regions, and focus | `generation-controls.test.tsx` |
-| Header and cookie allowlists plus safe gateway errors | `generation-proxy.test.ts` |
-| Available and restricted Create Post integration | `generate-page.test.tsx` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                                               | Automated evidence                                          |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Professional and medium defaults with exact supported choices             | `generation-controls.test.tsx`                              |
+| Tone, length, and article UUID in the request                             | `generation-controls.test.tsx`                              |
+| CSRF proof and random idempotency header                                  | `generation-controls.test.tsx`                              |
+| Missing, invalid, restricted, and insufficient source handling            | `generation-controls.test.tsx` and `generate-page.test.tsx` |
+| Active loading state and synchronous duplicate prevention                 | `generation-controls.test.tsx`                              |
+| Authentication recovery and usage-limit retry lock                        | `generation-controls.test.tsx`                              |
+| Runtime-validated success and mandatory review receipt                    | `generation-controls.test.tsx` and `types/generation.ts`    |
+| Native labelled radio groups, keyboard operation, live regions, and focus | `generation-controls.test.tsx`                              |
+| Header and cookie allowlists plus safe gateway errors                     | `generation-proxy.test.ts`                                  |
+| Available and restricted Create Post integration                          | `generate-page.test.tsx`                                    |
+| Production TypeScript and route validation                                | `npm run typecheck` and `npm run build`                     |
 
 See the [NFA-60 LinkedIn generation controls guide](linkedin-generation-controls.md) for the exact request contract, supported preferences, same-origin gateway, controlled states, security boundary, accessibility behaviour, tests, and limitations.
 
 ## NFA-61 reusable generation state coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Idle, submitting, processing, completed, and failed transitions | `generation-state.test.tsx` |
-| Slow synchronous operation remains in processing | `generation-state.test.tsx` |
-| Network and provider-timeout failure handling | `generation-state.test.tsx` and `generation-controls.test.tsx` |
-| Deliberate retry with preserved input | `generation-state.test.tsx` |
-| Synchronous duplicate-request lock | `generation-state.test.tsx` and `generation-controls.test.tsx` |
-| Older response cannot replace current state | `generation-state.test.tsx` |
-| Text-specific and image-specific status feedback | `generation-state.test.tsx` |
-| Usage-limit countdown prevents early retry | `generation-state.test.tsx` and `generation-controls.test.tsx` |
-| Polite status and assertive failure announcements | `generation-state.test.tsx` |
-| No unsupported cancellation action | `generation-state.test.tsx` |
-| Integrated Create Post behaviour | `generation-controls.test.tsx` and `generate-page.test.tsx` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                                     | Automated evidence                                             |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| Idle, submitting, processing, completed, and failed transitions | `generation-state.test.tsx`                                    |
+| Slow synchronous operation remains in processing                | `generation-state.test.tsx`                                    |
+| Network and provider-timeout failure handling                   | `generation-state.test.tsx` and `generation-controls.test.tsx` |
+| Deliberate retry with preserved input                           | `generation-state.test.tsx`                                    |
+| Synchronous duplicate-request lock                              | `generation-state.test.tsx` and `generation-controls.test.tsx` |
+| Older response cannot replace current state                     | `generation-state.test.tsx`                                    |
+| Text-specific and image-specific status feedback                | `generation-state.test.tsx`                                    |
+| Usage-limit countdown prevents early retry                      | `generation-state.test.tsx` and `generation-controls.test.tsx` |
+| Polite status and assertive failure announcements               | `generation-state.test.tsx`                                    |
+| No unsupported cancellation action                              | `generation-state.test.tsx`                                    |
+| Integrated Create Post behaviour                                | `generation-controls.test.tsx` and `generate-page.test.tsx`    |
+| Production TypeScript and route validation                      | `npm run typecheck` and `npm run build`                        |
 
 See the [NFA-61 frontend generation states guide](generation-states.md) for the lifecycle, retry policy, duplicate and stale-response controls, accessibility rules, tests, and current cancellation limitation.
 
 ## NFA-62 LinkedIn draft editor coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Generated draft and source reference loading | `linkedin-editor.test.tsx` and `generation-controls.test.tsx` |
-| Multiline editing and line-preserving preview | `linkedin-editor.test.tsx` |
-| Character count and configured length guidance | `linkedin-editor.test.tsx` |
-| Empty and missing draft states | `linkedin-editor.test.tsx` |
-| Grounding warnings preserved after editing | `linkedin-editor.test.tsx` |
-| Normal rerenders preserve local text | `linkedin-editor.test.tsx` |
-| Newer generation cannot silently overwrite edits | `linkedin-editor.test.tsx` |
-| Unsaved same-tab navigation confirmation | `linkedin-editor.test.tsx` |
-| HTML-like text rendered without executable markup | `linkedin-editor.test.tsx` |
-| Native keyboard editing and accessible labels | `linkedin-editor.test.tsx` |
-| Validated generation response integrated with the editor | `generation-controls.test.tsx` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                              | Automated evidence                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| Generated draft and source reference loading             | `linkedin-editor.test.tsx` and `generation-controls.test.tsx` |
+| Multiline editing and line-preserving preview            | `linkedin-editor.test.tsx`                                    |
+| Character count and configured length guidance           | `linkedin-editor.test.tsx`                                    |
+| Empty and missing draft states                           | `linkedin-editor.test.tsx`                                    |
+| Grounding warnings preserved after editing               | `linkedin-editor.test.tsx`                                    |
+| Normal rerenders preserve local text                     | `linkedin-editor.test.tsx`                                    |
+| Newer generation cannot silently overwrite edits         | `linkedin-editor.test.tsx`                                    |
+| Unsaved same-tab navigation confirmation                 | `linkedin-editor.test.tsx`                                    |
+| HTML-like text rendered without executable markup        | `linkedin-editor.test.tsx`                                    |
+| Native keyboard editing and accessible labels            | `linkedin-editor.test.tsx`                                    |
+| Validated generation response integrated with the editor | `generation-controls.test.tsx`                                |
+| Production TypeScript and route validation               | `npm run typecheck` and `npm run build`                       |
 
 See the [NFA-62 LinkedIn draft editor guide](linkedin-draft-editor.md) for the editor state, local preview, overwrite protection, navigation warning, source and warning rules, security, accessibility, tests, and E7 boundary.
 
 ## NFA-63 LinkedIn-inspired content preview coverage
 
-| Requirement | Automated evidence |
-|---|---|
-| Current edited text and paragraph preservation | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
-| Selected image and image-change synchronisation | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
-| No-image, empty-draft, and missing-image states | `linkedin-preview.test.tsx` |
-| Source reference and HTTPS-only source link | `linkedin-preview.test.tsx` |
-| AI-generated illustration designation | `linkedin-preview.test.tsx` |
-| Review warnings remain visible | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
-| HTML-like text remains non-executable | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
-| Accessible image descriptions and status fallback | `linkedin-preview.test.tsx` |
-| Responsive fluid layout classes | `linkedin-preview.test.tsx` |
-| Session-cookie-only protected image gateway | `image-content-proxy.test.ts` |
-| UUID, media-type, cache, and safe-failure controls | `image-content-proxy.test.ts` |
-| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+| Requirement                                        | Automated evidence                                         |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| Current edited text and paragraph preservation     | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| Selected image and image-change synchronisation    | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| No-image, empty-draft, and missing-image states    | `linkedin-preview.test.tsx`                                |
+| Source reference and HTTPS-only source link        | `linkedin-preview.test.tsx`                                |
+| AI-generated illustration designation              | `linkedin-preview.test.tsx`                                |
+| Review warnings remain visible                     | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| HTML-like text remains non-executable              | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| Accessible image descriptions and status fallback  | `linkedin-preview.test.tsx`                                |
+| Responsive fluid layout classes                    | `linkedin-preview.test.tsx`                                |
+| Session-cookie-only protected image gateway        | `image-content-proxy.test.ts`                              |
+| UUID, media-type, cache, and safe-failure controls | `image-content-proxy.test.ts`                              |
+| Production TypeScript and route validation         | `npm run typecheck` and `npm run build`                    |
 
 See the [NFA-63 LinkedIn content preview guide](linkedin-content-preview.md) for the component contract, protected delivery flow, safety rules, states, accessibility behaviour, tests, and limitations.
+
+## NFA-64 image generation control coverage
+
+| Requirement                                               | Automated evidence                                         |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
+| Owner-scoped initial image generation                     | `test_image_regeneration.py`                               |
+| Root image storage and initial idempotent replay          | `test_image_regeneration.py`                               |
+| Cross-user draft non-disclosure                           | `test_image_regeneration.py`                               |
+| Initial FastAPI contract and private cache policy         | `test_image_regeneration.py`                               |
+| Browser validation, CSRF, idempotency, and safe errors    | `image-generation-api.test.ts`                             |
+| Same-origin gateway cookie and header allowlist           | `image-generation-proxy.test.ts`                           |
+| Generate, regenerate, retain original, and select version | `image-controls.test.tsx`                                  |
+| Preserve edited draft during image operations             | `image-controls.test.tsx`                                  |
+| Duplicate-click protection and truthful loading           | `image-controls.test.tsx`                                  |
+| Existing editor and preview regressions                   | `linkedin-editor.test.tsx` and `linkedin-preview.test.tsx` |
+
+See the [NFA-64 image generation controls guide](image-generation-controls.md) for the request flow, supported preferences, security boundary, immutable version behaviour, accessibility, tests, and limitations.
 
 ## Run the frontend suite
 
@@ -881,9 +898,12 @@ Verified locally on 1 November 2026:
 - The focused NFA-63 preview, image gateway, editor, generation-control, and page-integration run passed 37 tests across 5 files.
 - The complete frontend run after NFA-63 passed 104 tests across 20 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
 - The NFA-63 local Next.js source preview returned HTTP 200. Native browser automation remained unavailable, so selected-image, responsive, keyboard, and assistive-technology browser review remains a manual acceptance step.
+- The focused NFA-64 backend initial-image and regeneration run passed 15 tests without a live OpenAI call.
+- The complete frontend run after NFA-64 passed 114 tests across 23 files.
+- The NFA-64 production build passed and the local Next.js login route returned HTTP 200. Native browser automation was unavailable, so final responsive, keyboard, and assistive-technology browser review remains a manual acceptance step.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, and NFA-63
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, and NFA-64
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

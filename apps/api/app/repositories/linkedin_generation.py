@@ -102,6 +102,13 @@ class LinkedInGenerationRepository(Protocol):
         draft_id: UUID,
     ) -> LinkedInDraft | None: ...
 
+    async def get_draft_by_generation_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        generation_id: UUID,
+    ) -> LinkedInDraft | None: ...
+
 
 class SqlAlchemyLinkedInGenerationRepository:
     """Read current source data and save private drafts in one transaction."""
@@ -390,6 +397,30 @@ class SqlAlchemyLinkedInGenerationRepository:
                     await session.execute(
                         self._draft_statement().where(
                             GeneratedPostTable.id == draft_id,
+                            GeneratedPostTable.user_id == owner_id,
+                        )
+                    )
+                ).one_or_none()
+        except SQLAlchemyError as exc:
+            raise LinkedInGenerationRepositoryError(
+                "The generated draft could not be read."
+            ) from exc
+        return None if row is None else self._draft_from_row(row)
+
+    async def get_draft_by_generation_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        generation_id: UUID,
+    ) -> LinkedInDraft | None:
+        """Resolve a successful text generation without disclosing other owners."""
+
+        try:
+            async with self._database.session() as session:
+                row = (
+                    await session.execute(
+                        self._draft_statement().where(
+                            GenerationRunTable.id == generation_id,
                             GeneratedPostTable.user_id == owner_id,
                         )
                     )

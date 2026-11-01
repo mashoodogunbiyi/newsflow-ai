@@ -2,9 +2,9 @@
 
 NewsFlow AI is a planned full-stack application that turns authorised CNN International news information into original, source-grounded LinkedIn posts and accompanying AI-generated illustrations.
 
-> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API. NFA-35 adds safe structured ingestion logs, job and provider durations, operational metrics, protected status APIs, and configurable health thresholds. NFA-36 adds a complete synthetic provider-to-PostgreSQL-to-REST test suite with an enforced backend coverage floor. NFA-38 adds a secure, reusable, bounded, and fully mocked OpenAI Responses API service in FastAPI. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction with injection safeguards and factual evaluation examples. NFA-40 connects those controls through an authenticated, rate-limited, owner-scoped LinkedIn draft generation service with strict structured-output validation and PostgreSQL metadata. NFA-41 adds the secure frontend-facing `POST /api/generations` contract with narrow responses and documented failure handling. NFA-42 adds deterministic factual-grounding checks, safe review warnings, trusted source-reference validation, and persisted validation evidence while keeping human verification mandatory. NFA-43 adds shared daily, concurrency, and duplicate generation controls, safe failure categories, token tracking, and operational guidance. NFA-44 adds a synthetic AI-quality dataset, explainable generation scoring, prompt-version regression detection, and an isolated optional live-model evaluation. NFA-45 adds content-free generation lifecycle auditing, request correlation, duration and token metrics, retention, and administrator-only monitoring endpoints. NFA-46 completes the E4 architecture, joined HTTP-to-draft acceptance verification, final acceptance record, and exact E6 frontend integration contract. NFA-48 adds a rights-aware, versioned image-prompt composer with controlled illustration choices, article-or-draft context, injection separation, restricted-photography protection, and non-deception rules. NFA-49 adds the central pre-provider image safety policy, sensitive-news classifications, documentary-evidence and real-person safeguards, conservative uncertainty, provider-control requirements, AI designation, and content-free decisions. NFA-50 to NFA-53 add the mocked provider boundary, validated private storage, immutable regeneration, and owner-scoped delivery. NFA-54 adds the complete deterministic E5 image-workflow test suite and isolated PostgreSQL proof. NFA-56 adds the reusable authenticated frontend shell, responsive navigation, primary workspace routes, shared interface components, and safe route boundaries. NFA-57 adds the responsive authorised-article dashboard, server-side catalogue integration, safe article cards, search, sorting, cursor pagination, and controlled interface states. NFA-58 adds approved category filtering, URL-restorable browsing state, filter-aware pagination, and accessible empty and invalid states. NFA-59 adds UUID-only article selection, protected detail retrieval, current generation readiness, and a responsive source information panel. NFA-60 adds accessible LinkedIn tone and length controls, a secure same-origin generation gateway, duplicate protection, controlled request states, and runtime-validated responses. NFA-61 adds reusable text and image generation states, deliberate retries, accessible feedback, duplicate locking, and stale-response protection. NFA-62 adds the responsive LinkedIn draft editor, preserved warnings and attribution, and unsaved-edit protection. NFA-63 adds the responsive combined content preview, owner-protected image delivery, AI-image designation, and controlled preview states. ADR-001 continues to block all live CNN access.
+> Status: engineering foundation, secure accounts, and the provider-neutral news boundary are in progress. NFA-12 to NFA-18 provide the working application foundation and local development environment. NFA-20 and NFA-21 provide the approved schema, migrations, and synthetic seed data. NFA-22 to NFA-26 provide the secure account lifecycle, object-level authorisation, regression tests, and automatic quality checks. NFA-28 to NFA-32 provide the fixture-first provider boundary, validation, identity, provenance, and rights enforcement. NFA-33 adds durable article synchronisation. NFA-34 adds an authenticated, rights-aware article catalogue REST API. NFA-35 adds safe structured ingestion logs, job and provider durations, operational metrics, protected status APIs, and configurable health thresholds. NFA-36 adds a complete synthetic provider-to-PostgreSQL-to-REST test suite with an enforced backend coverage floor. NFA-38 adds a secure, reusable, bounded, and fully mocked OpenAI Responses API service in FastAPI. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction with injection safeguards and factual evaluation examples. NFA-40 connects those controls through an authenticated, rate-limited, owner-scoped LinkedIn draft generation service with strict structured-output validation and PostgreSQL metadata. NFA-41 adds the secure frontend-facing `POST /api/generations` contract with narrow responses and documented failure handling. NFA-42 adds deterministic factual-grounding checks, safe review warnings, trusted source-reference validation, and persisted validation evidence while keeping human verification mandatory. NFA-43 adds shared daily, concurrency, and duplicate generation controls, safe failure categories, token tracking, and operational guidance. NFA-44 adds a synthetic AI-quality dataset, explainable generation scoring, prompt-version regression detection, and an isolated optional live-model evaluation. NFA-45 adds content-free generation lifecycle auditing, request correlation, duration and token metrics, retention, and administrator-only monitoring endpoints. NFA-46 completes the E4 architecture, joined HTTP-to-draft acceptance verification, final acceptance record, and exact E6 frontend integration contract. NFA-48 adds a rights-aware, versioned image-prompt composer with controlled illustration choices, article-or-draft context, injection separation, restricted-photography protection, and non-deception rules. NFA-49 adds the central pre-provider image safety policy, sensitive-news classifications, documentary-evidence and real-person safeguards, conservative uncertainty, provider-control requirements, AI designation, and content-free decisions. NFA-50 to NFA-53 add the mocked provider boundary, validated private storage, immutable regeneration, and owner-scoped delivery. NFA-54 adds the complete deterministic E5 image-workflow test suite and isolated PostgreSQL proof. NFA-56 adds the reusable authenticated frontend shell, responsive navigation, primary workspace routes, shared interface components, and safe route boundaries. NFA-57 adds the responsive authorised-article dashboard, server-side catalogue integration, safe article cards, search, sorting, cursor pagination, and controlled interface states. NFA-58 adds approved category filtering, URL-restorable browsing state, filter-aware pagination, and accessible empty and invalid states. NFA-59 adds UUID-only article selection, protected detail retrieval, current generation readiness, and a responsive source information panel. NFA-60 adds accessible LinkedIn tone and length controls, a secure same-origin generation gateway, duplicate protection, controlled request states, and runtime-validated responses. NFA-61 adds reusable text and image generation states, deliberate retries, accessible feedback, duplicate locking, and stale-response protection. NFA-62 adds the responsive LinkedIn draft editor, preserved warnings and attribution, and unsaved-edit protection. NFA-63 adds the responsive combined content preview, owner-protected image delivery, AI-image designation, and controlled preview states. NFA-64 adds supported image preferences, authenticated initial generation, immutable alternatives, version selection, and live preview integration. ADR-001 continues to block all live CNN access.
 
-> Current implementation: NFA-63 combines the current edited draft, trusted source reference, review warnings, and an optional selected private AI-generated illustration in a responsive LinkedIn-inspired preview. The preview uses owner-protected image delivery, marks synthetic imagery clearly, handles empty or failed states, and never claims to reproduce or publish to LinkedIn. The current Create Post flow will show the no-image state until a separate image-selection interface supplies an image ID. Persistent saving remains correctly reserved for E7.
+> Current implementation: NFA-64 lets an authenticated user choose approved illustration preferences, generate the first private image for a LinkedIn draft, create immutable alternatives, retain the original, and select the version displayed in the NFA-63 preview. FastAPI rechecks ownership, current source rights, safety, and usage limits before provider access. Draft edits remain unchanged, private delivery remains owner protected, and persistent saving remains correctly reserved for E7.
 
 ## Product workflow
 
@@ -19,15 +19,15 @@ Direct LinkedIn publishing, other news sources, video generation, payments, and 
 
 ## Planned architecture
 
-| Layer | Planned technology | Responsibility |
-|---|---|---|
-| Web | Next.js, React, TypeScript, Tailwind CSS | Authentication screens, news dashboard, generation controls, editor, and preview |
-| Backend API (our application) | FastAPI, Python | Business logic, validation, authorisation, orchestration, and REST endpoints |
-| Data | PostgreSQL | Users, permitted article metadata, source lineage, generations, and saved posts |
-| Queue/scheduler | Lightweight worker selected during implementation | Authorised news synchronisation and long-running generation work |
-| External AI API | OpenAI API, called with the official Python SDK | LinkedIn post generation through the Responses API and original image generation |
-| Object storage | S3-compatible storage; local adapter for development | Generated image assets |
-| Delivery | Docker Compose and GitHub Actions | Reproducible local setup, tests, and release checks |
+| Layer                         | Planned technology                                   | Responsibility                                                                   |
+| ----------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Web                           | Next.js, React, TypeScript, Tailwind CSS             | Authentication screens, news dashboard, generation controls, editor, and preview |
+| Backend API (our application) | FastAPI, Python                                      | Business logic, validation, authorisation, orchestration, and REST endpoints     |
+| Data                          | PostgreSQL                                           | Users, permitted article metadata, source lineage, generations, and saved posts  |
+| Queue/scheduler               | Lightweight worker selected during implementation    | Authorised news synchronisation and long-running generation work                 |
+| External AI API               | OpenAI API, called with the official Python SDK      | LinkedIn post generation through the Responses API and original image generation |
+| Object storage                | S3-compatible storage; local adapter for development | Generated image assets                                                           |
+| Delivery                      | Docker Compose and GitHub Actions                    | Reproducible local setup, tests, and release checks                              |
 
 ### FastAPI and the OpenAI API are different
 
@@ -92,6 +92,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/generation-states.md](docs/generation-states.md) - NFA-61 reusable text and image lifecycle, retry rules, duplicate and stale-response protection, accessibility, and tests.
 - [docs/linkedin-draft-editor.md](docs/linkedin-draft-editor.md) - NFA-62 editable draft, live preview, source and warning preservation, unsaved-change protection, accessibility, and tests.
 - [docs/linkedin-content-preview.md](docs/linkedin-content-preview.md) - NFA-63 responsive content preview, private image delivery, AI designation, source and warning display, empty states, accessibility, limitations, and tests.
+- [docs/image-generation-controls.md](docs/image-generation-controls.md) - NFA-64 supported image preferences, secure generation and regeneration, immutable version selection, preview integration, safety, accessibility, and tests.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -152,6 +153,7 @@ newsflow-ai/
 │   ├── article-selection.md # Article selection and permitted source-panel contract
 │   ├── generation-states.md # Reusable text and image generation lifecycle
 │   ├── linkedin-draft-editor.md # Accessible editable draft and local preview
+│   ├── image-generation-controls.md # Secure image choices, version gallery, and preview integration
 │   ├── e4-generation-acceptance.md # E4 joined verification and acceptance record
 │   ├── e6-generation-integration-contract.md # Future frontend generation contract
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
@@ -173,56 +175,57 @@ The frontend and backend directories contain working application foundations. Po
 
 ### Directory responsibilities
 
-| Path | Responsibility |
-|---|---|
-| `apps/web` | Frontend user interface, authentication screens, dashboard, editor, and previews |
-| `apps/api` | Backend API, validation, authorisation, persistence, and external-service orchestration |
-| `apps/api/migrations` | Alembic database migration environment and versioned schema revisions |
-| `packages` | Code and contracts shared between applications |
-| `infrastructure/database` | Future hosted database, backup, and restore configuration |
-| `infrastructure/docker` | Docker and local dependency configuration |
-| `docs/architecture` | Architecture decisions and technical design records |
-| `docs/article-identity-and-deduplication.md` | NFA-31 identity, deduplication, atomic ingestion, update, and test rules |
-| `docs/article-normalisation.md` | NFA-30 rights-aware mapping, validation, sanitisation, error rules, and tests |
-| `docs/article-provenance-and-rights.md` | NFA-32 provenance, versioned permissions, fail-closed checks, and tests |
-| `docs/article-synchronisation.md` | NFA-33 job lifecycle, schedule, manual trigger, checkpoint, retry, and recovery rules |
-| `docs/article-catalogue-api.md` | NFA-34 REST endpoints, public schema, authentication, pagination, filtering, rights, and tests |
-| `docs/ingestion-observability.md` | NFA-35 safe logs, durations, metrics, administrator status endpoints, health thresholds, and response process |
-| `docs/article-pipeline-testing.md` | NFA-36 complete synthetic pipeline strategy, isolation, coverage, results, and limitations |
-| `docs/openai-integration.md` | NFA-38 OpenAI service architecture, configuration, security, error handling, tests, and limitations |
-| `docs/linkedin-prompting.md` | NFA-39 prompt versions, permitted fields, grounding, preferences, injection protection, evaluations, and tests |
-| `docs/linkedin-generation-service.md` | NFA-40 generation orchestration, API, rights, persistence, validation, controls, and tests |
-| `docs/generation-api.md` | NFA-41 frontend generation endpoint, public schema, security, failure mapping, OpenAPI, and tests |
-| `docs/factual-grounding-validation.md` | NFA-42 grounding requirements, validation policy, safe results, persistence, limitations, and tests |
-| `docs/generation-operations.md` | NFA-43 generation limits, duplicate control, retry policy, usage evidence, safe errors, tests, and troubleshooting |
-| `docs/ai-generation-evaluation.md` | NFA-44 generation quality criteria, scoring, fixtures, regression process, tests, and limitations |
-| `docs/generation-monitoring.md` | NFA-45 lifecycle audit events, request correlation, aggregate metrics, protected access, retention, tests, and troubleshooting |
-| `docs/architecture/ai-generation-architecture.md` | NFA-46 complete E4 architecture, lifecycle, security controls, monitoring, limitations, and readiness |
-| `docs/e4-generation-acceptance.md` | NFA-46 joined acceptance scenarios, verification results, limitations, and final E4 decision |
-| `docs/e6-generation-integration-contract.md` | Secure request, response, CSRF, error, review, and accessibility contract for E6 |
-| `docs/image-prompt-composer.md` | NFA-48 illustration parameters, rights and context checks, injection separation, safety rules, tests, and limitations |
-| `docs/image-safety-policy.md` | NFA-49 sensitive-news decisions, provider gate, non-deception and person safeguards, metadata, tests, and limitations |
-| `docs/openai-image-generation.md` | NFA-50 OpenAI Images API boundary, controlled configuration, safety and rights gates, response validation, errors, usage, and tests |
-| `docs/image-storage.md` | NFA-51 image validation, private storage, provenance metadata, consistency, and cleanup |
-| `docs/image-regeneration.md` | NFA-52 protected regeneration API, version relationships, controls, failures, and tests |
-| `docs/image-delivery.md` | NFA-53 protected image metadata, preview, download, authorisation, caching, failures, and tests |
-| `docs/e5-image-testing.md` | NFA-54 complete E5 strategy, fixtures, joined workflow, PostgreSQL proof, CI, results, and limitations |
-| `docs/frontend-layout.md` | NFA-56 application shell, routes, responsive behavior, UI conventions, accessibility, security, and tests |
-| `docs/article-dashboard.md` | NFA-57 dashboard data requirements, API integration, article cards, pagination, states, safety, and tests |
-| `docs/article-filtering.md` | NFA-58 approved categories, URL state, pagination reset, accessibility, security, and tests |
-| `docs/article-selection.md` | NFA-59 UUID-only article selection, source review, readiness, controlled states, and tests |
-| `docs/linkedin-generation-controls.md` | NFA-60 tones, lengths, same-origin request flow, duplicate protection, controlled states, accessibility, and tests |
-| `docs/generation-states.md` | NFA-61 reusable text and image states, retry policy, stale-response protection, accessibility, and tests |
-| `docs/linkedin-draft-editor.md` | NFA-62 editable draft, preview synchronisation, warnings, attribution, unsaved changes, and tests |
-| `docs/linkedin-content-preview.md` | NFA-63 combined draft and image preview, secure delivery, AI designation, states, accessibility, limitations, and tests |
-| `docs/authorization.md` | Object ownership rules, protected operations, safe errors, and test evidence |
-| `docs/cnn-adapter.md` | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates |
-| `docs/source-provider-interface.md` | Provider interface, article contract, fixture adapter, safe errors, and integration instructions |
-| `docs/testing.md` | Account-security test layers, coverage, isolation, commands, and CI behaviour |
-| `docs/jira` | Approved Jira deliverables and project-governance evidence |
-| `docs/development-setup.md` | Software requirements, setup, configuration, testing, verification, and troubleshooting |
-| `tests` | Cross-application, integration, and end-to-end tests |
-| `compose.yaml` | Local multi-container development configuration |
+| Path                                              | Responsibility                                                                                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                                        | Frontend user interface, authentication screens, dashboard, editor, and previews                                                    |
+| `apps/api`                                        | Backend API, validation, authorisation, persistence, and external-service orchestration                                             |
+| `apps/api/migrations`                             | Alembic database migration environment and versioned schema revisions                                                               |
+| `packages`                                        | Code and contracts shared between applications                                                                                      |
+| `infrastructure/database`                         | Future hosted database, backup, and restore configuration                                                                           |
+| `infrastructure/docker`                           | Docker and local dependency configuration                                                                                           |
+| `docs/architecture`                               | Architecture decisions and technical design records                                                                                 |
+| `docs/article-identity-and-deduplication.md`      | NFA-31 identity, deduplication, atomic ingestion, update, and test rules                                                            |
+| `docs/article-normalisation.md`                   | NFA-30 rights-aware mapping, validation, sanitisation, error rules, and tests                                                       |
+| `docs/article-provenance-and-rights.md`           | NFA-32 provenance, versioned permissions, fail-closed checks, and tests                                                             |
+| `docs/article-synchronisation.md`                 | NFA-33 job lifecycle, schedule, manual trigger, checkpoint, retry, and recovery rules                                               |
+| `docs/article-catalogue-api.md`                   | NFA-34 REST endpoints, public schema, authentication, pagination, filtering, rights, and tests                                      |
+| `docs/ingestion-observability.md`                 | NFA-35 safe logs, durations, metrics, administrator status endpoints, health thresholds, and response process                       |
+| `docs/article-pipeline-testing.md`                | NFA-36 complete synthetic pipeline strategy, isolation, coverage, results, and limitations                                          |
+| `docs/openai-integration.md`                      | NFA-38 OpenAI service architecture, configuration, security, error handling, tests, and limitations                                 |
+| `docs/linkedin-prompting.md`                      | NFA-39 prompt versions, permitted fields, grounding, preferences, injection protection, evaluations, and tests                      |
+| `docs/linkedin-generation-service.md`             | NFA-40 generation orchestration, API, rights, persistence, validation, controls, and tests                                          |
+| `docs/generation-api.md`                          | NFA-41 frontend generation endpoint, public schema, security, failure mapping, OpenAPI, and tests                                   |
+| `docs/factual-grounding-validation.md`            | NFA-42 grounding requirements, validation policy, safe results, persistence, limitations, and tests                                 |
+| `docs/generation-operations.md`                   | NFA-43 generation limits, duplicate control, retry policy, usage evidence, safe errors, tests, and troubleshooting                  |
+| `docs/ai-generation-evaluation.md`                | NFA-44 generation quality criteria, scoring, fixtures, regression process, tests, and limitations                                   |
+| `docs/generation-monitoring.md`                   | NFA-45 lifecycle audit events, request correlation, aggregate metrics, protected access, retention, tests, and troubleshooting      |
+| `docs/architecture/ai-generation-architecture.md` | NFA-46 complete E4 architecture, lifecycle, security controls, monitoring, limitations, and readiness                               |
+| `docs/e4-generation-acceptance.md`                | NFA-46 joined acceptance scenarios, verification results, limitations, and final E4 decision                                        |
+| `docs/e6-generation-integration-contract.md`      | Secure request, response, CSRF, error, review, and accessibility contract for E6                                                    |
+| `docs/image-prompt-composer.md`                   | NFA-48 illustration parameters, rights and context checks, injection separation, safety rules, tests, and limitations               |
+| `docs/image-safety-policy.md`                     | NFA-49 sensitive-news decisions, provider gate, non-deception and person safeguards, metadata, tests, and limitations               |
+| `docs/openai-image-generation.md`                 | NFA-50 OpenAI Images API boundary, controlled configuration, safety and rights gates, response validation, errors, usage, and tests |
+| `docs/image-storage.md`                           | NFA-51 image validation, private storage, provenance metadata, consistency, and cleanup                                             |
+| `docs/image-regeneration.md`                      | NFA-52 protected regeneration API, version relationships, controls, failures, and tests                                             |
+| `docs/image-delivery.md`                          | NFA-53 protected image metadata, preview, download, authorisation, caching, failures, and tests                                     |
+| `docs/e5-image-testing.md`                        | NFA-54 complete E5 strategy, fixtures, joined workflow, PostgreSQL proof, CI, results, and limitations                              |
+| `docs/frontend-layout.md`                         | NFA-56 application shell, routes, responsive behavior, UI conventions, accessibility, security, and tests                           |
+| `docs/article-dashboard.md`                       | NFA-57 dashboard data requirements, API integration, article cards, pagination, states, safety, and tests                           |
+| `docs/article-filtering.md`                       | NFA-58 approved categories, URL state, pagination reset, accessibility, security, and tests                                         |
+| `docs/article-selection.md`                       | NFA-59 UUID-only article selection, source review, readiness, controlled states, and tests                                          |
+| `docs/linkedin-generation-controls.md`            | NFA-60 tones, lengths, same-origin request flow, duplicate protection, controlled states, accessibility, and tests                  |
+| `docs/generation-states.md`                       | NFA-61 reusable text and image states, retry policy, stale-response protection, accessibility, and tests                            |
+| `docs/linkedin-draft-editor.md`                   | NFA-62 editable draft, preview synchronisation, warnings, attribution, unsaved changes, and tests                                   |
+| `docs/linkedin-content-preview.md`                | NFA-63 combined draft and image preview, secure delivery, AI designation, states, accessibility, limitations, and tests             |
+| `docs/image-generation-controls.md`               | NFA-64 approved preferences, secure initial generation, immutable alternatives, version selection, preview integration, and tests   |
+| `docs/authorization.md`                           | Object ownership rules, protected operations, safe errors, and test evidence                                                        |
+| `docs/cnn-adapter.md`                             | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates                                                  |
+| `docs/source-provider-interface.md`               | Provider interface, article contract, fixture adapter, safe errors, and integration instructions                                    |
+| `docs/testing.md`                                 | Account-security test layers, coverage, isolation, commands, and CI behaviour                                                       |
+| `docs/jira`                                       | Approved Jira deliverables and project-governance evidence                                                                          |
+| `docs/development-setup.md`                       | Software requirements, setup, configuration, testing, verification, and troubleshooting                                             |
+| `tests`                                           | Cross-application, integration, and end-to-end tests                                                                                |
+| `compose.yaml`                                    | Local multi-container development configuration                                                                                     |
 
 Start with the complete [local development guide](docs/development-setup.md). The frontend also has its own [setup and structure guide](apps/web/README.md). The generated [Next.js agent instructions](apps/web/AGENTS.md) record version-specific framework rules that contributors and coding tools must follow. The backend has a separate [FastAPI setup and structure guide](apps/api/README.md).
 
@@ -408,14 +411,14 @@ Docker waits for PostgreSQL to become healthy before starting FastAPI, then wait
 
 NFA-17 records the following tool selection:
 
-| Area | Tool | Purpose |
-|---|---|---|
-| Frontend linting | ESLint with Next.js Core Web Vitals and TypeScript rules | Finds React, Next.js, accessibility, and TypeScript-related mistakes. |
-| Frontend formatting | Prettier | Applies one consistent format to frontend source and configuration files. |
-| Frontend type checking | TypeScript | Detects incompatible types without creating build output. |
-| Frontend testing | Vitest, React Testing Library, and jsdom | Tests React components in a lightweight simulated browser environment. |
-| Backend linting and formatting | Ruff | Finds Python errors and common bug patterns, sorts imports, and formats Python. |
-| Backend testing and coverage | Pytest and Pytest-cov | Runs backend tests and enforces the documented branch-aware coverage floor. |
+| Area                           | Tool                                                     | Purpose                                                                         |
+| ------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Frontend linting               | ESLint with Next.js Core Web Vitals and TypeScript rules | Finds React, Next.js, accessibility, and TypeScript-related mistakes.           |
+| Frontend formatting            | Prettier                                                 | Applies one consistent format to frontend source and configuration files.       |
+| Frontend type checking         | TypeScript                                               | Detects incompatible types without creating build output.                       |
+| Frontend testing               | Vitest, React Testing Library, and jsdom                 | Tests React components in a lightweight simulated browser environment.          |
+| Backend linting and formatting | Ruff                                                     | Finds Python errors and common bug patterns, sorts imports, and formats Python. |
+| Backend testing and coverage   | Pytest and Pytest-cov                                    | Runs backend tests and enforces the documented branch-aware coverage floor.     |
 
 Run the frontend checks from `apps/web`:
 
