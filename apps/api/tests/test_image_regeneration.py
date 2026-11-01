@@ -1,4 +1,4 @@
-"""NFA-52 image regeneration workflow and API tests."""
+"""NFA-52 and NFA-64 initial image and regeneration workflow tests."""
 
 import asyncio
 import hashlib
@@ -34,6 +34,8 @@ from app.models.image_generation import (
     OpenAIImageGenerationResult,
 )
 from app.models.image_regeneration import (
+    ImageCreationRequest,
+    ImageCreationResponse,
     ImageRegenerationRequest,
     ImageRegenerationResponse,
 )
@@ -73,6 +75,7 @@ CHILD_IMAGE_ID = UUID("52000000-0000-4000-8000-000000000010")
 CHILD_RUN_ID = UUID("52000000-0000-4000-8000-000000000011")
 RIGHTS_ID = UUID("52000000-0000-4000-8000-000000000012")
 SAFETY_ID = UUID("52000000-0000-4000-8000-000000000013")
+INITIAL_IMAGE_ID = UUID("52000000-0000-4000-8000-000000000016")
 NOW = datetime(2026, 10, 31, 18, 0, tzinfo=UTC)
 
 
@@ -160,12 +163,29 @@ def parent_record() -> StoredGeneratedImageRecord:
 
 
 class MemoryImages:
-    def __init__(self) -> None:
-        self.records = {PARENT_IMAGE_ID: parent_record()}
+    def __init__(self, *, include_parent: bool = True) -> None:
+        self.records = {PARENT_IMAGE_ID: parent_record()} if include_parent else {}
 
     async def get_for_owner(self, *, image_id: UUID, owner_id: UUID):
         record = self.records.get(image_id)
         return record if record is not None and record.owner_id == owner_id else None
+
+    async def get_initial_for_owner_post(
+        self,
+        *,
+        owner_id: UUID,
+        generated_post_id: UUID,
+    ):
+        return next(
+            (
+                item
+                for item in self.records.values()
+                if item.owner_id == owner_id
+                and item.generated_post_id == generated_post_id
+                and item.parent_image_id is None
+            ),
+            None,
+        )
 
     async def get_by_request_id(self, *, request_id: UUID):
         return next(
@@ -241,6 +261,16 @@ class DraftRepository:
 
     async def get_draft_for_owner(self, *, owner_id: UUID, draft_id: UUID):
         if owner_id == OWNER_ID and draft_id == POST_ID:
+            return self.draft
+        return None
+
+    async def get_draft_by_generation_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        generation_id: UUID,
+    ):
+        if owner_id == OWNER_ID and generation_id == POST_RUN_ID:
             return self.draft
         return None
 
@@ -328,9 +358,13 @@ class FakeStorage:
         self.calls.append(request)
         if self.failure is not None:
             raise self.failure
-        parent = self.images.records[request.parent_image_id]
+        parent = (
+            self.images.records[request.parent_image_id]
+            if request.parent_image_id is not None
+            else None
+        )
         record = StoredGeneratedImageRecord(
-            id=CHILD_IMAGE_ID,
+            id=CHILD_IMAGE_ID if parent is not None else INITIAL_IMAGE_ID,
             request_id=request.result.request_id,
             owner_id=request.owner_id,
             article_id=request.article_id,
@@ -339,9 +373,13 @@ class FakeStorage:
             source_post_version_id=request.source_post_version_id,
             generation_run_id=request.generation_run_id,
             parent_image_id=request.parent_image_id,
-            regeneration_sequence=parent.regeneration_sequence + 1,
+            regeneration_sequence=(parent.regeneration_sequence + 1 if parent else 0),
             storage_provider="private_test",
-            storage_key=SecretStr("generated-images/child.png"),
+            storage_key=SecretStr(
+                "generated-images/child.png"
+                if parent is not None
+                else "generated-images/initial.png"
+            ),
             mime_type="image/png",
             file_size_bytes=120,
             width=1536,
@@ -399,14 +437,24 @@ def preferences() -> ImageRegenerationRequest:
     )
 
 
+def creation_request() -> ImageCreationRequest:
+    return ImageCreationRequest(
+        generation_id=POST_RUN_ID,
+        style="minimalist_illustration",
+        aspect_ratio="landscape",
+        composition="focal_point_left",
+    )
+
+
 def service(
     *,
     allowed: bool = True,
     uncertain: bool = False,
     generator_failure: Exception | None = None,
     limited: bool = False,
+    include_parent: bool = True,
 ):
-    images = MemoryImages()
+    images = MemoryImages(include_parent=include_parent)
     runs = MemoryRuns()
     generator = FakeGenerator(failure=generator_failure)
     storage = FakeStorage(images, runs)
@@ -461,6 +509,85 @@ def test_successful_regeneration_preserves_parent_and_records_new_version() -> N
     assert storage.calls[0].source_post_version_id == POST_VERSION_ID
     assert storage.calls[0].output_safety_status == ImageSafetyReviewStatus.PENDING
     assert usage.completed == 1
+
+
+def test_initial_generation_resolves_owned_draft_and_stores_root_version() -> None:
+    selected, images, _, generator, storage, usage = service(include_parent=False)
+
+    result = run(
+        selected.generate_initial(
+            owner_id=OWNER_ID,
+            request=creation_request(),
+            idempotency_key="nfa64-initial-001",
+        )
+    )
+
+    assert result.image_id == INITIAL_IMAGE_ID
+    assert result.parent_image_id is None
+    assert result.generated_post_id == POST_ID
+    assert result.regeneration_sequence == 0
+    assert result.is_ai_generated is True
+    assert result.review_required is True
+    assert INITIAL_IMAGE_ID in images.records
+    assert generator.calls == 1
+    assert generator.closed == 1
+    assert storage.calls[0].parent_image_id is None
+    assert storage.calls[0].source_post_version_id is None
+    assert usage.completed == 1
+
+
+def test_duplicate_initial_request_replays_without_second_provider_call() -> None:
+    selected, _, _, generator, _, usage = service(include_parent=False)
+    arguments = {
+        "owner_id": OWNER_ID,
+        "request": creation_request(),
+        "idempotency_key": "nfa64-initial-duplicate-001",
+    }
+
+    first = run(selected.generate_initial(**arguments))
+    second = run(selected.generate_initial(**arguments))
+
+    assert second.image_id == first.image_id
+    assert generator.calls == 1
+    assert usage.started == 1
+
+
+def test_existing_root_is_returned_even_with_a_new_client_request_key() -> None:
+    selected, _, _, generator, _, usage = service(include_parent=False)
+
+    first = run(
+        selected.generate_initial(
+            owner_id=OWNER_ID,
+            request=creation_request(),
+            idempotency_key="nfa64-initial-first-001",
+        )
+    )
+    second = run(
+        selected.generate_initial(
+            owner_id=OWNER_ID,
+            request=creation_request(),
+            idempotency_key="nfa64-initial-after-refresh-001",
+        )
+    )
+
+    assert second.image_id == first.image_id
+    assert generator.calls == 1
+    assert usage.started == 1
+
+
+def test_initial_generation_does_not_disclose_another_owners_draft() -> None:
+    selected, _, _, generator, storage, _ = service(include_parent=False)
+
+    with pytest.raises(ImageRegenerationNotFoundError):
+        run(
+            selected.generate_initial(
+                owner_id=OTHER_OWNER_ID,
+                request=creation_request(),
+            )
+        )
+
+    assert generator.calls == 0
+    assert storage.calls == []
 
 
 def test_duplicate_request_returns_same_child_without_second_provider_call() -> None:
@@ -604,6 +731,18 @@ class StubApiService:
             created_at=NOW,
         )
 
+    async def generate_initial(self, **kwargs):
+        self.calls += 1
+        assert kwargs["owner_id"] == OWNER_ID
+        assert kwargs["request"].generation_id == POST_RUN_ID
+        return ImageCreationResponse(
+            image_id=INITIAL_IMAGE_ID,
+            generation_id=CHILD_RUN_ID,
+            generated_post_id=POST_ID,
+            safety_status=ImageSafetyReviewStatus.PENDING,
+            created_at=NOW,
+        )
+
 
 def api_client(*, authenticated: bool = True):
     selected_service = StubApiService()
@@ -673,6 +812,36 @@ def test_api_contract_returns_private_review_required_version_metadata() -> None
         "generation_id": str(CHILD_RUN_ID),
         "generated_post_id": str(POST_ID),
         "regeneration_sequence": 1,
+        "status": "completed",
+        "safety_status": "pending",
+        "is_ai_generated": True,
+        "review_required": True,
+        "created_at": "2026-10-31T18:00:00Z",
+    }
+    assert selected_service.calls == 1
+
+
+def test_initial_image_api_returns_private_review_required_root_metadata() -> None:
+    client, selected_service = api_client()
+    response = client.post(
+        "/api/images",
+        headers={"Idempotency-Key": "nfa64-api-001"},
+        json={
+            "generation_id": str(POST_RUN_ID),
+            "style": "minimalist_illustration",
+            "aspect_ratio": "landscape",
+            "composition": "focal_point_left",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.headers["cache-control"] == "private, no-store"
+    assert response.json() == {
+        "image_id": str(INITIAL_IMAGE_ID),
+        "parent_image_id": None,
+        "generation_id": str(CHILD_RUN_ID),
+        "generated_post_id": str(POST_ID),
+        "regeneration_sequence": 0,
         "status": "completed",
         "safety_status": "pending",
         "is_ai_generated": True,

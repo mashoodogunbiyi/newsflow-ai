@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
 import { CharacterCounter } from "@/components/editor/character-counter";
+import { ImageControls } from "@/components/images/image-controls";
 import { LinkedInPreview } from "@/components/preview/linkedin-preview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +19,10 @@ type LinkedInEditorProps = {
 export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorProps) {
   const editor = useDraftEditor(draft);
   const activeDraft = editor.activeDocument;
+  const [generatedSelection, setGeneratedSelection] = useState<{
+    generationId: string;
+    image: PreviewImageSelection;
+  } | null>(null);
 
   if (!activeDraft) {
     return (
@@ -37,6 +44,10 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
   }
 
   const emptyDraft = editor.editedText.trim().length === 0;
+  const activeImage =
+    generatedSelection?.generationId === activeDraft.generationId
+      ? generatedSelection.image
+      : selectedImage;
 
   return (
     <Card className="scroll-mt-24" id="draft-editor">
@@ -125,12 +136,20 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
               The draft is empty. Add reviewed text manually or request another generated draft.
             </p>
           ) : null}
+          <ImageControls
+            generationId={activeDraft.generationId}
+            key={activeDraft.generationId}
+            onSelectionChange={(image) =>
+              setGeneratedSelection({ generationId: activeDraft.generationId, image })
+            }
+            sourceTitle={activeDraft.sourceTitle}
+          />
         </section>
 
         <LinkedInPreview
           draftText={editor.editedText}
           groundingStatus={activeDraft.groundingStatus}
-          image={selectedImage}
+          image={activeImage}
           source={{
             attribution: activeDraft.sourceAttribution,
             name: activeDraft.sourceName,

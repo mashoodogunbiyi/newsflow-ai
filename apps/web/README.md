@@ -1,8 +1,8 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection. NFA-62 adds the accessible multiline draft editor, source and warning preservation, and local unsaved-change protection. NFA-63 adds the responsive LinkedIn-inspired text and image preview, owner-protected image gateway, AI designation, controlled fallbacks, and preview limitations.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection. NFA-62 adds the accessible multiline draft editor, source and warning preservation, and local unsaved-change protection. NFA-63 adds the responsive LinkedIn-inspired text and image preview, owner-protected image gateway, AI designation, controlled fallbacks, and preview limitations. NFA-64 adds supported illustration preferences, secure initial generation and regeneration gateways, immutable version selection, and live preview updates.
 
-The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, lets an authorised user request a private LinkedIn draft using supported tone and length choices, and opens a responsive editor after a valid result. The editor updates its combined content preview without another provider request and never receives an OpenAI credential. The preview supports an optional selected private illustration; the current flow displays the no-image state until an image-selection interface supplies an ID.
+The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, lets an authorised user request a private LinkedIn draft using supported tone and length choices, and opens a responsive editor after a valid result. The editor keeps text editable while the user generates a private illustration, creates immutable alternatives, and selects the version displayed in the combined preview. It never receives an OpenAI credential or publishes automatically.
 
 The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
@@ -36,17 +36,19 @@ Open [http://localhost:3000](http://localhost:3000). The browser sends authentic
 
 ## Authentication journey
 
-| Route                           | Purpose                                                                                         | Access                   |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------ |
-| `/register`                     | Validates account details and creates an account through FastAPI.                               | Public                   |
-| `/login`                        | Verifies credentials and starts a secure session.                                               | Public                   |
-| `/dashboard`                    | Displays the searchable, category-filtered, paginated, rights-approved article catalogue.       | Authenticated users only |
-| `/generate`                     | Reviews a selected source and submits validated LinkedIn draft preferences.                     | Authenticated users only |
-| `/library`                      | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
-| `/account`                      | Displays account security and ownership information.                                            | Authenticated users only |
-| `/api/auth/[action]`            | Same-origin server gateway for the FastAPI register, login, logout, and current-user endpoints. | Internal frontend route  |
-| `/api/generations`              | Same-origin gateway for CSRF-protected private LinkedIn draft requests.                         | Internal frontend route  |
-| `/api/images/[imageId]/content` | Same-origin gateway for owner-protected generated-image preview bytes.                          | Internal frontend route  |
+| Route                              | Purpose                                                                                         | Access                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------ |
+| `/register`                        | Validates account details and creates an account through FastAPI.                               | Public                   |
+| `/login`                           | Verifies credentials and starts a secure session.                                               | Public                   |
+| `/dashboard`                       | Displays the searchable, category-filtered, paginated, rights-approved article catalogue.       | Authenticated users only |
+| `/generate`                        | Reviews a selected source and submits validated LinkedIn draft preferences.                     | Authenticated users only |
+| `/library`                         | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
+| `/account`                         | Displays account security and ownership information.                                            | Authenticated users only |
+| `/api/auth/[action]`               | Same-origin server gateway for the FastAPI register, login, logout, and current-user endpoints. | Internal frontend route  |
+| `/api/generations`                 | Same-origin gateway for CSRF-protected private LinkedIn draft requests.                         | Internal frontend route  |
+| `/api/images`                      | Same-origin gateway for CSRF-protected initial image generation.                                | Internal frontend route  |
+| `/api/images/[imageId]/regenerate` | Same-origin gateway for immutable owner-scoped image alternatives.                              | Internal frontend route  |
+| `/api/images/[imageId]/content`    | Same-origin gateway for owner-protected generated-image preview bytes.                          | Internal frontend route  |
 
 The workspace is protected in two layers. `proxy.ts` quickly redirects requests that have no session cookie. The shared server layout then asks FastAPI to validate any presented session before returning account content. FastAPI remains the authority for identity and access control.
 
@@ -104,6 +106,7 @@ apps/web/
 │   ├── auth/                # Reusable forms, page shell, and logout control
 │   ├── articles/            # Article discovery, selection, source panel, and controlled states
 │   ├── editor/              # Draft textarea, character count, warnings, and preview
+│   ├── images/              # Image preferences, request states, and version selection
 │   ├── generation/          # Tone, length, submission, and generation feedback controls
 │   ├── layout/              # Application shell, navigation, page header, and auth fallback
 │   ├── preview/             # Combined text, source, warning, and private image preview
@@ -238,6 +241,21 @@ The full state model, overwrite protection, navigation warning, preview, securit
 - Explain that the planning preview can differ from LinkedIn's live rendering.
 
 The complete data contract, secure delivery path, states, accessibility behaviour, tests, and limitations are documented in [the NFA-63 LinkedIn content preview guide](../../docs/linkedin-content-preview.md).
+
+## NFA-64 image generation control conventions
+
+- Use only the style, shape, and composition values exported from `types/image-generation.ts`.
+- Link initial generation to the validated text-generation ID and let FastAPI resolve the private generated post for the authenticated owner.
+- Send initial and regeneration requests through the same-origin image gateways with CSRF proof and idempotency keys.
+- Preserve the edited draft and every earlier image while an alternative is generated or a request fails.
+- Select exactly one image version for the live preview using native radio controls.
+- Load image bytes only through the owner-protected content gateway and never expose storage keys or provider credentials.
+- Keep the AI-generated and non-photographic designations visible.
+- Reuse the NFA-61 lifecycle, duplicate lock, safe error categories, deliberate retry, and `Retry-After` handling.
+- Keep FastAPI authoritative for ownership, rights, safety, rate limits, usage limits, provider access, validation, and storage.
+- Do not persist the selected version or edited text until the E7 saved-content contract is implemented.
+
+The complete user flow, API boundary, security controls, version behaviour, accessibility rules, tests, and limitations are documented in [the NFA-64 image generation controls guide](../../docs/image-generation-controls.md).
 
 ## Configuration and security
 

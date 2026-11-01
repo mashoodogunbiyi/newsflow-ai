@@ -24,6 +24,8 @@ from app.models.image_generation import (
 )
 from app.models.image_prompt import ImagePromptRequest
 from app.models.image_regeneration import (
+    ImageCreationRequest,
+    ImageCreationResponse,
     ImageRegenerationRequest,
     ImageRegenerationResponse,
 )
@@ -122,6 +124,202 @@ class ImageRegenerationService:
         self._image_generator_factory = image_generator_factory
         self._storage = storage
         self._usage = usage
+
+    async def generate_initial(
+        self,
+        *,
+        owner_id: UUID,
+        request: ImageCreationRequest,
+        idempotency_key: str | None = None,
+    ) -> ImageCreationResponse:
+        """Generate and privately store the first illustration for a draft."""
+
+        attempt = None
+        generation_run_id: UUID | None = None
+        draft = await self._drafts.get_draft_by_generation_for_owner(
+            owner_id=owner_id,
+            generation_id=request.generation_id,
+        )
+        if draft is None:
+            raise ImageRegenerationNotFoundError(
+                code="generation_not_found",
+                message="The requested draft was not found.",
+            )
+
+        existing_root = await self._images.get_initial_for_owner_post(
+            owner_id=owner_id,
+            generated_post_id=draft.draft_id,
+        )
+        if existing_root is not None:
+            return self._creation_response(
+                StoredGeneratedImage.from_record(existing_root)
+            )
+
+        source = await self._drafts.get_article(draft.source.article_id)
+        if source is None:
+            raise ImageRegenerationNotFoundError(
+                code="image_context_not_found",
+                message="The requested draft was not found.",
+            )
+
+        decision = await self._rights.can_use_article(
+            article_id=draft.source.article_id,
+            operation=ArticleUseOperation.USE_FOR_AI_GENERATION,
+        )
+        if not decision.allowed:
+            raise ImageRegenerationRightsDeniedError(
+                code="article_image_generation_not_permitted",
+                message="Current source rights do not permit image generation.",
+            )
+
+        try:
+            prompt = self._prompt_composer.compose(
+                request=ImagePromptRequest(
+                    article_id=draft.source.article_id,
+                    generation_id=draft.generation_id,
+                    style=request.style,
+                    aspect_ratio=request.aspect_ratio,
+                    composition=request.composition,
+                ),
+                article=source.article,
+                rights_decision=decision,
+                draft=draft,
+            )
+        except ImagePromptRightsError as exc:
+            raise ImageRegenerationRightsDeniedError(
+                code=exc.code,
+                message=exc.safe_message,
+            ) from exc
+        except ImagePromptConstructionError as exc:
+            raise ImageRegenerationContextError(
+                code=exc.code,
+                message=exc.safe_message,
+            ) from exc
+
+        safety = self._safety.evaluate(ImageSafetyRequest(prompt=prompt))
+        if not safety.provider_call_allowed or safety.decision not in {
+            ImageSafetyDecision.ALLOWED,
+            ImageSafetyDecision.ALLOWED_WITH_RESTRICTIONS,
+        }:
+            raise ImageRegenerationSafetyDeniedError(
+                code="image_generation_safety_denied",
+                message="The image safety policy does not permit generation.",
+            )
+
+        request_marker = self._initial_request_marker(request)
+        request_key = self._request_key(owner_id, idempotency_key)
+        replay = await self._runs.get_completed_by_request_key(
+            owner_id=owner_id,
+            generated_post_id=draft.draft_id,
+            request_key=request_key,
+            request_marker=request_marker,
+        )
+        if replay is not None:
+            stored = await self._images.get_for_owner(
+                image_id=replay.image_id,
+                owner_id=owner_id,
+            )
+            if stored is None or stored.parent_image_id is not None:
+                raise ImageRegenerationNotFoundError(
+                    code="image_version_not_found",
+                    message="The requested image version was not found.",
+                )
+            return self._creation_response(stored)
+
+        try:
+            if self._usage is not None:
+                attempt = await self._usage.start_attempt(
+                    owner_id=owner_id,
+                    request_fingerprint=self._usage_fingerprint(
+                        owner_id,
+                        idempotency_key,
+                        request_marker,
+                        request_key,
+                    ),
+                )
+
+            generated = await self._generate(
+                owner_id=owner_id,
+                prompt=prompt,
+                safety=safety,
+                decision=decision,
+            )
+            generation_run_id = await self._runs.create_succeeded_run(
+                owner_id=owner_id,
+                generated_post_id=draft.draft_id,
+                request_key=request_key,
+                request_marker=request_marker,
+                generated=generated,
+            )
+            try:
+                stored = await self._storage.store(
+                    GeneratedImageStorageRequest(
+                        owner_id=owner_id,
+                        article_id=draft.source.article_id,
+                        generated_post_id=draft.draft_id,
+                        generation_run_id=generation_run_id,
+                        parent_image_id=None,
+                        result=generated,
+                        output_safety_status=ImageSafetyReviewStatus.PENDING,
+                    )
+                )
+            except Exception as exc:
+                try:
+                    await self._runs.mark_run_failed(
+                        generation_run_id=generation_run_id,
+                        generated_post_id=draft.draft_id,
+                        safe_error_code=getattr(
+                            exc,
+                            "code",
+                            "image_generation_storage_failed",
+                        ),
+                    )
+                except ImageRegenerationRepositoryError:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "image_generation_failure_state_not_recorded",
+                        generation_run_id=str(generation_run_id),
+                        status="failed",
+                    )
+                raise
+
+            if self._usage is not None and attempt is not None:
+                await self._usage.complete_attempt(
+                    attempt=attempt,
+                    generation_run_id=generation_run_id,
+                    model_identifier=generated.model_identifier,
+                    token_usage=AITokenUsage(
+                        input_tokens=generated.usage_metadata.input_tokens,
+                        output_tokens=generated.usage_metadata.output_tokens,
+                        total_tokens=generated.usage_metadata.total_tokens,
+                    ),
+                )
+                attempt = None
+            log_event(
+                logger,
+                logging.INFO,
+                "image_generation_completed",
+                image_id=str(stored.id),
+                generation_run_id=str(generation_run_id),
+                status=stored.generation_status,
+            )
+            return self._creation_response(stored)
+        except Exception as exc:
+            if self._usage is not None and attempt is not None:
+                try:
+                    await self._usage.fail_attempt(
+                        attempt=attempt,
+                        category=self._error_category(exc),
+                    )
+                except GenerationUsageUnavailable:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "image_generation_usage_failure_not_recorded",
+                        status="failed",
+                    )
+            raise
 
     async def regenerate(
         self,
@@ -368,6 +566,16 @@ class ImageRegenerationService:
         return f"Prompt content not retained. Regeneration fingerprint: {digest}"
 
     @staticmethod
+    def _initial_request_marker(request: ImageCreationRequest) -> str:
+        digest = hashlib.sha256(
+            (
+                f"{request.generation_id}:{request.style.value}:"
+                f"{request.aspect_ratio.value}:{request.composition.value}"
+            ).encode()
+        ).hexdigest()
+        return f"Prompt content not retained. Initial image fingerprint: {digest}"
+
+    @staticmethod
     def _usage_fingerprint(
         owner_id: UUID,
         supplied_key: str | None,
@@ -387,6 +595,18 @@ class ImageRegenerationService:
             generation_id=stored.generation_run_id,
             generated_post_id=stored.generated_post_id,
             regeneration_sequence=stored.regeneration_sequence,
+            safety_status=stored.safety_status,
+            created_at=stored.created_at,
+        )
+
+    @staticmethod
+    def _creation_response(stored: StoredGeneratedImage) -> ImageCreationResponse:
+        assert stored.parent_image_id is None
+        assert stored.regeneration_sequence == 0
+        return ImageCreationResponse(
+            image_id=stored.id,
+            generation_id=stored.generation_run_id,
+            generated_post_id=stored.generated_post_id,
             safety_status=stored.safety_status,
             created_at=stored.created_at,
         )

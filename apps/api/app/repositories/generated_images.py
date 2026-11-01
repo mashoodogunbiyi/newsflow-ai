@@ -50,6 +50,13 @@ class GeneratedImageRepository(Protocol):
         owner_id: UUID,
     ) -> StoredGeneratedImageRecord | None: ...
 
+    async def get_initial_for_owner_post(
+        self,
+        *,
+        owner_id: UUID,
+        generated_post_id: UUID,
+    ) -> StoredGeneratedImageRecord | None: ...
+
     async def save(
         self,
         image: GeneratedImageWrite,
@@ -93,6 +100,36 @@ class SqlAlchemyGeneratedImageRepository:
                             GeneratedImageTable.deleted_at.is_(None),
                             GeneratedImageTable.status == "available",
                         )
+                    )
+                ).one_or_none()
+        except SQLAlchemyError as exc:
+            raise GeneratedImageRepositoryError(
+                "Generated image metadata could not be read."
+            ) from exc
+        return None if row is None else self._record_from_row(row)
+
+    async def get_initial_for_owner_post(
+        self,
+        *,
+        owner_id: UUID,
+        generated_post_id: UUID,
+    ) -> StoredGeneratedImageRecord | None:
+        """Return the immutable root image for one owner-scoped draft."""
+
+        try:
+            async with self._database.session() as session:
+                row = (
+                    await session.execute(
+                        self._record_statement()
+                        .where(
+                            GeneratedImageTable.generated_post_id == generated_post_id,
+                            GeneratedImageTable.user_id == owner_id,
+                            GeneratedImageTable.parent_image_id.is_(None),
+                            GeneratedImageTable.deleted_at.is_(None),
+                            GeneratedImageTable.status == "available",
+                        )
+                        .order_by(GeneratedImageTable.created_at.asc())
+                        .limit(1)
                     )
                 ).one_or_none()
         except SQLAlchemyError as exc:
