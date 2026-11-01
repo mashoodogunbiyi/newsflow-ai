@@ -1,8 +1,8 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration.
 
-The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. It uses original static demonstration content and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; the NFA-56 Create Post route is intentionally a disabled scaffold rather than a false implementation of that interface.
+The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information or call the OpenAI API. NFA-46 supplies the reviewed backend contract for a future E6 generation interface; the Create Post route remains an honest scaffold until its dedicated integration task.
 
 The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
@@ -40,7 +40,7 @@ Open [http://localhost:3000](http://localhost:3000). The browser sends authentic
 | -------------------- | ----------------------------------------------------------------------------------------------- | ------------------------ |
 | `/register`          | Validates account details and creates an account through FastAPI.                               | Public                   |
 | `/login`             | Verifies credentials and starts a secure session.                                               | Public                   |
-| `/dashboard`         | Restores the session from the HTTP-only cookie and displays the account workspace.              | Authenticated users only |
+| `/dashboard`         | Displays the searchable, paginated, rights-approved article catalogue from FastAPI.             | Authenticated users only |
 | `/generate`          | Provides the protected foundation for authorised article selection and post generation.         | Authenticated users only |
 | `/library`           | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
 | `/account`           | Displays account security and ownership information.                                            | Authenticated users only |
@@ -74,7 +74,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, and server-layout authentication. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, pagination, and dashboard states. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -89,10 +89,10 @@ apps/web/
 ├── .dockerignore          # Files excluded from the image build context
 ├── .prettierignore        # Files excluded from formatting checks
 ├── Dockerfile             # Next.js development image
-├── __tests__/              # Homepage and authentication tests
+├── __tests__/              # Homepage, authentication, shell, and article-dashboard tests
 ├── app/
 │   ├── api/auth/[action]/   # Same-origin FastAPI authentication gateway
-│   ├── (workspace)/          # Shared protected layout, boundaries, and application routes
+│   ├── (workspace)/          # Shared protected layout, boundaries, dashboard, and application routes
 │   ├── login/               # Login page
 │   ├── register/            # Registration page
 │   ├── globals.css          # Tailwind import and global design tokens
@@ -100,12 +100,14 @@ apps/web/
 │   └── page.tsx             # Public homepage
 ├── components/
 │   ├── auth/                # Reusable forms, page shell, and logout control
+│   ├── articles/            # Article cards, grid, loading, empty, and error states
 │   ├── layout/              # Application shell, navigation, page header, and auth fallback
 │   ├── ui/                  # Buttons, inputs, cards, statuses, loading, and errors
 │   ├── brand-mark.tsx       # Reusable project identity
 │   ├── product-preview.tsx  # Fixture-mode product demonstration
 │   └── workflow-step.tsx    # Reusable workflow item
-├── lib/                     # Authentication contracts and server utilities
+├── lib/                     # Authentication and article API server utilities
+├── types/                   # Runtime-validated frontend data contracts
 ├── public/                  # Static assets
 ├── proxy.ts                 # Optimistic protected-workspace cookie check
 ├── eslint.config.mjs        # Next.js and TypeScript linting
@@ -131,6 +133,18 @@ Add future routes under `app`, shared interface elements under `components`, and
 - Keep unfinished functionality visibly disabled or described as upcoming rather than presenting placeholder interactions as complete.
 
 The complete component, route, spacing, accessibility, and test conventions are documented in [the NFA-56 frontend layout guide](../../docs/frontend-layout.md).
+
+## NFA-57 article dashboard conventions
+
+- Fetch protected article data on the Next.js server and forward only the HTTP-only session cookie to FastAPI.
+- Use the NFA-34 public schema from `types/article.ts`; do not introduce internal rights or database fields into frontend types.
+- Render all external article values as React text and accept only validated HTTPS source URLs.
+- Keep attribution visible on every card and do not invent a summary when no permitted description exists.
+- Preserve opaque cursors unchanged and keep catalogue requests `no-store`.
+- Disable Next.js prefetch on cursor pagination links to avoid unnecessary authenticated API requests.
+- Keep fixture mode and the live CNN authorisation limitation visible.
+
+The full data requirements, states, security rules, test approach, and manual verification steps are documented in [the NFA-57 article dashboard guide](../../docs/article-dashboard.md).
 
 ## Configuration and security
 
