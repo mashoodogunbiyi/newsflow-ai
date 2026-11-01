@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, and the NFA-62 LinkedIn draft editor.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, and the NFA-63 combined content preview.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -13,7 +13,7 @@ The test suite is designed to detect security regressions before a pull request 
 | Backend unit and API tests | `apps/api/tests/test_*.py` | Fast tests for accounts, providers, articles, rights, synchronisation, catalogue endpoints, OpenAI integration, grounded prompts, generation orchestration, CSRF, safe errors, and authorisation. |
 | Account-security regression tests | `apps/api/tests/test_account_security_regression.py` | One integrated in-memory journey from registration through private-content access and logout. |
 | PostgreSQL integration tests | `apps/api/tests/*_integration.py` | Opt-in verification of migrations, constraints, accounts, ownership, article ingestion, provenance, rights, synchronisation, and catalogue queries. |
-| Frontend interface tests | `apps/web/__tests__` | Registration, login, logout, session restoration, workspace protection, responsive navigation state, reusable UI, generation transitions, draft editing, loading, and safe error behaviour. |
+| Frontend interface tests | `apps/web/__tests__` | Registration, login, logout, session restoration, workspace protection, responsive navigation state, reusable UI, generation transitions, draft editing, private image preview, loading, and safe error behaviour. |
 | Complete article pipeline | `apps/api/tests/test_catalogue_pipeline_e2e.py` | Safety-gated synthetic provider-to-PostgreSQL-to-REST verification, including failure, rights, logs, and concurrent ingestion. |
 | Pull-request quality checks | `.github/workflows/quality.yml` | Runs backend and frontend quality checks, enforces backend coverage, and runs isolated NFA-36 and NFA-54 PostgreSQL suites on GitHub. |
 | AI generation evaluation | `apps/api/tests/evaluation` | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests. |
@@ -747,6 +747,25 @@ See the [NFA-61 frontend generation states guide](generation-states.md) for the 
 
 See the [NFA-62 LinkedIn draft editor guide](linkedin-draft-editor.md) for the editor state, local preview, overwrite protection, navigation warning, source and warning rules, security, accessibility, tests, and E7 boundary.
 
+## NFA-63 LinkedIn-inspired content preview coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Current edited text and paragraph preservation | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| Selected image and image-change synchronisation | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| No-image, empty-draft, and missing-image states | `linkedin-preview.test.tsx` |
+| Source reference and HTTPS-only source link | `linkedin-preview.test.tsx` |
+| AI-generated illustration designation | `linkedin-preview.test.tsx` |
+| Review warnings remain visible | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| HTML-like text remains non-executable | `linkedin-preview.test.tsx` and `linkedin-editor.test.tsx` |
+| Accessible image descriptions and status fallback | `linkedin-preview.test.tsx` |
+| Responsive fluid layout classes | `linkedin-preview.test.tsx` |
+| Session-cookie-only protected image gateway | `image-content-proxy.test.ts` |
+| UUID, media-type, cache, and safe-failure controls | `image-content-proxy.test.ts` |
+| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+
+See the [NFA-63 LinkedIn content preview guide](linkedin-content-preview.md) for the component contract, protected delivery flow, safety rules, states, accessibility behaviour, tests, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -859,9 +878,12 @@ Verified locally on 1 November 2026:
 - The focused NFA-62 editor, generation-control, and page-integration run passed 24 tests across 3 files.
 - The complete frontend run after NFA-62 passed 91 tests across 18 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
 - The NFA-62 local Next.js source preview returned HTTP 200. Native browser automation remained unavailable, so responsive, keyboard, and assistive-technology browser review remains a manual acceptance step.
+- The focused NFA-63 preview, image gateway, editor, generation-control, and page-integration run passed 37 tests across 5 files.
+- The complete frontend run after NFA-63 passed 104 tests across 20 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
+- The NFA-63 local Next.js source preview returned HTTP 200. Native browser automation remained unavailable, so selected-image, responsive, keyboard, and assistive-technology browser review remains a manual acceptance step.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, and NFA-62
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, and NFA-63
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
