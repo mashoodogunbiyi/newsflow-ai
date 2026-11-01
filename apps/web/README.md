@@ -1,8 +1,8 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback.
 
-The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information or call the OpenAI API. The Create Post route now restores the selected article from its UUID, presents permitted source information and current generation readiness, and keeps later preference and generation work clearly identified as upcoming.
+The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, and lets an authorised user request a private LinkedIn draft using supported tone and length choices. The browser sends the request to FastAPI through a narrow same-origin route and never receives an OpenAI credential.
 
 The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
@@ -41,10 +41,11 @@ Open [http://localhost:3000](http://localhost:3000). The browser sends authentic
 | `/register`          | Validates account details and creates an account through FastAPI.                               | Public                   |
 | `/login`             | Verifies credentials and starts a secure session.                                               | Public                   |
 | `/dashboard`         | Displays the searchable, category-filtered, paginated, rights-approved article catalogue.       | Authenticated users only |
-| `/generate`          | Restores the selected article, retrieves permitted detail, and displays the source panel.       | Authenticated users only |
+| `/generate`          | Reviews a selected source and submits validated LinkedIn draft preferences.                     | Authenticated users only |
 | `/library`           | Provides the protected foundation for owner-scoped saved content.                               | Authenticated users only |
 | `/account`           | Displays account security and ownership information.                                            | Authenticated users only |
 | `/api/auth/[action]` | Same-origin server gateway for the FastAPI register, login, logout, and current-user endpoints. | Internal frontend route  |
+| `/api/generations`   | Same-origin gateway for CSRF-protected private LinkedIn draft requests.                         | Internal frontend route  |
 
 The workspace is protected in two layers. `proxy.ts` quickly redirects requests that have no session cookie. The shared server layout then asks FastAPI to validate any presented session before returning account content. FastAPI remains the authority for identity and access control.
 
@@ -74,7 +75,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, and responsive source information. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, generation preferences, duplicate protection, usage limits, authentication recovery, and generation gateway allowlists. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -89,9 +90,9 @@ apps/web/
 ├── .dockerignore          # Files excluded from the image build context
 ├── .prettierignore        # Files excluded from formatting checks
 ├── Dockerfile             # Next.js development image
-├── __tests__/              # Homepage, authentication, shell, article, filtering, and selection tests
+├── __tests__/              # Homepage, authentication, article, selection, and generation tests
 ├── app/
-│   ├── api/auth/[action]/   # Same-origin FastAPI authentication gateway
+│   ├── api/                  # Same-origin FastAPI authentication and generation gateways
 │   ├── (workspace)/          # Shared protected layout, boundaries, dashboard, and application routes
 │   ├── login/               # Login page
 │   ├── register/            # Registration page
@@ -101,12 +102,13 @@ apps/web/
 ├── components/
 │   ├── auth/                # Reusable forms, page shell, and logout control
 │   ├── articles/            # Article discovery, selection, source panel, and controlled states
+│   ├── generation/          # Tone, length, submission, and generation feedback controls
 │   ├── layout/              # Application shell, navigation, page header, and auth fallback
 │   ├── ui/                  # Buttons, inputs, cards, statuses, loading, and errors
 │   ├── brand-mark.tsx       # Reusable project identity
 │   ├── product-preview.tsx  # Fixture-mode product demonstration
 │   └── workflow-step.tsx    # Reusable workflow item
-├── lib/                     # Authentication and article API server utilities
+├── lib/                     # Authentication, article, and generation API utilities
 ├── types/                   # Runtime-validated frontend data contracts
 ├── public/                  # Static assets
 ├── proxy.ts                 # Optimistic protected-workspace cookie check
@@ -169,6 +171,21 @@ The complete category contract, state flow, empty and invalid states, tests, and
 - Disable continuation for restricted or insufficient sources and never invent missing source information.
 
 The complete selection flow, detail contract, generation states, controlled errors, tests, and manual review steps are documented in [the NFA-59 article selection guide](../../docs/article-selection.md).
+
+## NFA-60 generation control conventions
+
+- Use only the tone and length values exported from `types/generation.ts`; do not add a frontend-only option.
+- Keep Professional and Medium as the documented defaults unless the backend contract is formally changed.
+- Send the browser request through `/api/generations` with same-origin credentials, CSRF proof, and one idempotency key for the selected article and preferences.
+- Forward only the allowlisted headers and authentication cookies from the Next.js route to FastAPI.
+- Keep the synchronous request lock as well as the visible disabled loading state so rapid submissions cannot create a second request.
+- Preserve user choices after controlled failures and respect a backend `Retry-After` delay.
+- Validate every successful response at runtime before presenting it as a private draft receipt.
+- Never place an OpenAI key, session identifier, prompt, source content, or generated draft in browser storage or logs.
+- Keep FastAPI authoritative for authentication, rights, validation, limits, provider access, and persistence.
+- Never automatically publish a generated result or describe automated checks as factual verification.
+
+The exact request contract, state mapping, duplicate controls, accessibility rules, tests, and limitations are documented in [the NFA-60 LinkedIn generation controls guide](../../docs/linkedin-generation-controls.md).
 
 ## Configuration and security
 

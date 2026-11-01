@@ -691,6 +691,24 @@ See the [NFA-58 article filtering guide](article-filtering.md) for the approved 
 
 See the [NFA-59 article selection guide](article-selection.md) for the detail contract, source panel, safe states, accessibility, security boundary, results, and limitations.
 
+## NFA-60 LinkedIn generation controls coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| Professional and medium defaults with exact supported choices | `generation-controls.test.tsx` |
+| Tone, length, and article UUID in the request | `generation-controls.test.tsx` |
+| CSRF proof and random idempotency header | `generation-controls.test.tsx` |
+| Missing, invalid, restricted, and insufficient source handling | `generation-controls.test.tsx` and `generate-page.test.tsx` |
+| Active loading state and synchronous duplicate prevention | `generation-controls.test.tsx` |
+| Authentication recovery and usage-limit retry lock | `generation-controls.test.tsx` |
+| Runtime-validated success and mandatory review receipt | `generation-controls.test.tsx` and `types/generation.ts` |
+| Native labelled radio groups, keyboard operation, live regions, and focus | `generation-controls.test.tsx` |
+| Header and cookie allowlists plus safe gateway errors | `generation-proxy.test.ts` |
+| Available and restricted Create Post integration | `generate-page.test.tsx` |
+| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+
+See the [NFA-60 LinkedIn generation controls guide](linkedin-generation-controls.md) for the exact request contract, supported preferences, same-origin gateway, controlled states, security boundary, accessibility behaviour, tests, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -793,9 +811,13 @@ Verified locally on 1 November 2026:
 - The complete backend run after NFA-59 passed 417 tests, skipped 13 safety-gated tests, deselected the optional live-model test, and measured 81.15 percent coverage.
 - The NFA-59 frontend run passed all 59 tests across 14 files, plus ESLint, Prettier, TypeScript, route type generation, and the Next.js production build.
 - Automated browser control was unavailable during the NFA-59 local verification, so its documented responsive browser review remains a manual acceptance step.
+- The focused NFA-60 component, gateway, and page-integration run passed 17 tests across 3 files.
+- The complete frontend run after NFA-60 passed 72 tests across 16 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
+- The focused existing FastAPI generation endpoint run passed 33 tests, and Ruff passed for the generation request models and HTTP boundary.
+- The NFA-60 local Next.js server returned HTTP 200, but native browser automation was unavailable, so responsive browser review remains a manual acceptance step.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, and NFA-59
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, and NFA-60
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
