@@ -857,10 +857,10 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, and run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 persistence proof against `newsflow_saved_draft_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, and build Next.js.
 
-The NFA-36, NFA-58, and NFA-54 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
+The NFA-36, NFA-58, NFA-54, and NFA-67 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
 Do not add real credentials to workflow files. The committed workflow values are disposable CI-only values and must never be reused outside that isolated job.
 
@@ -921,9 +921,13 @@ Verified locally on 1 November 2026:
 - The complete frontend run after NFA-65 passed 129 tests across 26 files, plus ESLint, Prettier, TypeScript, route generation, and the Next.js production build.
 - The NFA-65 production server returned HTTP 200 for `/`, `/login`, and `/register`. The protected `/dashboard` route returned 307 to the authentication-required login route.
 - Native browser control was unavailable during NFA-65, so the documented 375 px, 768 px, 1440 px, keyboard, and VoiceOver acceptance record remains pending human review.
+- The focused NFA-67 API and service run passed 5 tests covering authentication, validation, metadata preservation, idempotency, duplicate protection, owner isolation, image validation, stale updates, and safe storage failures.
+- The NFA-67 PostgreSQL test passed against the safety-gated `newsflow_saved_draft_test` database. It applied migration `20261101_0013`, verified immutable original and manual versions, rejected a stale write, and rolled the schema back. GitHub Actions will repeat the same proof.
+- The complete backend run after NFA-67 passed 427 tests, skipped 14 safety-gated tests, deselected the optional live-model test, and measured 79.46 percent branch-aware coverage, above the 75 percent floor.
+- The existing migration and repeatable-seed integration test passed with NFA-67's required source-generation field, then rolled back and rebuilt the isolated schema.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, and NFA-65
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, and NFA-67
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

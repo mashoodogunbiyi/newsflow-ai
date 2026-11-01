@@ -473,6 +473,7 @@ def _execute_seed(connection: Connection[Any]) -> None:
                 id,
                 user_id,
                 generated_post_id,
+                source_generation_id,
                 selected_post_version_id,
                 library_title
             )
@@ -480,6 +481,7 @@ def _execute_seed(connection: Connection[Any]) -> None:
                 %(saved_content)s,
                 %(user)s,
                 %(generated_post)s,
+                %(generation_run)s,
                 %(post_version)s,
                 'Synthetic energy dashboard example'
             )

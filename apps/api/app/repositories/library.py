@@ -12,6 +12,7 @@ from app.database.sqlalchemy import SqlAlchemyDatabase
 from app.database.tables import (
     GeneratedImageTable,
     GeneratedPostTable,
+    GenerationRunTable,
     PostVersionTable,
     SavedContentItemTable,
 )
@@ -228,9 +229,42 @@ class SqlAlchemySavedContentRepository:
         ):
             return None
 
+        try:
+            async with self._database.session() as session:
+                source_generation_id = (
+                    await session.execute(
+                        select(GenerationRunTable.id)
+                        .join(
+                            GeneratedPostTable,
+                            GeneratedPostTable.id
+                            == GenerationRunTable.generated_post_id,
+                        )
+                        .join(
+                            PostVersionTable,
+                            PostVersionTable.generated_post_id == GeneratedPostTable.id,
+                        )
+                        .where(
+                            GeneratedPostTable.id == generated_post_id,
+                            GeneratedPostTable.user_id == owner_id,
+                            PostVersionTable.id == selected_post_version_id,
+                            GenerationRunTable.generation_type == "post",
+                            GenerationRunTable.status == "succeeded",
+                        )
+                        .order_by(GenerationRunTable.created_at)
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+        except SQLAlchemyError as exc:
+            raise SavedContentRepositoryError(
+                "The source generation could not be resolved."
+            ) from exc
+        if source_generation_id is None:
+            return None
+
         item = SavedContentItemTable(
             user_id=owner_id,
             generated_post_id=generated_post_id,
+            source_generation_id=source_generation_id,
             selected_post_version_id=selected_post_version_id,
             selected_image_id=selected_image_id,
             library_title=library_title,
@@ -269,6 +303,7 @@ class SqlAlchemySavedContentRepository:
                     )
                     .values(
                         library_title=library_title,
+                        version=SavedContentItemTable.version + 1,
                         updated_at=datetime.now(UTC),
                     )
                     .returning(SavedContentItemTable.id)

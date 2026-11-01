@@ -2,7 +2,7 @@
 
 This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step.
 
-NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests.
+NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests. NFA-67 adds transactional, owner-scoped saved-draft creation and updates with original-generation lineage, immutable manual versions, optional approved-image selection, idempotency, and stale-write protection.
 
 ## Requirements
 
@@ -475,6 +475,20 @@ The optional `Idempotency-Key` header prevents repeated storage for one complete
 
 The OpenAI key remains server-side. Prompt text is not persisted, and logs exclude article text and generated prose. PostgreSQL records the source snapshot, exact rights version, prompt version, model identifier, provider request reference, available token usage, and safe grounding result. See the [LinkedIn generation service guide](../../docs/linkedin-generation-service.md) and [factual grounding guide](../../docs/factual-grounding-validation.md) for the complete workflow, rules, errors, controls, tests, and limitations.
 
+### Save and update reviewed LinkedIn drafts
+
+NFA-67 provides these authenticated endpoints:
+
+```text
+POST /api/v1/drafts
+GET  /api/v1/drafts/{saved_draft_id}
+PUT  /api/v1/drafts/{saved_draft_id}
+```
+
+The POST endpoint requires CSRF proof and an `Idempotency-Key`. It preserves the successful generation and original AI post version, creates an immutable manual version for the exact reviewed text, and optionally selects an available, approved, validated image owned by the same user and post. The PUT endpoint accepts the full editable state and an `expected_version`; stale requests return a conflict instead of overwriting newer work. Every query is owner-scoped, every response is private and no-store, and create or update changes commit in one transaction.
+
+See the [NFA-67 draft persistence guide](../../docs/draft-persistence.md) for schemas, version rules, validation, safe errors, security controls, tests, and limitations.
+
 ### Request generation from the frontend
 
 NFA-41 adds the public application endpoint used by the future Next.js generation interface:
@@ -638,13 +652,13 @@ alembic upgrade head
 alembic history
 ```
 
-The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. NFA-45 migration `20261030_0010` adds content-free lifecycle audit events, request correlation, duration, safe decision fields, and operational indexes. NFA-51 migration `20261031_0011` adds private image ownership, article and generation associations, integrity, model and policy provenance, validation, and AI-designation controls. To roll back the latest revision in a disposable development database:
+The initial migration creates the complete NFA-20 schema, keys, indexes, constraints, update triggers, and `pgcrypto` extension. NFA-23 migration `20261025_0002` adds the server-validated CSRF hash and session lookup indexes. NFA-32 migration `20261029_0003` adds article provenance events and versioned rights. NFA-33 migration `20261029_0004` adds administrator roles, synchronisation jobs, leases, checkpoints, statistics, and concurrency constraints. NFA-34 migration `20261029_0005` adds the stable catalogue ordering index. NFA-35 migration `20261029_0006` adds provider failure counts, provider duration, failure category, failure stage, and operational query indexes. NFA-40 migration `20261029_0007` records the exact article-rights version used by each new generation run. NFA-42 migration `20261030_0008` stores safe grounding status, policy version, warnings, and checked-claim counts. NFA-43 migration `20261030_0009` adds safe usage events plus shared daily, concurrency, duplicate, lease, token, status, and retention support. NFA-45 migration `20261030_0010` adds content-free lifecycle audit events, request correlation, duration, safe decision fields, and operational indexes. NFA-51 migration `20261031_0011` adds private image ownership, article and generation associations, integrity, model and policy provenance, validation, and AI-designation controls. NFA-52 migration `20261031_0012` adds immutable image-regeneration relationships and sequencing. NFA-67 migration `20261101_0013` adds saved-draft generation lineage, optimistic versions, hashed idempotency evidence, constraints, and indexes. To roll back the latest revision in a disposable development database:
 
 ```bash
 alembic downgrade -1
 ```
 
-From revision `20261031_0011`, this command removes the NFA-51 generated-image metadata additions and indexes. A second downgrade removes the NFA-45 audit-event table and its indexes. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
+From revision `20261101_0013`, this command removes only the NFA-67 saved-draft additions. Further downgrades remove earlier revisions in reverse order. Downgrading all the way to `base` deletes all NewsFlow AI tables and their data. Never downgrade a database containing information that must be retained without a reviewed recovery plan. Future schema changes must be added as new reviewed revisions instead of editing a migration that has already been shared.
 
 Development seeding is deliberately disabled by default. It runs only when `APP_ENV` is `development` or `test` and `SEED_DATA_ENABLED=true` is explicitly supplied:
 
@@ -667,7 +681,7 @@ docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.see
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
 ```
 
-The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, NFA-39 prompt controls, NFA-40 authenticated orchestration and private draft access, the NFA-41 public request and safe-error contract, and the NFA-42 factual-grounding statuses, warnings, source integrity, rejection, and response fields.
+The normal test suite uses database and OpenAI test doubles, so it does not need real credentials, an OpenAI API key, a live provider request, or a running PostgreSQL server. It verifies environment loading, masked secret representations, missing-configuration errors, placeholder rejection, startup checking, liveness, readiness, safe database failure responses, generated OpenAPI documentation, standard API errors, seed safety gates, owner-scoped collections, blocked cross-user operations, NFA-38 OpenAI behaviour, NFA-39 prompt controls, NFA-40 authenticated orchestration and private draft access, the NFA-41 public request and safe-error contract, NFA-42 factual-grounding statuses, warnings, source integrity and rejection, and NFA-67 versioned draft persistence, duplicate protection, image validation, conflicts, and storage failures.
 
 Run the focused NFA-38 tests with:
 
@@ -706,6 +720,14 @@ pytest tests/test_generation_validator.py \
   tests/test_generation_api.py \
   tests/test_linkedin_generation_api.py
 ```
+
+Run the focused NFA-67 fast tests with:
+
+```bash
+pytest tests/test_saved_drafts.py
+```
+
+The PostgreSQL proof is safety-gated to a disposable database whose name contains `newsflow_saved_draft_test`. Its exact command is documented in the [draft persistence guide](../../docs/draft-persistence.md), and GitHub Actions runs it automatically.
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
 
@@ -820,6 +842,7 @@ apps/api/
 |   |-- api/routes/health.py    # GET /health
 |   |-- api/routes/auth.py      # Register, login, current-user, and logout APIs
 |   |-- api/routes/library.py   # Owner-scoped saved-content APIs
+|   |-- api/routes/saved_drafts.py # Versioned saved-draft APIs
 |   |-- api/routes/article_sync.py # Protected manual sync and job-status APIs
 |   |-- api/routes/ingestion_observability.py # Protected jobs, metrics, and health APIs
 |   |-- api/routes/articles.py  # Authenticated article list and detail APIs
@@ -837,6 +860,7 @@ apps/api/
 |   |-- models/auth.py          # Registration and authentication API schemas
 |   |-- models/health.py        # Health response schema
 |   |-- models/library.py       # Private saved-content API schemas
+|   |-- models/saved_draft.py   # Saved-draft create, update, and response schemas
 |   |-- models/article_rights.py # Provenance, rights policy, and decision models
 |   |-- models/article_sync.py  # Job, checkpoint, status, and statistics models
 |   |-- models/ingestion_observability.py # Metrics and health response schemas
@@ -859,6 +883,7 @@ apps/api/
 |   |-- repositories/article_catalogue.py # Rights-aware article catalogue queries
 |   |-- repositories/authentication.py # Login and session persistence
 |   |-- repositories/library.py # Owner-scoped saved-content persistence
+|   |-- repositories/saved_drafts.py # Transactional versioned-draft persistence
 |   |-- repositories/linkedin_generation.py # Current article read and private draft persistence
 |   |-- repositories/generated_images.py # Image ownership and metadata persistence
 |   |-- repositories/users.py   # PostgreSQL registration persistence
@@ -872,6 +897,7 @@ apps/api/
 |   |-- services/article_identity.py # Provider ID and canonical-URL fallback rules
 |   |-- services/authorization.py # Reusable owned-resource rule
 |   |-- services/library.py     # Private saved-content workflow
+|   |-- services/saved_drafts.py # Idempotent save and optimistic update workflow
 |   |-- services/openai_service.py # Secure reusable Responses API boundary
 |   |-- services/prompt_builder.py # Rights-aware grounded prompt construction
 |   |-- services/image_prompt.py # Rights-aware article-or-draft image-prompt composer
