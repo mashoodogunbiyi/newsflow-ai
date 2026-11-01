@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { getArticlePage } from "@/lib/article-api";
+import { getArticleDetail, getArticlePage } from "@/lib/article-api";
 import type { ArticleCategory } from "@/types/article";
 
 const cookieState = vi.hoisted(() => ({ session: undefined as string | undefined }));
@@ -33,6 +33,14 @@ const articlePage = {
     },
   ],
   next_cursor: "next-page",
+};
+
+const articleDetail = {
+  ...articlePage.items[0],
+  generation: {
+    allowed: true,
+    status: "available",
+  },
 };
 
 describe("article catalogue API client", () => {
@@ -119,6 +127,61 @@ describe("article catalogue API client", () => {
     );
 
     await expect(getArticlePage()).resolves.toEqual({
+      status: "error",
+      reason: "unavailable",
+    });
+  });
+
+  test("loads one selected article detail with the authenticated session", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify(articleDetail), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(getArticleDetail("10000000-0000-4000-8000-000000000003")).resolves.toEqual({
+      status: "success",
+      data: articleDetail,
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "http://backend:8000/api/articles/10000000-0000-4000-8000-000000000003",
+      {
+        headers: {
+          Accept: "application/json",
+          Cookie: "newsflow_session=session-value",
+        },
+        cache: "no-store",
+      },
+    );
+  });
+
+  test("validates selected IDs and maps missing detail responses safely", async () => {
+    await expect(getArticleDetail("not-an-article-id")).resolves.toEqual({
+      status: "error",
+      reason: "invalid_request",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(getArticleDetail("10000000-0000-4000-8000-000000000003")).resolves.toEqual({
+      status: "error",
+      reason: "not_found",
+    });
+  });
+
+  test("rejects inconsistent generation availability and unsafe detail data", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ...articleDetail,
+          generation: { allowed: true, status: "restricted" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await expect(getArticleDetail("10000000-0000-4000-8000-000000000003")).resolves.toEqual({
       status: "error",
       reason: "unavailable",
     });

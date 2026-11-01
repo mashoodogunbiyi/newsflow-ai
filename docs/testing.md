@@ -674,6 +674,23 @@ See the [NFA-56 frontend layout guide](frontend-layout.md) for the route structu
 
 See the [NFA-58 article filtering guide](article-filtering.md) for the approved identifiers, URL-state flow, pagination rules, empty and invalid states, accessibility, results, and limitations.
 
+## NFA-59 article selection and source-panel coverage
+
+| Requirement | Automated evidence |
+|---|---|
+| UUID-only article selection URL | `article-selection.test.tsx` and `article-card.test.tsx` |
+| Authenticated detail retrieval and response validation | `article-api.test.ts` |
+| Title, provider, date, category, summary, attribution, and source link | `source-panel.test.tsx` |
+| Available, restricted, and insufficient generation states | `source-panel.test.tsx` and `test_article_catalogue.py` |
+| Restricted continuation disabled | `source-panel.test.tsx` |
+| Missing, invalid, duplicated, and inaccessible selection states | `generate-page.test.tsx` and `test_article_catalogue.py` |
+| HTML-like source values rendered as text | `source-panel.test.tsx` |
+| Responsive metadata layout and accessible structure | `source-panel.test.tsx` |
+| PostgreSQL current detail and readiness | `test_article_catalogue_integration.py` |
+| Production TypeScript and route validation | `npm run typecheck` and `npm run build` |
+
+See the [NFA-59 article selection guide](article-selection.md) for the detail contract, source panel, safe states, accessibility, security boundary, results, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -772,9 +789,13 @@ Verified locally on 1 November 2026:
 - The focused NFA-58 backend article-catalogue run passed 10 tests.
 - The NFA-58 frontend run passed all 47 tests across 11 files, plus ESLint, Prettier, TypeScript, route type generation, and the Next.js production build.
 - The NFA-58 PostgreSQL test is safety-gated for the disposable `newsflow_article_catalogue_test` database and will run automatically in GitHub Actions after this branch is pushed.
+- The focused NFA-59 backend article detail and readiness run passed 11 tests.
+- The complete backend run after NFA-59 passed 417 tests, skipped 13 safety-gated tests, deselected the optional live-model test, and measured 81.15 percent coverage.
+- The NFA-59 frontend run passed all 59 tests across 14 files, plus ESLint, Prettier, TypeScript, route type generation, and the Next.js production build.
+- Automated browser control was unavailable during the NFA-59 local verification, so its documented responsive browser review remains a manual acceptance step.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, and NFA-58
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, and NFA-59
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

@@ -14,6 +14,9 @@ from app.models.article_catalogue import (
     ArticleAttributionResponse,
     ArticleCatalogueQuery,
     ArticleCollectionResponse,
+    ArticleDetailResponse,
+    ArticleGenerationAvailabilityResponse,
+    ArticleGenerationStatus,
     ArticleResponse,
 )
 from app.repositories.article_catalogue import (
@@ -97,7 +100,7 @@ class ArticleCatalogueService:
             )
         return ArticleCollectionResponse(items=items, next_cursor=next_cursor)
 
-    async def get_article(self, article_id: UUID) -> ArticleResponse:
+    async def get_article(self, article_id: UUID) -> ArticleDetailResponse:
         checked_at = self._checked_at()
         record = await self._repository.get_visible(
             article_id=article_id,
@@ -107,7 +110,11 @@ class ArticleCatalogueService:
             raise ArticleCatalogueNotFoundError(
                 "The article is missing or cannot be disclosed."
             )
-        return self._public_response(record)
+        public = self._public_response(record)
+        return ArticleDetailResponse(
+            **public.model_dump(),
+            generation=self._generation_availability(record),
+        )
 
     def _checked_at(self) -> datetime:
         checked_at = self._clock()
@@ -161,6 +168,36 @@ class ArticleCatalogueService:
             raise ArticleCatalogueDataError(
                 "Stored article metadata is not safe to disclose."
             ) from exc
+
+    @staticmethod
+    def _generation_availability(
+        record: ArticleCatalogueRecord,
+    ) -> ArticleGenerationAvailabilityResponse:
+        permissions_allow_generation = all(
+            (
+                record.snapshot_ai_processing_allowed,
+                record.snapshot_derivative_output_allowed,
+                record.rights_ai_processing_allowed,
+                record.rights_derivative_output_allowed,
+            )
+        )
+        if (
+            not permissions_allow_generation
+            or record.permitted_content_status == "not_permitted"
+        ):
+            status = ArticleGenerationStatus.RESTRICTED
+        elif (
+            record.permitted_content_status != "available"
+            or not record.permitted_content_text
+            or not record.permitted_content_text.strip()
+        ):
+            status = ArticleGenerationStatus.INSUFFICIENT_SOURCE_INFORMATION
+        else:
+            status = ArticleGenerationStatus.AVAILABLE
+        return ArticleGenerationAvailabilityResponse(
+            allowed=status == ArticleGenerationStatus.AVAILABLE,
+            status=status,
+        )
 
     @classmethod
     def _query_fingerprint(cls, query: ArticleCatalogueQuery) -> str:

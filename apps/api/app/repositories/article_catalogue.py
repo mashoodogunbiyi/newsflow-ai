@@ -56,6 +56,10 @@ class ArticleCatalogueRecord:
     published_at: datetime
     category: str
     snapshot_display_allowed: bool
+    permitted_content_status: str
+    permitted_content_text: str | None
+    snapshot_ai_processing_allowed: bool
+    snapshot_derivative_output_allowed: bool
     attribution_display_name: str
     attribution_text: str
     byline: str | None
@@ -63,6 +67,8 @@ class ArticleCatalogueRecord:
     source_status: str
     rights_verification_status: str
     rights_display_allowed: bool
+    rights_ai_processing_allowed: bool
+    rights_derivative_output_allowed: bool
     attribution_required: bool
     rights_attribution_text: str | None
     retention_expires_at: datetime | None
@@ -215,6 +221,12 @@ class SqlAlchemyArticleCatalogueRepository:
                 snapshot.publication_date.label("published_at"),
                 snapshot.category.label("category"),
                 snapshot.display_allowed.label("snapshot_display_allowed"),
+                snapshot.permitted_content_status.label("permitted_content_status"),
+                snapshot.permitted_content_text.label("permitted_content_text"),
+                snapshot.ai_processing_allowed.label("snapshot_ai_processing_allowed"),
+                snapshot.derivative_output_allowed.label(
+                    "snapshot_derivative_output_allowed"
+                ),
                 snapshot.attribution_display_name.label("attribution_display_name"),
                 snapshot.attribution_text.label("attribution_text"),
                 snapshot.byline.label("byline"),
@@ -223,6 +235,10 @@ class SqlAlchemyArticleCatalogueRepository:
                 SourceProfileTable.status.label("source_status"),
                 rights.verification_status.label("rights_verification_status"),
                 rights.display_allowed.label("rights_display_allowed"),
+                rights.ai_processing_allowed.label("rights_ai_processing_allowed"),
+                rights.derivative_output_allowed.label(
+                    "rights_derivative_output_allowed"
+                ),
                 rights.attribution_required.label("attribution_required"),
                 rights.attribution_text.label("rights_attribution_text"),
                 rights.retention_expires_at.label("retention_expires_at"),
@@ -283,6 +299,10 @@ class SqlAlchemyArticleCatalogueRepository:
             published_at=row.published_at,
             category=row.category,
             snapshot_display_allowed=row.snapshot_display_allowed,
+            permitted_content_status=row.permitted_content_status,
+            permitted_content_text=row.permitted_content_text,
+            snapshot_ai_processing_allowed=row.snapshot_ai_processing_allowed,
+            snapshot_derivative_output_allowed=(row.snapshot_derivative_output_allowed),
             attribution_display_name=row.attribution_display_name,
             attribution_text=row.attribution_text,
             byline=row.byline,
@@ -290,6 +310,8 @@ class SqlAlchemyArticleCatalogueRepository:
             source_status=row.source_status,
             rights_verification_status=row.rights_verification_status,
             rights_display_allowed=row.rights_display_allowed,
+            rights_ai_processing_allowed=row.rights_ai_processing_allowed,
+            rights_derivative_output_allowed=row.rights_derivative_output_allowed,
             attribution_required=row.attribution_required,
             rights_attribution_text=row.rights_attribution_text,
             retention_expires_at=row.retention_expires_at,

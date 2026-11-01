@@ -2,7 +2,7 @@
 
 ## Purpose
 
-NFA-34 gives the NewsFlow AI frontend a secure way to browse and retrieve authorised article metadata from PostgreSQL. NFA-58 extends the list endpoint with an approved category filter for the dashboard browsing workflow.
+NFA-34 gives the NewsFlow AI frontend a secure way to browse and retrieve authorised article metadata from PostgreSQL. NFA-58 extends the list endpoint with an approved category filter for the dashboard browsing workflow. NFA-59 extends article detail with a safe, current generation-readiness result.
 
 The frontend never connects directly to PostgreSQL. It sends an HTTP request to FastAPI, FastAPI applies authentication and rights rules, and the repository builds parameterised SQLAlchemy queries against the current stored article records.
 
@@ -100,7 +100,7 @@ Example synthetic response:
 GET /api/articles/{article_id}
 ```
 
-The identifier is the internal stable UUID created by the article identity system. A successful response uses the same public article schema as the list endpoint.
+The identifier is the internal stable UUID created by the article identity system. A successful response uses the public article schema from the list endpoint and adds `generation.allowed` plus a safe `available`, `restricted`, or `insufficient_source_information` status. Stored grounding text and confidential rights evidence are not returned.
 
 Missing, inactive, restricted, expired, unverified, and disabled-source records all receive the same HTTP 404 response. This prevents the API from revealing that a restricted record exists.
 
@@ -114,6 +114,7 @@ The API returns only the metadata required by the frontend:
 - Approved provider profile key.
 - Publication timestamp and category.
 - Required display name, attribution wording, byline, and copyright notice.
+- Safe current generation availability on article detail only.
 
 The API does not return:
 
@@ -206,7 +207,7 @@ Run the focused fast tests from `apps/api`:
 pytest tests/test_article_catalogue.py
 ```
 
-They cover list and detail responses, public field exclusion, authentication, restricted records, pagination, cursor binding, search input, query validation, safe database errors, and OpenAPI documentation.
+They cover list and detail responses, generation readiness, restricted and insufficient sources, public field exclusion, authentication, restricted records, pagination, cursor binding, search input, query validation, safe database errors, and OpenAPI documentation.
 
 The PostgreSQL integration test is destructive and accepts only a separate database whose name contains `newsflow_article_catalogue_test`:
 
@@ -234,7 +235,7 @@ Verified on 29 October 2026:
 - Article list and detail REST endpoints - complete.
 - Cursor pagination, search, category, provider and publication-date filtering, and sorting - complete.
 - Authentication and rights-aware visibility - complete.
-- Public response schemas and source attribution - complete.
+- Public response schemas, source attribution, and safe generation readiness - complete.
 - Safe SQLAlchemy queries and controlled errors - complete.
 - FastAPI OpenAPI documentation - complete.
 - Fast and PostgreSQL automated tests - complete.

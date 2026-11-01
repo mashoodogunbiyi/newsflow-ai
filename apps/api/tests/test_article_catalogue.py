@@ -50,6 +50,10 @@ def article_record(
         "published_at": published_at or NOW - timedelta(hours=2),
         "category": "technology",
         "snapshot_display_allowed": True,
+        "permitted_content_status": "available",
+        "permitted_content_text": "Synthetic permitted grounding information.",
+        "snapshot_ai_processing_allowed": True,
+        "snapshot_derivative_output_allowed": True,
         "attribution_display_name": "NewsFlow AI synthetic fixture",
         "attribution_text": "Source: NewsFlow AI synthetic fixture - not live news",
         "byline": None,
@@ -57,6 +61,8 @@ def article_record(
         "source_status": "enabled",
         "rights_verification_status": "verified",
         "rights_display_allowed": True,
+        "rights_ai_processing_allowed": True,
+        "rights_derivative_output_allowed": True,
         "attribution_required": True,
         "rights_attribution_text": (
             "Source: NewsFlow AI synthetic fixture - not live news"
@@ -216,6 +222,11 @@ def test_individual_endpoint_returns_article_and_missing_is_404() -> None:
 
     assert response.status_code == 200
     assert response.json()["id"] == str(record.id)
+    assert response.json()["generation"] == {
+        "allowed": True,
+        "status": "available",
+    }
+    assert "permitted_content_text" not in response.json()
     assert missing.status_code == 404
     assert missing.json() == {
         "error": {
@@ -223,6 +234,37 @@ def test_individual_endpoint_returns_article_and_missing_is_404() -> None:
             "message": "The requested article was not found.",
         }
     }
+
+
+def test_detail_reports_restricted_and_insufficient_generation_safely() -> None:
+    restricted = article_record(
+        rights_ai_processing_allowed=False,
+        rights_derivative_output_allowed=False,
+    )
+    insufficient = article_record(
+        permitted_content_status="missing",
+        permitted_content_text=None,
+    )
+
+    restricted_response = make_client(
+        InMemoryArticleCatalogueRepository([restricted])
+    ).get(f"/api/articles/{restricted.id}")
+    insufficient_response = make_client(
+        InMemoryArticleCatalogueRepository([insufficient])
+    ).get(f"/api/articles/{insufficient.id}")
+
+    assert restricted_response.status_code == 200
+    assert restricted_response.json()["generation"] == {
+        "allowed": False,
+        "status": "restricted",
+    }
+    assert insufficient_response.status_code == 200
+    assert insufficient_response.json()["generation"] == {
+        "allowed": False,
+        "status": "insufficient_source_information",
+    }
+    assert "permitted_content_text" not in restricted_response.text
+    assert "Synthetic permitted grounding information" not in restricted_response.text
 
 
 def test_restricted_or_expired_article_is_not_disclosed() -> None:

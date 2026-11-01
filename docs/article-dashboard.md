@@ -2,7 +2,7 @@
 
 ## Purpose
 
-NFA-57 connects the protected Next.js dashboard to the authenticated article catalogue created in NFA-34. Signed-in users can browse permitted article metadata, search by topic, choose publication order, follow the original source, and select an article as the starting point for LinkedIn content creation.
+NFA-57 connects the protected Next.js dashboard to the authenticated article catalogue created in NFA-34. Signed-in users can browse permitted article metadata, search by topic, choose publication order, follow the original source, and select an article as the starting point for LinkedIn content creation. NFA-59 connects that selection to the protected source-review route.
 
 The dashboard does not retrieve live CNN information. It displays the approved synthetic development catalogue while ADR-001 blocks live CNN access.
 
@@ -54,7 +54,7 @@ Internal rights records, stored permitted-content text, provider credentials, sn
 - Source attribution remains visible on every article card.
 - Original-source links open in a new tab with `noopener noreferrer` protection and an article-specific accessible label.
 - The interface explicitly identifies fixture mode and does not imply CNN supplied or approved the records.
-- Selecting an article sends only its stable identifier to `/generate`; FastAPI must repeat all rights and authorisation checks before generation.
+- Selecting an article sends only its stable identifier to `/generate`; FastAPI repeats display checks for the source panel and must repeat all AI-use checks before generation.
 
 ## Pagination and request behaviour
 
@@ -100,6 +100,7 @@ Authentication rejection redirects to login. Invalid cursors and filters produce
 | `apps/web/app/(workspace)/dashboard/loading.tsx` | Route-level loading interface |
 | `apps/web/components/articles/article-catalogue.tsx` | Controls, server fetch orchestration, states, and pagination |
 | `apps/web/components/articles/article-card.tsx` | Reusable permitted article presentation and actions |
+| `apps/web/components/articles/article-selection.tsx` | UUID-only selection link shared by catalogue cards |
 | `apps/web/components/articles/category-filter.tsx` | Approved responsive category selector |
 | `apps/web/components/articles/article-grid.tsx` | Responsive article layout |
 | `apps/web/components/articles/article-dashboard-skeleton.tsx` | Accessible loading skeleton |
@@ -167,5 +168,5 @@ With PostgreSQL, FastAPI, and Next.js running:
 
 - The dashboard uses synthetic fixture records until written authorisation replaces ADR-001.
 - Cursor pagination supports forward navigation and returning to the first page. Browser history provides the previous-page journey.
-- Article selection prepares the `/generate` route. The dedicated generation-interface task completes the remaining creation experience.
+- NFA-59 completes article selection and the source information panel. Tone, length, draft generation, editing, and saving controls remain for their dedicated tasks.
 - Automated layout tests verify responsive classes and behaviour, but a human visual review remains part of acceptance.

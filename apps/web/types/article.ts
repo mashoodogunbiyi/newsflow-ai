@@ -21,6 +21,16 @@ export type ArticlePage = {
   next_cursor: string | null;
 };
 
+export type ArticleGenerationStatus =
+  "available" | "restricted" | "insufficient_source_information";
+
+export type ArticleDetail = Article & {
+  generation: {
+    allowed: boolean;
+    status: ArticleGenerationStatus;
+  };
+};
+
 export const ARTICLE_CATEGORIES = [
   { id: "technology", label: "Technology" },
   { id: "business", label: "Business" },
@@ -84,6 +94,28 @@ function isArticle(value: unknown): value is Article {
     !Number.isNaN(Date.parse(value.published_at)) &&
     isNullableString(value.category) &&
     isArticleAttribution(value.attribution)
+  );
+}
+
+function isGenerationStatus(value: unknown): value is ArticleGenerationStatus {
+  return (
+    value === "available" || value === "restricted" || value === "insufficient_source_information"
+  );
+}
+
+export function isArticleDetail(value: unknown): value is ArticleDetail {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const generation = value.generation;
+  if (!isArticle(value) || !isRecord(generation)) {
+    return false;
+  }
+  const status = generation.status;
+  return (
+    typeof generation.allowed === "boolean" &&
+    isGenerationStatus(status) &&
+    generation.allowed === (status === "available")
   );
 }
 
