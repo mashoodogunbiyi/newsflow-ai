@@ -301,7 +301,13 @@ def test_complete_synthetic_ingestion_and_catalogue_pipeline(
             )
             detail = client.get(f"/api/articles/{technology_item['id']}")
             assert detail.status_code == 200
-            assert detail.json() == technology_item
+            assert detail.json() == {
+                **technology_item,
+                "generation": {
+                    "allowed": True,
+                    "status": "available",
+                },
+            }
             assert detail.headers["Cache-Control"] == "private, no-store"
 
             first_counts = _counts(resources)
