@@ -85,6 +85,11 @@ describe("LinkedIn generation controls", () => {
     expect(new Headers(options?.headers).get("x-csrf-token")).toBe("csrf-test-token");
     expect(new Headers(options?.headers).get("idempotency-key")).toMatch(/^generation:/);
     expect(screen.getByText(/nothing has been published to LinkedIn/i)).toBeDefined();
+    expect(screen.getByRole("textbox", { name: "LinkedIn draft text" })).toHaveProperty(
+      "value",
+      generationResponse.draft,
+    );
+    expect(screen.getByTestId("draft-preview").textContent).toBe(generationResponse.draft);
     await waitFor(() =>
       expect(document.activeElement?.textContent).toContain(
         "Your private draft has been generated.",

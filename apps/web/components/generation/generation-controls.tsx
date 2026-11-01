@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
+import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import { GenerationStatus } from "@/components/generation/generation-status";
 import { LengthSelector } from "@/components/generation/length-selector";
 import { ToneSelector } from "@/components/generation/tone-selector";
@@ -15,6 +16,7 @@ import {
   type GenerationResult,
 } from "@/lib/generation-api";
 import type { ArticleGenerationStatus } from "@/types/article";
+import { toDraftEditorDocument } from "@/types/draft";
 import {
   isArticleId,
   isGenerationLength,
@@ -88,6 +90,9 @@ export function GenerationControls({
   const router = useRouter();
   const [tone, setTone] = useState<GenerationTone>("professional");
   const [length, setLength] = useState<GenerationLength>("medium");
+  const [editorDraft, setEditorDraft] = useState<
+    Extract<GenerationResult, { status: "success" }>["data"] | null
+  >(null);
   const [retrySeconds, setRetrySeconds] = useState(0);
   const statusRef = useRef<HTMLDivElement>(null);
   const requestKeyRef = useRef<{ key: string; signature: string } | null>(null);
@@ -164,7 +169,11 @@ export function GenerationControls({
   function handleRunResult(
     run: GenerationRunResult<Extract<GenerationResult, { status: "success" }>["data"]>,
   ) {
-    if (!run.accepted || !run.applied || run.outcome.status === "success") {
+    if (!run.accepted || !run.applied) {
+      return;
+    }
+    if (run.outcome.status === "success") {
+      setEditorDraft(run.outcome.data);
       return;
     }
     if (run.outcome.error.category === "authentication") {
@@ -187,95 +196,99 @@ export function GenerationControls({
   const unavailable = unavailableMessage(articleId, availabilityStatus);
 
   return (
-    <Card className="scroll-mt-24" id="generation-controls" tone="muted">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            Draft preferences
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
-            Configure your LinkedIn draft.
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-emerald-950/60" id="generation-help">
-            Choose a tone and length, then make one deliberate generation request. The backend
-            rechecks your session, source rights, and preferences before OpenAI is contacted.
-          </p>
+    <>
+      <Card className="scroll-mt-24" id="generation-controls" tone="muted">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Draft preferences
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
+              Configure your LinkedIn draft.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-emerald-950/60" id="generation-help">
+              Choose a tone and length, then make one deliberate generation request. The backend
+              rechecks your session, source rights, and preferences before OpenAI is contacted.
+            </p>
+          </div>
+          <span className="rounded-full border border-emerald-950/10 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950/65">
+            Defaults: Professional and Medium
+          </span>
         </div>
-        <span className="rounded-full border border-emerald-950/10 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950/65">
-          Defaults: Professional and Medium
-        </span>
-      </div>
 
-      {!isAvailable ? (
-        <div
-          aria-live="polite"
-          className="mt-6 rounded-2xl border border-amber-700/20 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
-          id="generation-unavailable"
-          role="status"
-        >
-          <strong>Generation unavailable:</strong> {unavailable}
-        </div>
-      ) : null}
-
-      <form
-        aria-busy={generation.isBusy}
-        aria-describedby={
-          isAvailable ? "generation-help" : "generation-help generation-unavailable"
-        }
-        className="mt-7 space-y-7"
-        noValidate
-        onSubmit={handleSubmit}
-      >
-        <ToneSelector disabled={controlsDisabled} onChange={updateTone} value={tone} />
-        <LengthSelector disabled={controlsDisabled} onChange={updateLength} value={length} />
-
-        <GenerationStatus
-          completionDetails={
-            generation.state.phase === "completed" ? (
-              <>
-                {generation.state.result.validation_warnings.length > 0 ? (
-                  <p className="mt-2 font-semibold text-amber-900">
-                    Automated checks added {generation.state.result.validation_warnings.length}{" "}
-                    review{" "}
-                    {generation.state.result.validation_warnings.length === 1
-                      ? "warning"
-                      : "warnings"}
-                    .
-                  </p>
-                ) : null}
-                <p className="mt-2 font-mono text-xs text-emerald-950/50">
-                  Generation ID: {generation.state.result.generation_id}
-                </p>
-              </>
-            ) : null
-          }
-          onRetry={() => void retryGeneration()}
-          retrySeconds={retrySeconds}
-          state={generation.state}
-          statusRef={statusRef}
-        />
-
-        <div className="flex flex-col gap-3 border-t border-emerald-950/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl text-xs leading-5 text-emerald-950/50">
-            Generation creates a private AI draft for review. It never publishes automatically and
-            it never sends an OpenAI credential to your browser.
-          </p>
-          <Button
-            aria-describedby={isAvailable ? "generation-help" : "generation-unavailable"}
-            className="w-full shrink-0 sm:w-auto"
-            disabled={!isAvailable || generation.isBusy || retrySeconds > 0}
-            type="submit"
+        {!isAvailable ? (
+          <div
+            aria-live="polite"
+            className="mt-6 rounded-2xl border border-amber-700/20 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+            id="generation-unavailable"
+            role="status"
           >
-            {generation.state.phase === "submitting"
-              ? "Submitting request..."
-              : generation.state.phase === "processing"
-                ? "Generating draft..."
-                : retrySeconds > 0
-                  ? "Generation temporarily limited"
-                  : "Generate LinkedIn draft"}
-          </Button>
-        </div>
-      </form>
-    </Card>
+            <strong>Generation unavailable:</strong> {unavailable}
+          </div>
+        ) : null}
+
+        <form
+          aria-busy={generation.isBusy}
+          aria-describedby={
+            isAvailable ? "generation-help" : "generation-help generation-unavailable"
+          }
+          className="mt-7 space-y-7"
+          noValidate
+          onSubmit={handleSubmit}
+        >
+          <ToneSelector disabled={controlsDisabled} onChange={updateTone} value={tone} />
+          <LengthSelector disabled={controlsDisabled} onChange={updateLength} value={length} />
+
+          <GenerationStatus
+            completionDetails={
+              generation.state.phase === "completed" ? (
+                <>
+                  {generation.state.result.validation_warnings.length > 0 ? (
+                    <p className="mt-2 font-semibold text-amber-900">
+                      Automated checks added {generation.state.result.validation_warnings.length}{" "}
+                      review{" "}
+                      {generation.state.result.validation_warnings.length === 1
+                        ? "warning"
+                        : "warnings"}
+                      .
+                    </p>
+                  ) : null}
+                  <p className="mt-2 font-mono text-xs text-emerald-950/50">
+                    Generation ID: {generation.state.result.generation_id}
+                  </p>
+                </>
+              ) : null
+            }
+            onRetry={() => void retryGeneration()}
+            retrySeconds={retrySeconds}
+            state={generation.state}
+            statusRef={statusRef}
+          />
+
+          <div className="flex flex-col gap-3 border-t border-emerald-950/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl text-xs leading-5 text-emerald-950/50">
+              Generation creates a private AI draft for review. It never publishes automatically and
+              it never sends an OpenAI credential to your browser.
+            </p>
+            <Button
+              aria-describedby={isAvailable ? "generation-help" : "generation-unavailable"}
+              className="w-full shrink-0 sm:w-auto"
+              disabled={!isAvailable || generation.isBusy || retrySeconds > 0}
+              type="submit"
+            >
+              {generation.state.phase === "submitting"
+                ? "Submitting request..."
+                : generation.state.phase === "processing"
+                  ? "Generating draft..."
+                  : retrySeconds > 0
+                    ? "Generation temporarily limited"
+                    : "Generate LinkedIn draft"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {editorDraft ? <LinkedInEditor draft={toDraftEditorDocument(editorDraft)} /> : null}
+    </>
   );
 }

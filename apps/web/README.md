@@ -1,8 +1,8 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection. NFA-62 adds the accessible multiline draft editor, text-only live preview, source and warning preservation, and local unsaved-change protection.
 
-The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, and lets an authorised user request a private LinkedIn draft using supported tone and length choices. The browser sends the request to FastAPI through a narrow same-origin route and never receives an OpenAI credential.
+The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, lets an authorised user request a private LinkedIn draft using supported tone and length choices, and opens a responsive editor after a valid result. The editor updates its local preview without another provider request and never receives an OpenAI credential.
 
 The E6 implementation must follow the [generation frontend integration contract](../../docs/e6-generation-integration-contract.md), including same-origin gateway, session and CSRF behaviour, request and response types, safe errors, mandatory human review, source presentation, accessibility, and no automatic LinkedIn publishing.
 
@@ -75,7 +75,7 @@ For a test watcher during development:
 npm run test:watch
 ```
 
-The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, generation preferences, duplicate protection, usage limits, authentication recovery, generation gateway allowlists, state transitions, provider timeouts, deliberate retries, stale-response protection, and text-specific and image-specific status messages. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
+The frontend tests cover the homepage, form validation, registration, login errors, loading feedback, logout and CSRF behaviour, session restoration, gateway failure handling, workspace route protection, active navigation, mobile menu behavior, reusable components, safe error recovery, server-layout authentication, article response validation, approved-field cards, source-link safety, category selection, URL-state restoration, pagination resets, UUID-only selection, detail retrieval, source-panel states, generation preferences, duplicate protection, usage limits, authentication recovery, generation gateway allowlists, state transitions, provider timeouts, deliberate retries, stale-response protection, text-specific and image-specific status messages, draft editing, preview synchronisation, warning preservation, unsaved navigation, and literal HTML-like text rendering. They use synthetic values and mocked network responses, so they make no real account, network, or paid API calls.
 
 To serve the production build locally after a successful build:
 
@@ -102,6 +102,7 @@ apps/web/
 ├── components/
 │   ├── auth/                # Reusable forms, page shell, and logout control
 │   ├── articles/            # Article discovery, selection, source panel, and controlled states
+│   ├── editor/              # Draft textarea, character count, warnings, and preview
 │   ├── generation/          # Tone, length, submission, and generation feedback controls
 │   ├── layout/              # Application shell, navigation, page header, and auth fallback
 │   ├── ui/                  # Buttons, inputs, cards, statuses, loading, and errors
@@ -203,6 +204,23 @@ The exact request contract, state mapping, duplicate controls, accessibility rul
 - Keep FastAPI authoritative for authentication, rights, limits, idempotency, provider access, and persistence.
 
 The complete model, transitions, failure and retry policy, stale-response design, accessibility behaviour, test coverage, and current cancellation limitation are documented in [the NFA-61 frontend generation states guide](../../docs/generation-states.md).
+
+## NFA-62 draft editor conventions
+
+- Pass only a runtime-validated generation response into the editor adapter.
+- Use the controlled native textarea for multiline editing; do not add a rich-text dependency without an approved requirement.
+- Keep source attribution and all backend validation warnings outside the editable text and visible after edits.
+- Render preview content as React text with preserved line breaks; never use `dangerouslySetInnerHTML` for generated or edited content.
+- Keep the current character count separate from the configured short, medium, or long word guidance.
+- Do not claim the character count is LinkedIn's current platform limit.
+- Keep normal rerenders from resetting edited text.
+- When a newer result arrives after an edit, require the user to choose between the new result and their local changes.
+- Warn before a reload, close, or normal same-tab link discards unsaved local edits.
+- Do not add a non-functional Save action. Persistent saving and draft history belong to E7.
+- Do not send local edits to FastAPI or OpenAI merely to update the preview.
+- Keep the AI-assisted label, mandatory human-review language, and no-automatic-publishing boundary visible.
+
+The full state model, overwrite protection, navigation warning, preview, security, accessibility, tests, and E7 boundary are documented in [the NFA-62 LinkedIn draft editor guide](../../docs/linkedin-draft-editor.md).
 
 ## Configuration and security
 
