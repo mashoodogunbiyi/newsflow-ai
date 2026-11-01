@@ -194,6 +194,7 @@ def generation_run_values(run_id: UUID, idempotency_key: str) -> dict[str, objec
         "prompt_text": "Prompt content intentionally not retained in this test.",
         "provider_request_id": f"provider-{run_id}",
         "attempt_count": 1,
+        "created_at": NOW,
         "started_at": NOW,
         "completed_at": NOW,
     }
