@@ -137,6 +137,9 @@ def test_openai_settings_have_bounded_defaults() -> None:
     assert str(settings.image_storage_local_root) == ".local/image-storage"
     assert settings.image_storage_max_bytes == 10_485_760
     assert settings.image_storage_max_pixels == 4_000_000
+    assert settings.draft_deletion_retention_days == 30
+    assert settings.deletion_audit_retention_days == 365
+    assert settings.image_cleanup_retry_seconds == 300
 
 
 def test_local_image_storage_is_limited_to_development_and_test() -> None:

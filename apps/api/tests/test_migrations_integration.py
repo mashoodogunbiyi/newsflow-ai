@@ -24,12 +24,14 @@ EXPECTED_TABLES = {
     "article_sync_checkpoints",
     "article_sync_jobs",
     "articles",
+    "content_deletion_audits",
     "generated_images",
     "generated_posts",
     "generation_facts",
     "generation_audit_events",
     "generation_runs",
     "generation_usage_events",
+    "image_cleanup_jobs",
     "post_claim_sources",
     "post_claims",
     "post_version_hashtags",
@@ -223,6 +225,20 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
         "ix_generated_images_article_created",
         "ix_generated_images_parent_created",
     } <= generated_image_indexes
+    saved_content_columns = {
+        column["name"]
+        for column in sa.inspect(engine).get_columns("saved_content_items")
+    }
+    assert "deletion_due_at" in saved_content_columns
+    deletion_audit_indexes = {
+        index["name"]
+        for index in sa.inspect(engine).get_indexes("content_deletion_audits")
+    }
+    assert "ix_content_deletion_audits_purge" in deletion_audit_indexes
+    cleanup_indexes = {
+        index["name"] for index in sa.inspect(engine).get_indexes("image_cleanup_jobs")
+    }
+    assert "ix_image_cleanup_jobs_due" in cleanup_indexes
     snapshot_indexes = {
         index["name"] for index in sa.inspect(engine).get_indexes("article_snapshots")
     }

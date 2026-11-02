@@ -24,6 +24,7 @@ from app.models.saved_draft import (
     UpdateSavedDraftRequest,
 )
 from app.repositories import AuthenticatedSession
+from app.repositories.content_deletion import ContentDeletionRepositoryError
 from app.repositories.saved_drafts import (
     SavedDraft,
     SavedDraftDuplicateError,
@@ -33,6 +34,7 @@ from app.repositories.saved_drafts import (
     SavedDraftVersionConflict,
 )
 from app.services import PrivateResourceNotFoundError
+from app.services.content_deletion import ContentDeletionService
 from app.services.saved_drafts import SavedDraftService
 
 router = APIRouter(prefix="/api/v1/drafts", tags=["Saved LinkedIn drafts"])
@@ -49,6 +51,21 @@ def _service(request: Request) -> SavedDraftService:
             status_code=503,
             code="draft_persistence_unavailable",
             message="Draft persistence is temporarily unavailable.",
+        )
+    return service
+
+
+def _deletion_service(request: Request) -> ContentDeletionService:
+    service: ContentDeletionService | None = getattr(
+        request.app.state,
+        "content_deletion_service",
+        None,
+    )
+    if service is None:
+        raise ApplicationError(
+            status_code=503,
+            code="content_deletion_unavailable",
+            message="Content deletion is temporarily unavailable.",
         )
     return service
 
@@ -282,6 +299,49 @@ async def get_saved_draft(
 
     response.headers["Cache-Control"] = "private, no-store"
     return _response(item)
+
+
+@router.delete(
+    "/{saved_draft_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete one owned saved draft",
+    description=(
+        "Immediately remove an owned draft from active access and queue eligible "
+        "private image objects for retryable cleanup. Retained content is redacted "
+        "after the configured lifecycle period."
+    ),
+    responses={
+        401: {"description": "Authentication is required."},
+        403: {"description": "CSRF validation failed."},
+        404: {"description": "The owned active draft was not found."},
+        503: {"description": "Deletion persistence is unavailable."},
+    },
+)
+async def delete_saved_draft(
+    saved_draft_id: UUID,
+    request: Request,
+    active_session: Annotated[
+        AuthenticatedSession,
+        Depends(require_csrf_authenticated_session),
+    ],
+) -> Response:
+    try:
+        await _deletion_service(request).delete(
+            owner_id=active_session.user_id,
+            draft_id=saved_draft_id,
+        )
+    except PrivateResourceNotFoundError as exc:
+        _raise_private_not_found(exc)
+    except ContentDeletionRepositoryError as exc:
+        raise ApplicationError(
+            status_code=503,
+            code="content_deletion_unavailable",
+            message="Content deletion is temporarily unavailable.",
+        ) from exc
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get(
