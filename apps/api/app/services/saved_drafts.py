@@ -4,7 +4,11 @@ import hashlib
 import json
 from uuid import UUID
 
-from app.repositories.saved_drafts import SavedDraft, SavedDraftRepository
+from app.repositories.saved_drafts import (
+    SavedDraft,
+    SavedDraftPage,
+    SavedDraftRepository,
+)
 from app.services.authorization import require_owned_resource
 
 MAX_DRAFT_CHARACTERS = 12_000
@@ -36,6 +40,19 @@ class SavedDraftService:
                 owner_id=owner_id,
                 saved_draft_id=saved_draft_id,
             )
+        )
+
+    async def list(
+        self,
+        *,
+        owner_id: UUID,
+        page: int,
+        page_size: int,
+    ) -> SavedDraftPage:
+        return await self._repository.list_for_owner(
+            owner_id=owner_id,
+            page=page,
+            page_size=page_size,
         )
 
     async def create(

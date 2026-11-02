@@ -43,6 +43,19 @@ class SavedDraftVersionConflict(RuntimeError):
 
 
 @dataclass(frozen=True)
+class SavedDraftImage:
+    """Permitted selected-image metadata safe for private API responses."""
+
+    id: UUID
+    alt_text: str | None
+    mime_type: str
+    width_px: int
+    height_px: int
+    ai_generated: bool
+    ai_disclosure_required: bool
+
+
+@dataclass(frozen=True)
 class SavedDraft:
     """Private saved draft with source and original-generation lineage."""
 
@@ -53,6 +66,7 @@ class SavedDraft:
     original_post_version_id: UUID
     current_post_version_id: UUID
     selected_image_id: UUID | None
+    selected_image: SavedDraftImage | None
     title: str | None
     edited_text: str
     tone: str
@@ -70,12 +84,30 @@ class SavedDraft:
     updated_at: datetime
 
 
+@dataclass(frozen=True)
+class SavedDraftPage:
+    """One bounded owner-scoped page in stable newest-first order."""
+
+    items: list[SavedDraft]
+    page: int
+    page_size: int
+    total_items: int
+
+
 class SavedDraftRepository(Protocol):
     """Owner-scoped save and update persistence boundary."""
 
     async def get_for_owner(
         self, *, owner_id: UUID, saved_draft_id: UUID
     ) -> SavedDraft | None: ...
+
+    async def list_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        page: int,
+        page_size: int,
+    ) -> SavedDraftPage: ...
 
     async def create_for_owner(
         self,
@@ -104,6 +136,7 @@ class SavedDraftRepository(Protocol):
 def _saved_draft_statement():
     selected_version = aliased(PostVersionTable, name="selected_version")
     original_version = aliased(PostVersionTable, name="original_version")
+    permitted_image = aliased(GeneratedImageTable, name="permitted_image")
     return (
         select(
             SavedContentItemTable.id,
@@ -113,6 +146,15 @@ def _saved_draft_statement():
             original_version.id.label("original_post_version_id"),
             selected_version.id.label("current_post_version_id"),
             SavedContentItemTable.selected_image_id,
+            permitted_image.id.label("permitted_image_id"),
+            permitted_image.alt_text.label("image_alt_text"),
+            permitted_image.mime_type.label("image_mime_type"),
+            permitted_image.width_px.label("image_width_px"),
+            permitted_image.height_px.label("image_height_px"),
+            permitted_image.ai_generated.label("image_ai_generated"),
+            permitted_image.ai_disclosure_required.label(
+                "image_ai_disclosure_required"
+            ),
             SavedContentItemTable.library_title,
             selected_version.rendered_text,
             selected_version.tone,
@@ -165,6 +207,20 @@ def _saved_draft_statement():
             ArticleSnapshotTable.id == GeneratedPostTable.article_snapshot_id,
         )
         .join(ArticleTable, ArticleTable.id == ArticleSnapshotTable.article_id)
+        .outerjoin(
+            permitted_image,
+            and_(
+                permitted_image.id == SavedContentItemTable.selected_image_id,
+                permitted_image.user_id == SavedContentItemTable.user_id,
+                permitted_image.generated_post_id
+                == SavedContentItemTable.generated_post_id,
+                permitted_image.status == "available",
+                permitted_image.safety_status == "approved",
+                permitted_image.validation_status == "passed",
+                permitted_image.generation_status == "completed",
+                permitted_image.deleted_at.is_(None),
+            ),
+        )
         .where(
             SavedContentItemTable.deleted_at.is_(None),
             GeneratedPostTable.deleted_at.is_(None),
@@ -174,6 +230,17 @@ def _saved_draft_statement():
 
 
 def _from_row(row: object) -> SavedDraft:
+    selected_image = None
+    if row.permitted_image_id is not None:
+        selected_image = SavedDraftImage(
+            id=row.permitted_image_id,
+            alt_text=row.image_alt_text,
+            mime_type=row.image_mime_type,
+            width_px=row.image_width_px,
+            height_px=row.image_height_px,
+            ai_generated=row.image_ai_generated,
+            ai_disclosure_required=row.image_ai_disclosure_required,
+        )
     return SavedDraft(
         id=row.id,
         owner_id=row.user_id,
@@ -182,6 +249,7 @@ def _from_row(row: object) -> SavedDraft:
         original_post_version_id=row.original_post_version_id,
         current_post_version_id=row.current_post_version_id,
         selected_image_id=row.selected_image_id,
+        selected_image=selected_image,
         title=row.library_title,
         edited_text=row.rendered_text,
         tone=row.tone,
@@ -228,6 +296,61 @@ class SqlAlchemySavedDraftRepository:
                 "The saved draft could not be read."
             ) from exc
         return None if row is None else _from_row(row)
+
+    async def list_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        page: int,
+        page_size: int,
+    ) -> SavedDraftPage:
+        offset = (page - 1) * page_size
+        count_statement = (
+            select(func.count())
+            .select_from(SavedContentItemTable)
+            .join(
+                GeneratedPostTable,
+                and_(
+                    GeneratedPostTable.id == SavedContentItemTable.generated_post_id,
+                    GeneratedPostTable.user_id == SavedContentItemTable.user_id,
+                ),
+            )
+            .where(
+                SavedContentItemTable.user_id == owner_id,
+                SavedContentItemTable.deleted_at.is_(None),
+                GeneratedPostTable.user_id == owner_id,
+                GeneratedPostTable.deleted_at.is_(None),
+                GeneratedPostTable.status != "deleted",
+            )
+        )
+        try:
+            async with self._database.session() as session:
+                total_items = int((await session.execute(count_statement)).scalar_one())
+                rows = (
+                    await session.execute(
+                        _saved_draft_statement()
+                        .where(
+                            SavedContentItemTable.user_id == owner_id,
+                            GeneratedPostTable.user_id == owner_id,
+                        )
+                        .order_by(
+                            SavedContentItemTable.updated_at.desc(),
+                            SavedContentItemTable.id.desc(),
+                        )
+                        .offset(offset)
+                        .limit(page_size)
+                    )
+                ).all()
+        except SQLAlchemyError as exc:
+            raise SavedDraftRepositoryError(
+                "Saved drafts could not be listed."
+            ) from exc
+        return SavedDraftPage(
+            items=[_from_row(row) for row in rows],
+            page=page,
+            page_size=page_size,
+            total_items=total_items,
+        )
 
     async def create_for_owner(
         self,

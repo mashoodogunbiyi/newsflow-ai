@@ -1,4 +1,4 @@
-"""NFA-67 saved-draft API, ownership, and conflict tests."""
+"""NFA-67 and NFA-68 saved-draft persistence and REST API tests."""
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -18,6 +18,8 @@ from app.repositories.saved_drafts import (
     SavedDraft,
     SavedDraftDuplicateError,
     SavedDraftIdempotencyConflict,
+    SavedDraftImage,
+    SavedDraftPage,
     SavedDraftRepositoryError,
     SavedDraftVersionConflict,
 )
@@ -52,6 +54,27 @@ class InMemorySavedDraftRepository:
         item = self.items.get(saved_draft_id)
         return item if item is not None and item.owner_id == owner_id else None
 
+    async def list_for_owner(
+        self,
+        *,
+        owner_id: UUID,
+        page: int,
+        page_size: int,
+    ) -> SavedDraftPage:
+        self._maybe_fail()
+        owned = sorted(
+            (item for item in self.items.values() if item.owner_id == owner_id),
+            key=lambda item: (item.updated_at, item.id),
+            reverse=True,
+        )
+        offset = (page - 1) * page_size
+        return SavedDraftPage(
+            items=owned[offset : offset + page_size],
+            page=page,
+            page_size=page_size,
+            total_items=len(owned),
+        )
+
     async def create_for_owner(
         self,
         *,
@@ -82,6 +105,19 @@ class InMemorySavedDraftRepository:
             raise SavedDraftDuplicateError("Already saved.")
 
         saved_at = NOW
+        selected_image = (
+            SavedDraftImage(
+                id=IMAGE_ID,
+                alt_text="Synthetic AI-generated chart illustration",
+                mime_type="image/png",
+                width_px=1536,
+                height_px=1024,
+                ai_generated=True,
+                ai_disclosure_required=True,
+            )
+            if selected_image_id == IMAGE_ID
+            else None
+        )
         item = SavedDraft(
             id=uuid4(),
             owner_id=owner_id,
@@ -90,6 +126,7 @@ class InMemorySavedDraftRepository:
             original_post_version_id=ORIGINAL_VERSION_ID,
             current_post_version_id=uuid4(),
             selected_image_id=selected_image_id,
+            selected_image=selected_image,
             title=title,
             edited_text=edited_text,
             tone="professional",
@@ -142,6 +179,19 @@ class InMemorySavedDraftRepository:
                 else item.current_post_version_id
             ),
             selected_image_id=selected_image_id,
+            selected_image=(
+                SavedDraftImage(
+                    id=IMAGE_ID,
+                    alt_text="Synthetic AI-generated chart illustration",
+                    mime_type="image/png",
+                    width_px=1536,
+                    height_px=1024,
+                    ai_generated=True,
+                    ai_disclosure_required=True,
+                )
+                if selected_image_id == IMAGE_ID
+                else None
+            ),
             title=title,
             edited_text=edited_text,
             version=item.version + 1,
@@ -241,10 +291,19 @@ def test_create_preserves_source_generation_image_and_private_response() -> None
     response = _create(_client(repository))
 
     assert response.status_code == 201
-    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["cache-control"] == "private, no-store"
     body = response.json()
     assert body["edited_text"] == _payload()["edited_text"]
     assert body["selected_image_id"] == str(IMAGE_ID)
+    assert body["selected_image"] == {
+        "id": str(IMAGE_ID),
+        "alt_text": "Synthetic AI-generated chart illustration",
+        "mime_type": "image/png",
+        "width_px": 1536,
+        "height_px": 1024,
+        "ai_generated": True,
+        "ai_disclosure_required": True,
+    }
     assert body["source"]["article_id"] == str(ARTICLE_ID)
     assert body["generation"]["generation_id"] == str(GENERATION_ID)
     assert body["generation"]["original_post_version_id"] == str(ORIGINAL_VERSION_ID)
@@ -253,6 +312,7 @@ def test_create_preserves_source_generation_image_and_private_response() -> None
     assert "owner_id" not in body
     assert "save_key_hash" not in body
     assert "save_payload_hash" not in body
+    assert "storage_key" not in response.text
 
 
 def test_create_is_idempotent_but_rejects_key_reuse_and_duplicate_save() -> None:
@@ -370,3 +430,131 @@ def test_invalid_image_and_database_failure_leave_existing_content_unchanged() -
     stored = repository.items[UUID(created.json()["id"])]
     assert stored.title == "Quarterly briefing"
     assert stored.version == 1
+
+
+def test_list_returns_only_owner_page_in_stable_newest_first_order() -> None:
+    repository = InMemorySavedDraftRepository()
+    owner_client = _client(repository)
+    created_response = _create(owner_client)
+    created = repository.items[UUID(created_response.json()["id"])]
+
+    owner_items = [
+        replace(
+            created,
+            id=uuid4(),
+            generated_post_id=uuid4(),
+            title=f"Owner draft {minute}",
+            selected_image_id=None,
+            selected_image=None,
+            updated_at=NOW + timedelta(minutes=minute),
+        )
+        for minute in (1, 2, 3)
+    ]
+    foreign = replace(
+        created,
+        id=uuid4(),
+        owner_id=OWNER_B,
+        generated_post_id=uuid4(),
+        title="Another user's private draft",
+        updated_at=NOW + timedelta(minutes=4),
+    )
+    for item in [*owner_items, foreign]:
+        repository.items[item.id] = item
+
+    first_page = owner_client.get("/api/v1/drafts?page=1&page_size=2")
+    second_page = owner_client.get("/api/v1/drafts?page=2&page_size=2")
+
+    assert first_page.status_code == 200
+    assert first_page.headers["cache-control"] == "private, no-store"
+    assert [item["title"] for item in first_page.json()["items"]] == [
+        "Owner draft 3",
+        "Owner draft 2",
+    ]
+    assert first_page.json() | {"items": []} == {
+        "items": [],
+        "page": 1,
+        "page_size": 2,
+        "total_items": 4,
+        "total_pages": 2,
+        "sort": "updated_at_desc",
+    }
+    assert [item["title"] for item in second_page.json()["items"]] == [
+        "Owner draft 1",
+        "Quarterly briefing",
+    ]
+    assert "Another user's private draft" not in first_page.text + second_page.text
+    assert "storage_key" not in first_page.text + second_page.text
+
+
+def test_list_requires_authentication_and_valid_bounded_pagination() -> None:
+    repository = InMemorySavedDraftRepository()
+    denied = _client(repository, authenticated=False).get("/api/v1/drafts")
+    client = _client(repository)
+    bad_page = client.get("/api/v1/drafts?page=0")
+    bad_size = client.get("/api/v1/drafts?page_size=101")
+    bad_identifier = client.get("/api/v1/drafts/not-a-uuid")
+    repository.fail_next = True
+    unavailable = client.get("/api/v1/drafts")
+
+    assert denied.status_code == 401
+    assert bad_page.status_code == 422
+    assert bad_size.status_code == 422
+    assert bad_identifier.status_code == 422
+    assert unavailable.status_code == 503
+    assert unavailable.json()["error"]["code"] == "draft_persistence_unavailable"
+
+
+def test_patch_updates_only_supplied_fields_and_enforces_conflicts_and_ownership() -> (
+    None
+):
+    repository = InMemorySavedDraftRepository()
+    owner_client = _client(repository)
+    created = _create(owner_client).json()
+    item_id = created["id"]
+
+    patched = owner_client.patch(
+        f"/api/v1/drafts/{item_id}",
+        json={"expected_version": 1, "title": "Library title only"},
+    )
+    stale = owner_client.patch(
+        f"/api/v1/drafts/{item_id}",
+        json={"expected_version": 1, "title": "Stale overwrite"},
+    )
+    no_change_fields = owner_client.patch(
+        f"/api/v1/drafts/{item_id}",
+        json={"expected_version": 2},
+    )
+    null_text = owner_client.patch(
+        f"/api/v1/drafts/{item_id}",
+        json={"expected_version": 2, "edited_text": None},
+    )
+    foreign = _client(repository, owner_id=OWNER_B).patch(
+        f"/api/v1/drafts/{item_id}",
+        json={"expected_version": 2, "title": "Cross-user overwrite"},
+    )
+
+    assert patched.status_code == 200
+    assert patched.headers["cache-control"] == "private, no-store"
+    assert patched.json()["title"] == "Library title only"
+    assert patched.json()["edited_text"] == created["edited_text"]
+    assert patched.json()["selected_image_id"] == created["selected_image_id"]
+    assert (
+        patched.json()["current_post_version_id"] == created["current_post_version_id"]
+    )
+    assert patched.json()["version"] == 2
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "draft_version_conflict"
+    assert no_change_fields.status_code == 422
+    assert null_text.status_code == 422
+    assert foreign.status_code == 404
+    assert repository.items[UUID(item_id)].title == "Library title only"
+
+
+def test_openapi_documents_collection_create_retrieve_and_update_contracts() -> None:
+    schema = _client(InMemorySavedDraftRepository()).get("/openapi.json")
+
+    assert schema.status_code == 200
+    paths = schema.json()["paths"]
+    assert {"get", "post"} <= set(paths["/api/v1/drafts"])
+    assert {"get", "put", "patch"} <= set(paths["/api/v1/drafts/{saved_draft_id}"])
+    assert "storage_key" not in schema.text

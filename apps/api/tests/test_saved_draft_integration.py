@@ -14,6 +14,7 @@ from app.database.sqlalchemy import SqlAlchemyDatabase
 from app.database.tables import (
     ArticleSnapshotTable,
     ArticleTable,
+    GeneratedImageTable,
     GeneratedPostTable,
     GenerationRunTable,
     PostVersionHashtagTable,
@@ -42,6 +43,9 @@ SNAPSHOT_ID = UUID("67100000-0000-4000-8000-000000000004")
 POST_ID = UUID("67100000-0000-4000-8000-000000000005")
 GENERATION_ID = UUID("67100000-0000-4000-8000-000000000006")
 ORIGINAL_VERSION_ID = UUID("67100000-0000-4000-8000-000000000007")
+IMAGE_RUN_ID = UUID("67100000-0000-4000-8000-000000000008")
+IMAGE_ID = UUID("67100000-0000-4000-8000-000000000009")
+IMAGE_REQUEST_ID = UUID("67100000-0000-4000-8000-000000000010")
 ORIGINAL_TEXT = "Original synthetic AI draft.\n\n#Synthetic #News #AI"
 FIRST_EDIT = "First human-reviewed draft.\n\n#Synthetic #News #AI"
 SECOND_EDIT = "Second human-reviewed draft.\n\n#Synthetic #News #AI"
@@ -168,6 +172,25 @@ def _insert_generation_context(resources: DisposablePostgres) -> None:
             },
         )
         connection.execute(
+            sa.insert(GenerationRunTable),
+            {
+                "id": IMAGE_RUN_ID,
+                "generated_post_id": POST_ID,
+                "generation_type": "image",
+                "status": "succeeded",
+                "idempotency_key": "nfa68-image-generation-001",
+                "provider": "openai",
+                "model": "synthetic-image-model",
+                "prompt_template_version": "image_prompt_v1",
+                "prompt_text": "Synthetic image prompt for isolated testing.",
+                "provider_request_id": "synthetic-image-provider-request",
+                "attempt_count": 1,
+                "created_at": NOW,
+                "started_at": NOW,
+                "completed_at": NOW,
+            },
+        )
+        connection.execute(
             sa.insert(PostVersionTable),
             {
                 "id": ORIGINAL_VERSION_ID,
@@ -211,6 +234,39 @@ def _insert_generation_context(resources: DisposablePostgres) -> None:
                 },
             ],
         )
+        connection.execute(
+            sa.insert(GeneratedImageTable),
+            {
+                "id": IMAGE_ID,
+                "request_id": IMAGE_REQUEST_ID,
+                "user_id": OWNER_ID,
+                "article_id": ARTICLE_ID,
+                "article_snapshot_id": SNAPSHOT_ID,
+                "generated_post_id": POST_ID,
+                "source_post_version_id": ORIGINAL_VERSION_ID,
+                "generation_run_id": IMAGE_RUN_ID,
+                "parent_image_id": None,
+                "regeneration_sequence": 0,
+                "storage_provider": "local",
+                "storage_key": "generated-images/nfa68-private-image.png",
+                "mime_type": "image/png",
+                "byte_size": 1024,
+                "width_px": 1536,
+                "height_px": 1024,
+                "content_sha256": "a" * 64,
+                "model_identifier": "synthetic-image-model",
+                "prompt_version": "image_prompt_v1",
+                "safety_policy_version": "image_safety_v1",
+                "safety_status": "approved",
+                "validation_status": "passed",
+                "generation_status": "completed",
+                "ai_generated": True,
+                "ai_disclosure_required": True,
+                "status": "available",
+                "alt_text": "Synthetic accessible technology illustration",
+                "created_at": NOW,
+            },
+        )
 
 
 def test_postgresql_save_replay_update_and_stale_write_protection(
@@ -219,7 +275,8 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
     resources = saved_draft_postgres
     _insert_generation_context(resources)
     database = SqlAlchemyDatabase(SecretStr(resources.database_url))
-    service = SavedDraftService(SqlAlchemySavedDraftRepository(database))
+    repository = SqlAlchemySavedDraftRepository(database)
+    service = SavedDraftService(repository)
 
     created = run(
         service.create(
@@ -227,7 +284,7 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
             generation_id=GENERATION_ID,
             title="Synthetic briefing",
             edited_text=FIRST_EDIT,
-            selected_image_id=None,
+            selected_image_id=IMAGE_ID,
             idempotency_key="nfa67-save-001",
         )
     )
@@ -237,7 +294,7 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
             generation_id=GENERATION_ID,
             title="Synthetic briefing",
             edited_text=FIRST_EDIT,
-            selected_image_id=None,
+            selected_image_id=IMAGE_ID,
             idempotency_key="nfa67-save-001",
         )
     )
@@ -248,7 +305,7 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
             expected_version=1,
             title="Reviewed synthetic briefing",
             edited_text=SECOND_EDIT,
-            selected_image_id=None,
+            selected_image_id=IMAGE_ID,
         )
     )
     with pytest.raises(SavedDraftVersionConflict):
@@ -259,9 +316,12 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
                 expected_version=1,
                 title="Stale overwrite",
                 edited_text="This stale text must not persist.",
-                selected_image_id=None,
+                selected_image_id=IMAGE_ID,
             )
         )
+
+    first_page = run(service.list(owner_id=OWNER_ID, page=1, page_size=20))
+    empty_page = run(service.list(owner_id=OWNER_ID, page=2, page_size=20))
 
     with resources.engine.connect() as connection:
         versions = (
@@ -304,6 +364,16 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
     assert updated.original_post_version_id == ORIGINAL_VERSION_ID
     assert updated.saved_at == created.saved_at
     assert updated.updated_at >= created.updated_at
+    assert first_page.total_items == 1
+    assert [item.id for item in first_page.items] == [created.id]
+    assert first_page.items[0].selected_image is not None
+    assert first_page.items[0].selected_image.id == IMAGE_ID
+    assert first_page.items[0].selected_image.mime_type == "image/png"
+    assert first_page.items[0].selected_image.alt_text == (
+        "Synthetic accessible technology illustration"
+    )
+    assert empty_page.total_items == 1
+    assert empty_page.items == []
     assert updated.article_id == ARTICLE_ID
     assert updated.source_title == "Synthetic permitted persistence demonstration"
     assert updated.source_url == "https://example.invalid/nfa67-article-001"

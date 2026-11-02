@@ -857,10 +857,10 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 persistence proof against `newsflow_saved_draft_test`.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 and NFA-68 saved-draft and content-library proof against `newsflow_saved_draft_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, and build Next.js.
 
-The NFA-36, NFA-58, NFA-54, and NFA-67 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
+The NFA-36, NFA-58, NFA-54, NFA-67, and NFA-68 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
 Do not add real credentials to workflow files. The committed workflow values are disposable CI-only values and must never be reused outside that isolated job.
 
@@ -925,9 +925,13 @@ Verified locally on 1 November 2026:
 - The NFA-67 PostgreSQL test passed against the safety-gated `newsflow_saved_draft_test` database. It applied migration `20261101_0013`, verified immutable original and manual versions, rejected a stale write, and rolled the schema back. GitHub Actions will repeat the same proof.
 - The complete backend run after NFA-67 passed 427 tests, skipped 14 safety-gated tests, deselected the optional live-model test, and measured 79.46 percent branch-aware coverage, above the 75 percent floor.
 - The existing migration and repeatable-seed integration test passed with NFA-67's required source-generation field, then rolled back and rebuilt the isolated schema.
+- The expanded NFA-68 focused API and service run passed 9 tests covering owner-only listing, stable newest-first pagination, total metadata, safe selected-image metadata, invalid parameters and UUIDs, partial updates, stale conflicts, cross-user masking, OpenAPI operations, and the retained NFA-67 create and update controls.
+- The expanded NFA-68 PostgreSQL proof passed against `newsflow_saved_draft_test`. It verified owner-scoped paginated listing and safe image metadata without exposing the private storage key, in addition to NFA-67 migration, version, conflict, and rollback behaviour.
+- The complete backend run after NFA-68 passed 431 tests, skipped 14 safety-gated tests, deselected the optional live-model test, and measured 79.50 percent branch-aware coverage, above the 75 percent floor.
+- Ruff linting and formatting checks passed for the complete backend after NFA-68.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, and NFA-67
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, and NFA-68
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
