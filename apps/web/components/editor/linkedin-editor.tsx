@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { CharacterCounter } from "@/components/editor/character-counter";
+import { ContentExportActions } from "@/components/export/content-export-actions";
 import { ImageControls } from "@/components/images/image-controls";
 import { LinkedInPreview } from "@/components/preview/linkedin-preview";
 import { Button } from "@/components/ui/button";
@@ -169,6 +170,8 @@ export function LinkedInEditor({
           warnings={activeDraft.validationWarnings}
         />
       </div>
+
+      <ContentExportActions imageId={activeImage?.id ?? null} text={editor.editedText} />
 
       <p className="mt-6 border-t border-emerald-950/10 pt-5 text-xs leading-5 text-emerald-950/70">
         {savedDraft
