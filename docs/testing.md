@@ -929,9 +929,14 @@ Verified locally on 1 November 2026:
 - The expanded NFA-68 PostgreSQL proof passed against `newsflow_saved_draft_test`. It verified owner-scoped paginated listing and safe image metadata without exposing the private storage key, in addition to NFA-67 migration, version, conflict, and rollback behaviour.
 - The complete backend run after NFA-68 passed 431 tests, skipped 14 safety-gated tests, deselected the optional live-model test, and measured 79.50 percent branch-aware coverage, above the 75 percent floor.
 - Ruff linting and formatting checks passed for the complete backend after NFA-68.
+- The focused NFA-69 content-library API, listing, pagination, controlled-state, and reopening run passed 14 tests across 3 files.
+- The complete frontend run after NFA-69 passed 143 tests across 29 files.
+- Prettier, strict TypeScript, ESLint, and the Next.js 16 production build passed after NFA-69. The build generated the authenticated `/library` route and partially prerendered `/library/[draftId]` route.
+- NFA-69 tests used synthetic saved drafts and mocked network responses. They did not use real accounts, production credentials, live CNN content, or live OpenAI requests.
+- Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, and NFA-68
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, and NFA-69
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
