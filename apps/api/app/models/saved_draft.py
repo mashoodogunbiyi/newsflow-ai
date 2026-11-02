@@ -4,7 +4,14 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
 
 def _clean_title(value: object) -> object:
@@ -50,6 +57,35 @@ class UpdateSavedDraftRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class PatchSavedDraftRequest(BaseModel):
+    """Partial editable state plus the version the client last read."""
+
+    expected_version: int = Field(ge=1)
+    title: str | None = Field(default=None, max_length=200)
+    edited_text: str | None = Field(default=None, min_length=1, max_length=12_000)
+    selected_image_id: UUID | None = None
+
+    _strip_title = field_validator("title", mode="before")(_clean_title)
+
+    @field_validator("edited_text")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _validate_edited_text(value)
+
+    @model_validator(mode="after")
+    def require_editable_change(self) -> "PatchSavedDraftRequest":
+        editable_fields = {"title", "edited_text", "selected_image_id"}
+        if not editable_fields.intersection(self.model_fields_set):
+            raise ValueError("At least one editable draft field is required.")
+        if "edited_text" in self.model_fields_set and self.edited_text is None:
+            raise ValueError("Draft text cannot be null.")
+        return self
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class SavedDraftSourceResponse(BaseModel):
     """Permitted source reference retained by a saved draft."""
 
@@ -69,6 +105,18 @@ class SavedDraftGenerationResponse(BaseModel):
     created_at: datetime
 
 
+class SavedDraftImageResponse(BaseModel):
+    """Permitted image metadata without private storage information."""
+
+    id: UUID
+    alt_text: str | None
+    mime_type: Literal["image/png", "image/jpeg", "image/webp"]
+    width_px: int = Field(gt=0)
+    height_px: int = Field(gt=0)
+    ai_generated: bool
+    ai_disclosure_required: bool
+
+
 class SavedDraftResponse(BaseModel):
     """Owner-safe saved-draft representation returned to the frontend."""
 
@@ -76,6 +124,7 @@ class SavedDraftResponse(BaseModel):
     generated_post_id: UUID
     current_post_version_id: UUID
     selected_image_id: UUID | None
+    selected_image: SavedDraftImageResponse | None
     title: str | None
     edited_text: str
     tone: str
@@ -86,5 +135,18 @@ class SavedDraftResponse(BaseModel):
     generation: SavedDraftGenerationResponse
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SavedDraftCollectionResponse(BaseModel):
+    """Bounded private content-library page in a documented sort order."""
+
+    items: list[SavedDraftResponse]
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total_items: int = Field(ge=0)
+    total_pages: int = Field(ge=0)
+    sort: Literal["updated_at_desc"] = "updated_at_desc"
 
     model_config = ConfigDict(extra="forbid")

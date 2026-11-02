@@ -2,7 +2,7 @@
 
 This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step.
 
-NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests. NFA-67 adds transactional, owner-scoped saved-draft creation and updates with original-generation lineage, immutable manual versions, optional approved-image selection, idempotency, and stale-write protection.
+NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests. NFA-67 adds transactional, owner-scoped saved-draft creation and updates with original-generation lineage, immutable manual versions, optional approved-image selection, idempotency, and stale-write protection. NFA-68 completes the backend content-library contract with owner-only listing and retrieval, bounded stable pagination, safe selected-image metadata, partial updates, OpenAPI documentation, and expanded automated evidence.
 
 ## Requirements
 
@@ -475,19 +475,23 @@ The optional `Idempotency-Key` header prevents repeated storage for one complete
 
 The OpenAI key remains server-side. Prompt text is not persisted, and logs exclude article text and generated prose. PostgreSQL records the source snapshot, exact rights version, prompt version, model identifier, provider request reference, available token usage, and safe grounding result. See the [LinkedIn generation service guide](../../docs/linkedin-generation-service.md) and [factual grounding guide](../../docs/factual-grounding-validation.md) for the complete workflow, rules, errors, controls, tests, and limitations.
 
-### Save and update reviewed LinkedIn drafts
+### Save, browse, and update reviewed LinkedIn drafts
 
-NFA-67 provides these authenticated endpoints:
+NFA-67 and NFA-68 provide these authenticated endpoints:
 
 ```text
 POST /api/v1/drafts
+GET  /api/v1/drafts?page=1&page_size=20
 GET  /api/v1/drafts/{saved_draft_id}
+PATCH /api/v1/drafts/{saved_draft_id}
 PUT  /api/v1/drafts/{saved_draft_id}
 ```
 
 The POST endpoint requires CSRF proof and an `Idempotency-Key`. It preserves the successful generation and original AI post version, creates an immutable manual version for the exact reviewed text, and optionally selects an available, approved, validated image owned by the same user and post. The PUT endpoint accepts the full editable state and an `expected_version`; stale requests return a conflict instead of overwriting newer work. Every query is owner-scoped, every response is private and no-store, and create or update changes commit in one transaction.
 
-See the [NFA-67 draft persistence guide](../../docs/draft-persistence.md) for schemas, version rules, validation, safe errors, security controls, tests, and limitations.
+The collection GET defaults to page 1 with 20 records and accepts at most 100 records per page. It returns only the active user's drafts, ordered by `updated_at` descending and then UUID descending as a stable tie-breaker. Responses include total items, total pages, and the fixed `updated_at_desc` sort identifier. PATCH requires the version last read and at least one editable field, retains omitted values, and returns a conflict for stale writes. Selected-image responses contain only approved metadata; private storage keys, filesystem paths, credentials, and owner identifiers are excluded.
+
+See the [NFA-67 draft persistence guide](../../docs/draft-persistence.md) for schema and transaction rules and the [NFA-68 content library API guide](../../docs/content-library-api.md) for pagination, partial updates, response data, errors, OpenAPI documentation, tests, and limitations.
 
 ### Request generation from the frontend
 
@@ -727,7 +731,9 @@ Run the focused NFA-67 fast tests with:
 pytest tests/test_saved_drafts.py
 ```
 
-The PostgreSQL proof is safety-gated to a disposable database whose name contains `newsflow_saved_draft_test`. Its exact command is documented in the [draft persistence guide](../../docs/draft-persistence.md), and GitHub Actions runs it automatically.
+The same command now runs 9 NFA-67 and NFA-68 focused tests, including owner-only listing, stable pagination, partial updates, safe image metadata, cross-user masking, and OpenAPI documentation.
+
+The PostgreSQL proof is safety-gated to a disposable database whose name contains `newsflow_saved_draft_test`. Its exact command is documented in the [draft persistence guide](../../docs/draft-persistence.md) and [content library API guide](../../docs/content-library-api.md), and GitHub Actions runs it automatically.
 
 NFA-26 provides shared, function-scoped fixtures in `tests/conftest.py` and a complete regression journey in `tests/test_account_security_regression.py`. Run that focused suite with:
 
