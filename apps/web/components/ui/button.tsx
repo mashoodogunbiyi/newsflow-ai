@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 
@@ -15,15 +15,18 @@ export function buttonStyles(variant: ButtonVariant = "primary") {
   return `inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variantStyles[variant]}`;
 }
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
 };
 
 export function Button({
   className = "",
+  ref,
   variant = "primary",
   type = "button",
   ...props
 }: ButtonProps) {
-  return <button className={`${buttonStyles(variant)} ${className}`} type={type} {...props} />;
+  return (
+    <button className={`${buttonStyles(variant)} ${className}`} ref={ref} type={type} {...props} />
+  );
 }

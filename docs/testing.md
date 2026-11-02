@@ -799,6 +799,23 @@ See the [NFA-64 image generation controls guide](image-generation-controls.md) f
 
 See the [NFA-65 responsive and accessibility review](responsive-accessibility-review.md) for the viewport matrix, defect record, evidence, manual keyboard and VoiceOver checklist, limitations, and review decision.
 
+## NFA-72 deletion and retention coverage
+
+| Requirement                                           | Automated evidence                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| Authenticated, CSRF-protected owner deletion          | `test_content_deletion.py`                                  |
+| Cross-user and missing-resource non-disclosure        | `test_content_deletion.py`                                  |
+| Immediate unreferenced private-image cleanup          | `test_content_deletion.py`                                  |
+| Storage-failure retry without restoring draft access  | `test_content_deletion.py`                                  |
+| Bounded retention worker and final content redaction  | `test_content_deletion.py` and migration integration tests  |
+| Explicit confirmation and cancellation                | `draft-deletion.test.tsx`                                   |
+| Loading, controlled failure, and library confirmation | `draft-deletion.test.tsx`                                   |
+| Session and CSRF-only same-origin gateway              | `draft-deletion-proxy.test.ts`                              |
+| Invalid identifier rejected before backend contact    | `draft-deletion-proxy.test.ts`                              |
+| Versioned tables, constraints, rollback, and rebuild  | `test_migrations_integration.py`                            |
+
+See the [NFA-72 content deletion and retention guide](content-deletion-retention.md) for the lifecycle, retention periods, image-reference protection, retry policy, backup limitations, worker command, and recovery boundary.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -942,10 +959,17 @@ Verified locally on 1 November 2026:
 - The retained NFA-53 backend image-delivery run passed 12 tests covering authentication, owner isolation, identical cross-owner and missing responses, storage integrity, approved formats, safe filenames, and private caching.
 - The complete frontend run after NFA-71 passed 158 tests across 32 files. Prettier, strict TypeScript, ESLint, and the Next.js 16 production build passed, including the new `/api/images/[imageId]/download` route.
 - NFA-71 tests use synthetic text and image bytes with mocked browser and network boundaries. They make no live CNN, OpenAI, or LinkedIn request.
+- The focused NFA-72 backend and configuration run passed 24 tests, including owner deletion, cross-user masking, unauthenticated rejection, object cleanup, retry recording, retention results, and bounded settings.
+- The complete backend quality run after NFA-72 passed 441 tests, skipped 15 opt-in integration tests, deselected the live-model test, and measured 78.15 percent branch-aware coverage, above the enforced 75 percent floor.
+- The NFA-72 migration proof passed against `newsflow_migration_test`, including upgrade through `20261102_0015`, repeatable seed loading, full rollback, and rebuild to head.
+- The expanded saved-draft PostgreSQL proof passed 2 tests against `newsflow_saved_draft_test`, including immediate access removal, private-image cleanup, history removal, prompt and text redaction, and final lifecycle evidence.
+- The focused NFA-72 frontend run passed 5 tests covering confirmation, cancellation, CSRF-protected deletion, controlled failure, library redirection, cookie allowlisting, and invalid UUID rejection.
+- The complete frontend run after NFA-72 passed 163 tests across 34 files. Prettier, ESLint, strict TypeScript, and the Next.js 16 production build passed, including `/api/drafts/[draftId]`.
+- NFA-72 tests use only synthetic identifiers, content, accounts, and local disposable storage. They make no live CNN, OpenAI, LinkedIn, or production object-storage request.
 - Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, and NFA-71
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, and NFA-72
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

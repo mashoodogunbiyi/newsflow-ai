@@ -7,6 +7,11 @@ from app.repositories.authentication import (
     AuthenticationRepositoryError,
     SqlAlchemyAuthenticationRepository,
 )
+from app.repositories.content_deletion import (
+    ContentDeletionRepository,
+    ContentDeletionRepositoryError,
+    SqlAlchemyContentDeletionRepository,
+)
 from app.repositories.library import (
     SavedContent,
     SavedContentConflictError,
@@ -38,6 +43,8 @@ __all__ = [
     "AuthenticatedSession",
     "AuthenticationRepository",
     "AuthenticationRepositoryError",
+    "ContentDeletionRepository",
+    "ContentDeletionRepositoryError",
     "DuplicateUserEmailError",
     "RegisteredUser",
     "SavedContent",
@@ -53,6 +60,7 @@ __all__ = [
     "SavedDraftRepositoryError",
     "SavedDraftVersionConflict",
     "SqlAlchemyAuthenticationRepository",
+    "SqlAlchemyContentDeletionRepository",
     "SqlAlchemySavedContentRepository",
     "SqlAlchemySavedDraftRepository",
     "SqlAlchemyUserRepository",

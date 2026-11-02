@@ -869,6 +869,9 @@ class SavedContentItemTable(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    deletion_due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class SavedDraftVersionTable(Base):
@@ -963,4 +966,91 @@ class SavedDraftVersionTable(Base):
     library_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class ContentDeletionAuditTable(Base):
+    """Content-free evidence for an owner-authorised deletion lifecycle."""
+
+    __tablename__ = "content_deletion_audits"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('requested', 'completed')",
+            name="ck_content_deletion_audits_status",
+        ),
+        CheckConstraint(
+            "draft_id_hash ~ '^[0-9a-f]{64}$'",
+            name="ck_content_deletion_audits_hash",
+        ),
+        Index("ix_content_deletion_audits_purge", "status", "purge_after"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    draft_id_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    purge_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class ImageCleanupJobTable(Base):
+    """Retryable cleanup state for an unreferenced private image object."""
+
+    __tablename__ = "image_cleanup_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'retry', 'completed')",
+            name="ck_image_cleanup_jobs_status",
+        ),
+        CheckConstraint("attempts >= 0", name="ck_image_cleanup_jobs_attempts"),
+        Index("ix_image_cleanup_jobs_due", "status", "next_attempt_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    generated_image_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("generated_images.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'pending'")
+    )
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    safe_error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )

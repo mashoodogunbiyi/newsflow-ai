@@ -123,6 +123,9 @@ class Settings(BaseSettings):
         ge=1_048_576,
         le=16_777_216,
     )
+    draft_deletion_retention_days: int = Field(default=30, ge=1, le=365)
+    deletion_audit_retention_days: int = Field(default=365, ge=30, le=2555)
+    image_cleanup_retry_seconds: int = Field(default=300, ge=1, le=86_400)
     seed_data_enabled: bool = False
 
     @field_validator("openai_model", "openai_image_model", mode="before")

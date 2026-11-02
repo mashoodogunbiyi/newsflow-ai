@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import { LibraryErrorState } from "@/components/library/library-error-state";
+import { DeleteDraftDialog } from "@/components/library/delete-draft-dialog";
 import { VersionHistory } from "@/components/library/version-history";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonStyles } from "@/components/ui/button";
@@ -72,14 +73,20 @@ export default async function SavedDraftPage({ params }: { params: Promise<{ dra
                   Last modified {formatUpdatedDate(result.data.updated_at)} UTC
                 </p>
               </div>
-              <a
-                className={buttonStyles("secondary")}
-                href={result.data.source.url}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Review original source
-              </a>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <a
+                  className={buttonStyles("secondary")}
+                  href={result.data.source.url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Review original source
+                </a>
+                <DeleteDraftDialog
+                  draftId={result.data.id}
+                  title={result.data.title?.trim() || result.data.source.title}
+                />
+              </div>
             </Card>
             <LinkedInEditor
               draft={toSavedDraftEditorDocument(result.data)}

@@ -1,8 +1,10 @@
 """NFA-67 PostgreSQL migration, version history, and transaction proof."""
 
 import asyncio
+import hashlib
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -22,10 +24,14 @@ from app.database.tables import (
     SourceProfileTable,
     UserTable,
 )
+from app.repositories.content_deletion import SqlAlchemyContentDeletionRepository
 from app.repositories.saved_drafts import (
     SavedDraftVersionConflict,
     SqlAlchemySavedDraftRepository,
 )
+from app.services import PrivateResourceNotFoundError
+from app.services.content_deletion import ContentDeletionService
+from app.services.image_storage import LocalPrivateImageStorage
 from app.services.saved_drafts import SavedDraftService
 from tests.support.postgres import (
     DisposablePostgres,
@@ -425,5 +431,124 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
     ]
     assert history_rows[0]["selected_image_id"] == IMAGE_ID
     assert history_rows[1]["post_version_id"] == versions[2]["id"]
+
+    run(database.close())
+
+
+def test_postgresql_delete_cleanup_and_retention_redaction(
+    saved_draft_postgres: DisposablePostgres,
+    tmp_path: Path,
+) -> None:
+    resources = saved_draft_postgres
+    _insert_generation_context(resources)
+    database = SqlAlchemyDatabase(SecretStr(resources.database_url))
+    drafts = SavedDraftService(SqlAlchemySavedDraftRepository(database))
+    created = run(
+        drafts.create(
+            owner_id=OWNER_ID,
+            generation_id=GENERATION_ID,
+            title="Delete this synthetic briefing",
+            edited_text=FIRST_EDIT,
+            selected_image_id=IMAGE_ID,
+            idempotency_key="nfa72-delete-001",
+        )
+    )
+    deletion = ContentDeletionService(
+        repository=SqlAlchemyContentDeletionRepository(database),
+        storage=LocalPrivateImageStorage(tmp_path),
+        draft_retention=timedelta(days=30),
+        audit_retention=timedelta(days=365),
+        retry_delay=timedelta(minutes=5),
+    )
+
+    run(deletion.delete(owner_id=OWNER_ID, draft_id=created.id))
+
+    assert run(drafts.list(owner_id=OWNER_ID, page=1, page_size=20)).items == []
+    with pytest.raises(PrivateResourceNotFoundError):
+        run(drafts.get(owner_id=OWNER_ID, saved_draft_id=created.id))
+    with pytest.raises(PrivateResourceNotFoundError):
+        run(
+            drafts.list_versions(
+                owner_id=OWNER_ID,
+                saved_draft_id=created.id,
+                page=1,
+                page_size=20,
+            )
+        )
+
+    with resources.engine.begin() as connection:
+        lifecycle = (
+            connection.execute(
+                sa.text(
+                    """
+                SELECT item.deleted_at, image.status AS image_status,
+                       job.status AS cleanup_status, audit.status AS audit_status
+                FROM saved_content_items AS item
+                JOIN generated_images AS image
+                  ON image.id = item.selected_image_id
+                JOIN image_cleanup_jobs AS job
+                  ON job.generated_image_id = image.id
+                JOIN content_deletion_audits AS audit
+                  ON audit.draft_id_hash = :draft_hash
+                WHERE item.id = :draft_id
+                """
+                ),
+                {
+                    "draft_id": created.id,
+                    "draft_hash": hashlib.sha256(str(created.id).encode()).hexdigest(),
+                },
+            )
+            .mappings()
+            .one()
+        )
+        assert lifecycle["deleted_at"] is not None
+        assert lifecycle["image_status"] == "deleted"
+        assert lifecycle["cleanup_status"] == "completed"
+        assert lifecycle["audit_status"] == "requested"
+        connection.execute(
+            sa.text(
+                """
+                UPDATE saved_content_items
+                SET deletion_due_at = now() - interval '1 minute'
+                WHERE id = :draft_id
+                """
+            ),
+            {"draft_id": created.id},
+        )
+
+    result = run(deletion.run_retention())
+    assert result.drafts_redacted == 1
+    with resources.engine.connect() as connection:
+        retained = (
+            connection.execute(
+                sa.text(
+                    """
+                SELECT version.rendered_text, run.prompt_text,
+                       (SELECT count(*) FROM saved_content_items
+                        WHERE id = :draft_id) AS saved_count,
+                       (SELECT count(*) FROM saved_draft_versions
+                        WHERE saved_draft_id = :draft_id) AS history_count,
+                       (SELECT status FROM content_deletion_audits
+                        WHERE draft_id_hash = :draft_hash) AS audit_status
+                FROM post_versions AS version
+                JOIN generation_runs AS run
+                  ON run.id = version.generation_run_id
+                WHERE version.id = :version_id
+                """
+                ),
+                {
+                    "draft_id": created.id,
+                    "draft_hash": hashlib.sha256(str(created.id).encode()).hexdigest(),
+                    "version_id": ORIGINAL_VERSION_ID,
+                },
+            )
+            .mappings()
+            .one()
+        )
+        assert retained["saved_count"] == 0
+        assert retained["rendered_text"] == "[deleted]"
+        assert retained["prompt_text"] == "[deleted]"
+        assert retained["history_count"] == 0
+        assert retained["audit_status"] == "completed"
 
     run(database.close())

@@ -36,6 +36,7 @@ from app.repositories import (
     SavedContentRepository,
     SavedDraftRepository,
     SqlAlchemyAuthenticationRepository,
+    SqlAlchemyContentDeletionRepository,
     SqlAlchemySavedContentRepository,
     SqlAlchemySavedDraftRepository,
     SqlAlchemyUserRepository,
@@ -72,6 +73,7 @@ from app.security import (
 )
 from app.services import (
     AuthenticationService,
+    ContentDeletionService,
     RegistrationService,
     SavedContentService,
     SavedDraftService,
@@ -115,6 +117,7 @@ def create_app(
     login_rate_limiter: InMemoryRateLimiter | None = None,
     saved_content_repository: SavedContentRepository | None = None,
     saved_draft_repository: SavedDraftRepository | None = None,
+    content_deletion_service: ContentDeletionService | None = None,
     article_catalogue_repository: ArticleCatalogueRepository | None = None,
     article_catalogue_service: ArticleCatalogueService | None = None,
     article_sync_repository: ArticleSyncRepository | None = None,
@@ -173,6 +176,7 @@ def create_app(
         configured_authentication_repository = authentication_repository
         configured_saved_content_repository = saved_content_repository
         configured_saved_draft_repository = saved_draft_repository
+        configured_content_deletion_service = content_deletion_service
         configured_article_catalogue_repository = article_catalogue_repository
         configured_article_catalogue_service = article_catalogue_service
         configured_article_sync_repository = article_sync_repository
@@ -342,6 +346,28 @@ def create_app(
                     ),
                     usage=configured_generation_usage_service,
                 )
+            if (
+                configured_content_deletion_service is None
+                and application_settings.app_env in {"development", "test"}
+            ):
+                image_storage_configuration = (
+                    application_settings.require_image_storage_configuration()
+                )
+                configured_content_deletion_service = ContentDeletionService(
+                    repository=SqlAlchemyContentDeletionRepository(sqlalchemy_database),
+                    storage=LocalPrivateImageStorage(
+                        image_storage_configuration.local_root
+                    ),
+                    draft_retention=timedelta(
+                        days=application_settings.draft_deletion_retention_days
+                    ),
+                    audit_retention=timedelta(
+                        days=application_settings.deletion_audit_retention_days
+                    ),
+                    retry_delay=timedelta(
+                        seconds=application_settings.image_cleanup_retry_seconds
+                    ),
+                )
             if configured_article_sync_repository is None:
                 configured_article_sync_repository = SqlAlchemyArticleSyncRepository(
                     sqlalchemy_database
@@ -407,6 +433,7 @@ def create_app(
         application.state.saved_draft_service = SavedDraftService(
             configured_saved_draft_repository
         )
+        application.state.content_deletion_service = configured_content_deletion_service
         application.state.article_catalogue_service = (
             configured_article_catalogue_service
         )

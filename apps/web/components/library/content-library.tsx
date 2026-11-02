@@ -7,6 +7,7 @@ import { LibraryPagination } from "@/components/library/library-pagination";
 import { getSavedDraftPage } from "@/lib/draft-api";
 
 export type LibrarySearchParams = {
+  deleted?: string | string[];
   page?: string | string[];
 };
 
@@ -26,7 +27,9 @@ export async function ContentLibrary({
 }: {
   searchParams: Promise<LibrarySearchParams>;
 }) {
-  const page = parsePage((await searchParams).page);
+  const parameters = await searchParams;
+  const page = parsePage(parameters.page);
+  const deletionConfirmed = parameters.deleted === "1";
   const result = page
     ? await getSavedDraftPage(page)
     : ({ status: "error", reason: "invalid_request" } as const);
@@ -38,7 +41,12 @@ export async function ContentLibrary({
     return <LibraryErrorState reason={result.reason} />;
   }
   if (result.data.items.length === 0 && result.data.total_items === 0) {
-    return <LibraryEmptyState />;
+    return (
+      <>
+        {deletionConfirmed ? <DeletionConfirmation /> : null}
+        <LibraryEmptyState />
+      </>
+    );
   }
   if (result.data.items.length === 0 || result.data.page > result.data.total_pages) {
     return <LibraryErrorState reason="invalid_request" />;
@@ -46,6 +54,7 @@ export async function ContentLibrary({
 
   return (
     <section aria-labelledby="saved-drafts-title">
+      {deletionConfirmed ? <DeletionConfirmation /> : null}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2
@@ -66,5 +75,16 @@ export async function ContentLibrary({
       <DraftList drafts={result.data.items} />
       <LibraryPagination page={result.data.page} totalPages={result.data.total_pages} />
     </section>
+  );
+}
+
+function DeletionConfirmation() {
+  return (
+    <p
+      className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900"
+      role="status"
+    >
+      The draft was removed from your active library and its secure cleanup has started.
+    </p>
   );
 }
