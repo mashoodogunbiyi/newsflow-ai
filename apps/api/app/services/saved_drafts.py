@@ -8,6 +8,8 @@ from app.repositories.saved_drafts import (
     SavedDraft,
     SavedDraftPage,
     SavedDraftRepository,
+    SavedDraftVersion,
+    SavedDraftVersionPage,
 )
 from app.services.authorization import require_owned_resource
 
@@ -115,5 +117,54 @@ class SavedDraftService:
                 title=title,
                 edited_text=edited_text,
                 selected_image_id=selected_image_id,
+            )
+        )
+
+    async def list_versions(
+        self,
+        *,
+        owner_id: UUID,
+        saved_draft_id: UUID,
+        page: int,
+        page_size: int,
+    ) -> SavedDraftVersionPage:
+        return require_owned_resource(
+            await self._repository.list_versions_for_owner(
+                owner_id=owner_id,
+                saved_draft_id=saved_draft_id,
+                page=page,
+                page_size=page_size,
+            )
+        )
+
+    async def get_version(
+        self,
+        *,
+        owner_id: UUID,
+        saved_draft_id: UUID,
+        version_id: UUID,
+    ) -> SavedDraftVersion:
+        return require_owned_resource(
+            await self._repository.get_version_for_owner(
+                owner_id=owner_id,
+                saved_draft_id=saved_draft_id,
+                version_id=version_id,
+            )
+        )
+
+    async def restore_version(
+        self,
+        *,
+        owner_id: UUID,
+        saved_draft_id: UUID,
+        version_id: UUID,
+        expected_version: int,
+    ) -> SavedDraft:
+        return require_owned_resource(
+            await self._repository.restore_version_for_owner(
+                owner_id=owner_id,
+                saved_draft_id=saved_draft_id,
+                version_id=version_id,
+                expected_version=expected_version,
             )
         )

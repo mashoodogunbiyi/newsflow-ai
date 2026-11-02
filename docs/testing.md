@@ -933,10 +933,15 @@ Verified locally on 1 November 2026:
 - The complete frontend run after NFA-69 passed 143 tests across 29 files.
 - Prettier, strict TypeScript, ESLint, and the Next.js 16 production build passed after NFA-69. The build generated the authenticated `/library` route and partially prerendered `/library/[draftId]` route.
 - NFA-69 tests used synthetic saved drafts and mocked network responses. They did not use real accounts, production credentials, live CNN content, or live OpenAI requests.
+- The focused NFA-70 backend run passed 14 saved-draft and history tests. It covered newest-first retrieval, selected history, owner isolation, unavailable direct modification, append-only restoration, and stale conflicts.
+- The NFA-70 PostgreSQL saved-draft proof passed against `newsflow_saved_draft_test`, recording `initial_save` and `manual_edit` entries in the same transactions as the current saved state.
+- The migration and repeatable-seed proof passed against `newsflow_migration_test`, including upgrade to `20261102_0014`, one synthetic initial history entry, downgrade to base, and rebuild to head.
+- The complete frontend run after NFA-70 passed 146 tests across 30 files. Prettier, strict TypeScript, ESLint, and the Next.js 16 production build passed, including `/library/[draftId]/versions/[versionId]`.
+- NFA-70 tests use only synthetic source, text, image metadata, users, and mocked network responses. They make no live CNN or OpenAI request.
 - Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, and NFA-69
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, and NFA-70
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

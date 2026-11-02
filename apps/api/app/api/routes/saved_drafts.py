@@ -13,11 +13,14 @@ from app.core.errors import ApplicationError
 from app.models.saved_draft import (
     CreateSavedDraftRequest,
     PatchSavedDraftRequest,
+    RestoreSavedDraftVersionRequest,
     SavedDraftCollectionResponse,
     SavedDraftGenerationResponse,
     SavedDraftImageResponse,
     SavedDraftResponse,
     SavedDraftSourceResponse,
+    SavedDraftVersionCollectionResponse,
+    SavedDraftVersionResponse,
     UpdateSavedDraftRequest,
 )
 from app.repositories import AuthenticatedSession
@@ -26,6 +29,7 @@ from app.repositories.saved_drafts import (
     SavedDraftDuplicateError,
     SavedDraftIdempotencyConflict,
     SavedDraftRepositoryError,
+    SavedDraftVersion,
     SavedDraftVersionConflict,
 )
 from app.services import PrivateResourceNotFoundError
@@ -88,6 +92,42 @@ def _response(item: SavedDraft) -> SavedDraftResponse:
         ),
         created_at=item.saved_at,
         updated_at=item.updated_at,
+    )
+
+
+def _version_response(item: SavedDraftVersion) -> SavedDraftVersionResponse:
+    selected_image = None
+    if item.selected_image is not None:
+        selected_image = SavedDraftImageResponse(
+            id=item.selected_image.id,
+            alt_text=item.selected_image.alt_text,
+            mime_type=item.selected_image.mime_type,
+            width_px=item.selected_image.width_px,
+            height_px=item.selected_image.height_px,
+            ai_generated=item.selected_image.ai_generated,
+            ai_disclosure_required=item.selected_image.ai_disclosure_required,
+        )
+    return SavedDraftVersionResponse(
+        id=item.id,
+        draft_id=item.saved_draft_id,
+        post_version_id=item.post_version_id,
+        selected_image_id=item.selected_image_id,
+        selected_image=selected_image,
+        generation_id=item.generation_run_id,
+        restored_from_version_id=item.restored_from_version_id,
+        version_number=item.version_number,
+        change_type=item.change_type,
+        title=item.title,
+        edited_text=item.edited_text,
+        tone=item.tone,
+        length=item.length_option,
+        source=SavedDraftSourceResponse(
+            article_id=item.article_id,
+            title=item.source_title,
+            url=item.source_url,
+            attribution=item.source_attribution,
+        ),
+        created_at=item.created_at,
     )
 
 
@@ -240,6 +280,120 @@ async def get_saved_draft(
     except SavedDraftRepositoryError as exc:
         _raise_storage_unavailable(exc)
 
+    response.headers["Cache-Control"] = "private, no-store"
+    return _response(item)
+
+
+@router.get(
+    "/{saved_draft_id}/versions",
+    response_model=SavedDraftVersionCollectionResponse,
+    summary="List immutable history for one owned saved draft",
+)
+async def list_saved_draft_versions(
+    saved_draft_id: UUID,
+    request: Request,
+    response: Response,
+    active_session: Annotated[
+        AuthenticatedSession,
+        Depends(require_authenticated_session),
+    ],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> SavedDraftVersionCollectionResponse:
+    try:
+        result = await _service(request).list_versions(
+            owner_id=active_session.user_id,
+            saved_draft_id=saved_draft_id,
+            page=page,
+            page_size=page_size,
+        )
+    except PrivateResourceNotFoundError as exc:
+        _raise_private_not_found(exc)
+    except SavedDraftRepositoryError as exc:
+        _raise_storage_unavailable(exc)
+    response.headers["Cache-Control"] = "private, no-store"
+    total_pages = (
+        (result.total_items + result.page_size - 1) // result.page_size
+        if result.total_items
+        else 0
+    )
+    return SavedDraftVersionCollectionResponse(
+        items=[_version_response(item) for item in result.items],
+        page=result.page,
+        page_size=result.page_size,
+        total_items=result.total_items,
+        total_pages=total_pages,
+    )
+
+
+@router.get(
+    "/{saved_draft_id}/versions/{version_id}",
+    response_model=SavedDraftVersionResponse,
+    summary="Read one immutable historical draft version",
+)
+async def get_saved_draft_version(
+    saved_draft_id: UUID,
+    version_id: UUID,
+    request: Request,
+    response: Response,
+    active_session: Annotated[
+        AuthenticatedSession,
+        Depends(require_authenticated_session),
+    ],
+) -> SavedDraftVersionResponse:
+    try:
+        item = await _service(request).get_version(
+            owner_id=active_session.user_id,
+            saved_draft_id=saved_draft_id,
+            version_id=version_id,
+        )
+    except PrivateResourceNotFoundError as exc:
+        _raise_private_not_found(exc)
+    except SavedDraftRepositoryError as exc:
+        _raise_storage_unavailable(exc)
+    response.headers["Cache-Control"] = "private, no-store"
+    return _version_response(item)
+
+
+@router.post(
+    "/{saved_draft_id}/versions/{version_id}/restore",
+    response_model=SavedDraftResponse,
+    summary="Restore history as a new current version",
+    responses={
+        401: {"description": "Authentication is required."},
+        403: {"description": "CSRF validation failed."},
+        404: {"description": "A private resource was not found."},
+        409: {"description": "The supplied current version is stale."},
+    },
+)
+async def restore_saved_draft_version(
+    saved_draft_id: UUID,
+    version_id: UUID,
+    payload: RestoreSavedDraftVersionRequest,
+    request: Request,
+    response: Response,
+    active_session: Annotated[
+        AuthenticatedSession,
+        Depends(require_csrf_authenticated_session),
+    ],
+) -> SavedDraftResponse:
+    try:
+        item = await _service(request).restore_version(
+            owner_id=active_session.user_id,
+            saved_draft_id=saved_draft_id,
+            version_id=version_id,
+            expected_version=payload.expected_version,
+        )
+    except PrivateResourceNotFoundError as exc:
+        _raise_private_not_found(exc)
+    except SavedDraftVersionConflict as exc:
+        raise ApplicationError(
+            status_code=409,
+            code="draft_version_conflict",
+            message="The draft changed after it was loaded. Refresh and try again.",
+        ) from exc
+    except SavedDraftRepositoryError as exc:
+        _raise_storage_unavailable(exc)
     response.headers["Cache-Control"] = "private, no-store"
     return _response(item)
 

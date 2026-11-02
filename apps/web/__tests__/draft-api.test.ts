@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { getSavedDraft, getSavedDraftPage, LIBRARY_PAGE_SIZE } from "@/lib/draft-api";
+import {
+  getSavedDraft,
+  getSavedDraftPage,
+  getSavedDraftVersion,
+  getSavedDraftVersions,
+  LIBRARY_PAGE_SIZE,
+} from "@/lib/draft-api";
 
 const cookieState = vi.hoisted(() => ({ session: undefined as string | undefined }));
 
@@ -57,6 +63,33 @@ const draftPage = {
   total_items: 7,
   total_pages: 2,
   sort: "updated_at_desc",
+};
+
+const savedDraftVersion = {
+  id: "10000000-0000-4000-8000-000000000008",
+  draft_id: savedDraft.id,
+  post_version_id: savedDraft.current_post_version_id,
+  selected_image_id: savedDraft.selected_image_id,
+  selected_image: savedDraft.selected_image,
+  generation_id: null,
+  restored_from_version_id: null,
+  version_number: 2,
+  change_type: "manual_edit",
+  title: savedDraft.title,
+  edited_text: savedDraft.edited_text,
+  tone: savedDraft.tone,
+  length: savedDraft.length,
+  source: savedDraft.source,
+  created_at: savedDraft.updated_at,
+};
+
+const historyPage = {
+  items: [savedDraftVersion],
+  page: 1,
+  page_size: 20,
+  total_items: 1,
+  total_pages: 1,
+  sort: "version_desc",
 };
 
 describe("saved draft API client", () => {
@@ -160,5 +193,58 @@ describe("saved draft API client", () => {
       reason: "invalid_request",
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("loads and validates immutable draft history", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(historyPage), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(savedDraftVersion), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    await expect(getSavedDraftVersions(savedDraft.id)).resolves.toEqual({
+      status: "success",
+      data: historyPage,
+    });
+    await expect(getSavedDraftVersion(savedDraft.id, savedDraftVersion.id)).resolves.toEqual({
+      status: "success",
+      data: savedDraftVersion,
+    });
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      `http://backend:8000/api/v1/drafts/${savedDraft.id}/versions?page=1&page_size=20`,
+      {
+        headers: {
+          Accept: "application/json",
+          Cookie: "newsflow_session=session-value",
+        },
+        cache: "no-store",
+      },
+    );
+  });
+
+  test("rejects malformed version change types", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ...historyPage,
+          items: [{ ...savedDraftVersion, change_type: "history_rewrite" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await expect(getSavedDraftVersions(savedDraft.id)).resolves.toEqual({
+      status: "error",
+      reason: "unavailable",
+    });
   });
 });

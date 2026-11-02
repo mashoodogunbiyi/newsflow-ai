@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 
 import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import { LibraryErrorState } from "@/components/library/library-error-state";
+import { VersionHistory } from "@/components/library/version-history";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getSavedDraft } from "@/lib/draft-api";
+import { getSavedDraft, getSavedDraftVersions } from "@/lib/draft-api";
 import { toSavedDraftEditorDocument, toSavedDraftImageSelection } from "@/types/library";
 
 export const metadata: Metadata = {
@@ -26,7 +27,10 @@ function formatUpdatedDate(value: string) {
 
 export default async function SavedDraftPage({ params }: { params: Promise<{ draftId: string }> }) {
   const { draftId } = await params;
-  const result = await getSavedDraft(draftId);
+  const [result, historyResult] = await Promise.all([
+    getSavedDraft(draftId),
+    getSavedDraftVersions(draftId),
+  ]);
 
   return (
     <>
@@ -82,6 +86,23 @@ export default async function SavedDraftPage({ params }: { params: Promise<{ dra
               origin="saved"
               selectedImage={toSavedDraftImageSelection(result.data)}
             />
+            {historyResult.status === "success" ? (
+              <VersionHistory
+                currentVersion={result.data.version}
+                draftId={result.data.id}
+                versions={historyResult.data.items}
+              />
+            ) : (
+              <Card role="status" tone="muted">
+                <h2 className="text-lg font-semibold text-emerald-950">
+                  Version history is temporarily unavailable.
+                </h2>
+                <p className="mt-2 text-sm text-emerald-950/70">
+                  Your current saved draft is still available. Refresh this page to try loading its
+                  history again.
+                </p>
+              </Card>
+            )}
           </div>
         )}
       </div>

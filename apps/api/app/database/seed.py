@@ -27,6 +27,7 @@ SEED_IDS = {
     "saved_content": "10000000-0000-4000-8000-000000000012",
     "article_rights": "10000000-0000-4000-8000-000000000013",
     "article_provenance": "10000000-0000-4000-8000-000000000014",
+    "saved_draft_version": "10000000-0000-4000-8000-000000000015",
 }
 
 SEED_USER_EMAIL = "developer@example.invalid"
@@ -491,6 +492,34 @@ def _execute_seed(connection: Connection[Any]) -> None:
         )
         cursor.execute(
             """
+            INSERT INTO saved_draft_versions (
+                id,
+                saved_draft_id,
+                user_id,
+                generated_post_id,
+                post_version_id,
+                generation_run_id,
+                version_number,
+                change_type,
+                library_title
+            )
+            VALUES (
+                %(saved_draft_version)s,
+                %(saved_content)s,
+                %(user)s,
+                %(generated_post)s,
+                %(post_version)s,
+                %(generation_run)s,
+                1,
+                'initial_save',
+                'Synthetic energy dashboard example'
+            )
+            ON CONFLICT (id) DO NOTHING
+            """,
+            values,
+        )
+        cursor.execute(
+            """
             UPDATE generated_posts
             SET status = 'saved'
             WHERE id = %(generated_post)s AND status = 'draft'
@@ -516,6 +545,7 @@ def _seed_counts(connection: Connection[Any]) -> dict[str, int]:
         "post_versions": [SEED_IDS["post_version"]],
         "post_claims": [SEED_IDS["post_claim_1"], SEED_IDS["post_claim_2"]],
         "saved_content_items": [SEED_IDS["saved_content"]],
+        "saved_draft_versions": [SEED_IDS["saved_draft_version"]],
     }
     counts: dict[str, int] = {}
     with connection.cursor() as cursor:

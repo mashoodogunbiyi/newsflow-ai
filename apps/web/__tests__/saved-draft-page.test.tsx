@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import SavedDraftPage from "@/app/(workspace)/library/[draftId]/page";
 
-const draftApi = vi.hoisted(() => ({ getSavedDraft: vi.fn() }));
+const draftApi = vi.hoisted(() => ({
+  getSavedDraft: vi.fn(),
+  getSavedDraftVersions: vi.fn(),
+}));
 const navigation = vi.hoisted(() => ({
   redirect: vi.fn(),
   refresh: vi.fn(),
@@ -12,6 +15,7 @@ const navigation = vi.hoisted(() => ({
 
 vi.mock("@/lib/draft-api", () => ({
   getSavedDraft: draftApi.getSavedDraft,
+  getSavedDraftVersions: draftApi.getSavedDraftVersions,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -56,9 +60,41 @@ const savedDraft = {
   updated_at: "2026-11-02T10:00:00Z",
 };
 
+const historyPage = {
+  items: [
+    {
+      id: "10000000-0000-4000-8000-000000000008",
+      draft_id: savedDraft.id,
+      post_version_id: savedDraft.current_post_version_id,
+      selected_image_id: savedDraft.selected_image_id,
+      selected_image: savedDraft.selected_image,
+      generation_id: null,
+      restored_from_version_id: null,
+      version_number: 3,
+      change_type: "manual_edit" as const,
+      title: savedDraft.title,
+      edited_text: savedDraft.edited_text,
+      tone: savedDraft.tone,
+      length: savedDraft.length,
+      source: savedDraft.source,
+      created_at: savedDraft.updated_at,
+    },
+  ],
+  page: 1,
+  page_size: 20,
+  total_items: 1,
+  total_pages: 1,
+  sort: "version_desc" as const,
+};
+
 describe("NFA-69 saved draft reopening", () => {
   beforeEach(() => {
     draftApi.getSavedDraft.mockReset();
+    draftApi.getSavedDraftVersions.mockReset();
+    draftApi.getSavedDraftVersions.mockResolvedValue({
+      status: "success",
+      data: historyPage,
+    });
     navigation.redirect.mockReset();
     navigation.refresh.mockReset();
     navigation.redirect.mockImplementation(() => {
@@ -86,6 +122,8 @@ describe("NFA-69 saved draft reopening", () => {
     expect(screen.getAllByText(savedDraft.source.title).length).toBeGreaterThan(0);
     expect(screen.getByText(savedDraft.source.attribution)).toBeDefined();
     expect(screen.getByRole("img", { name: savedDraft.selected_image.alt_text })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Version history" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Review version 3" })).toBeDefined();
 
     fireEvent.change(screen.getByRole("textbox", { name: "LinkedIn draft text" }), {
       target: { value: "A continued local edit." },

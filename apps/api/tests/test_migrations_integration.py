@@ -35,6 +35,7 @@ EXPECTED_TABLES = {
     "post_version_hashtags",
     "post_versions",
     "saved_content_items",
+    "saved_draft_versions",
     "sessions",
     "source_profiles",
     "users",
@@ -52,6 +53,7 @@ EXPECTED_SEED_COUNTS = {
     "post_versions": 1,
     "post_claims": 2,
     "saved_content_items": 1,
+    "saved_draft_versions": 1,
     "post_version_hashtags": 3,
     "post_claim_sources": 2,
 }

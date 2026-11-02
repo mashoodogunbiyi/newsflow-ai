@@ -322,6 +322,14 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
 
     first_page = run(service.list(owner_id=OWNER_ID, page=1, page_size=20))
     empty_page = run(service.list(owner_id=OWNER_ID, page=2, page_size=20))
+    history_page = run(
+        service.list_versions(
+            owner_id=OWNER_ID,
+            saved_draft_id=created.id,
+            page=1,
+            page_size=20,
+        )
+    )
 
     with resources.engine.connect() as connection:
         versions = (
@@ -355,6 +363,22 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
             .mappings()
             .one()
         )
+        history_rows = (
+            connection.execute(
+                sa.text(
+                    """
+                    SELECT version_number, change_type, post_version_id,
+                           selected_image_id, generation_run_id
+                    FROM saved_draft_versions
+                    WHERE saved_draft_id = :saved_id
+                    ORDER BY version_number
+                    """
+                ),
+                {"saved_id": created.id},
+            )
+            .mappings()
+            .all()
+        )
 
     assert replayed.id == created.id
     assert created.original_post_version_id == ORIGINAL_VERSION_ID
@@ -374,6 +398,10 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
     )
     assert empty_page.total_items == 1
     assert empty_page.items == []
+    assert [item.version_number for item in history_page.items] == [2, 1]
+    assert history_page.items[0].change_type == "manual_edit"
+    assert history_page.items[1].change_type == "initial_save"
+    assert history_page.items[1].generation_run_id == GENERATION_ID
     assert updated.article_id == ARTICLE_ID
     assert updated.source_title == "Synthetic permitted persistence demonstration"
     assert updated.source_url == "https://example.invalid/nfa67-article-001"
@@ -391,5 +419,11 @@ def test_postgresql_save_replay_update_and_stale_write_protection(
     assert saved["version"] == 2
     assert len(saved["save_key_hash"]) == 64
     assert len(saved["save_payload_hash"]) == 64
+    assert [row["change_type"] for row in history_rows] == [
+        "initial_save",
+        "manual_edit",
+    ]
+    assert history_rows[0]["selected_image_id"] == IMAGE_ID
+    assert history_rows[1]["post_version_id"] == versions[2]["id"]
 
     run(database.close())
