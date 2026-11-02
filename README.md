@@ -98,6 +98,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/content-library-api.md](docs/content-library-api.md) - NFA-68 create, list, retrieve, partial-update, pagination, ownership, safe metadata, OpenAPI, error, and test contract.
 - [docs/content-library-interface.md](docs/content-library-interface.md) - NFA-69 authenticated saved-draft browsing, responsive cards, pagination, reopening, secure thumbnails, states, and tests.
 - [docs/draft-version-history.md](docs/draft-version-history.md) - NFA-70 immutable saved-draft history, change classifications, restoration, ownership, retention, frontend review, and tests.
+- [docs/content-export.md](docs/content-export.md) - NFA-71 current-text clipboard copying, secure private-image downloads, feedback, rights notices, accessibility, and tests.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -163,6 +164,7 @@ newsflow-ai/
 │   ├── content-library-api.md # NFA-68 saved-draft REST API contract
 │   ├── content-library-interface.md # NFA-69 responsive personal content library
 │   ├── draft-version-history.md # NFA-70 immutable saved-draft history and restoration
+│   ├── content-export.md # NFA-71 clipboard and secure image export workflow
 │   ├── e4-generation-acceptance.md # E4 joined verification and acceptance record
 │   ├── e6-generation-integration-contract.md # Future frontend generation contract
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
@@ -232,6 +234,7 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/content-library-api.md`                     | NFA-68 content-library routes, pagination, stable sorting, ownership, safe metadata, errors, OpenAPI, and tests                     |
 | `docs/content-library-interface.md`               | NFA-69 saved-draft cards, secure thumbnails, URL pagination, controlled states, reopening, editor restoration, and tests            |
 | `docs/draft-version-history.md`                   | NFA-70 immutable draft history, regeneration associations, restoration, ownership, retention, UI, and tests                         |
+| `docs/content-export.md`                          | NFA-71 current-text clipboard export, owner-authorised image download, safe failures, notices, accessibility, and tests             |
 | `docs/authorization.md`                           | Object ownership rules, protected operations, safe errors, and test evidence                                                        |
 | `docs/cnn-adapter.md`                             | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates                                                  |
 | `docs/source-provider-interface.md`               | Provider interface, article contract, fixture adapter, safe errors, and integration instructions                                    |
@@ -372,6 +375,8 @@ NFA-69 replaces the Content Library placeholder with a server-rendered personal 
 
 NFA-70 adds an owner-bound, immutable history ledger for meaningful saved-draft changes. Initial saves, manual edits, verified text-generation selections, image selections and regenerations, title updates, and restorations retain their text, source, image, generation, and timestamp associations without copying image files. Protected paginated APIs expose history and selected versions, while restoration uses CSRF and optimistic concurrency to append a new current version instead of rewriting the past. The saved-draft page now displays labelled history and read-only historical details. See the [draft version history guide](docs/draft-version-history.md).
 
+NFA-71 adds deliberate export controls to the current draft editor. Copy Post sends the latest edited plain text to the browser clipboard without changing its line breaks, while Download Image uses a same-origin gateway and the existing E5 owner-authorised FastAPI endpoint to retrieve only approved PNG, JPEG, or WebP illustrations with a controlled filename. Accessible success and failure states cover empty text, clipboard denial, missing images, expired sessions, invalid responses, and network failures. Source attribution, human-review reminders, and the AI-generated illustration notice remain visible, and no LinkedIn publishing request exists. See the [content export guide](docs/content-export.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -493,7 +498,7 @@ NFA-51 adds synthetic image validation, private storage, metadata, idempotency, 
 
 ## Current next step
 
-Review NFA-70's immutable history storage, owner-scoped retrieval, change classifications, append-only restoration, retention boundary, and read-only frontend history. After the branch is pushed, confirm the backend and frontend quality workflows pass in GitHub Actions, merge it, pull `main`, and record the final links in Jira. Live CNN access remains blocked because no authorised method or Go decision exists.
+Review NFA-71's current-editor clipboard workflow, secure E5 image download gateway, safe filenames and formats, failure feedback, visible source and AI notices, keyboard controls, and absence of automatic publishing. After the branch is pushed, confirm the frontend quality workflow passes in GitHub Actions, merge it, pull `main`, and record the final links in Jira. Live CNN access remains blocked because no authorised method or Go decision exists.
 
 ## Licence
 
