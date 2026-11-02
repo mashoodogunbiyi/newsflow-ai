@@ -53,6 +53,45 @@ export type SavedDraftPage = {
   total_pages: number;
 };
 
+export const SAVED_DRAFT_CHANGE_TYPES = [
+  "initial_save",
+  "manual_edit",
+  "text_regeneration",
+  "image_selection",
+  "image_regeneration",
+  "metadata_update",
+  "version_restoration",
+] as const;
+
+export type SavedDraftChangeType = (typeof SAVED_DRAFT_CHANGE_TYPES)[number];
+
+export type SavedDraftVersion = {
+  change_type: SavedDraftChangeType;
+  created_at: string;
+  draft_id: string;
+  edited_text: string;
+  generation_id: string | null;
+  id: string;
+  length: "long" | "medium" | "short";
+  post_version_id: string;
+  restored_from_version_id: string | null;
+  selected_image: SavedDraftImage | null;
+  selected_image_id: string | null;
+  source: SavedDraft["source"];
+  title: string | null;
+  tone: "analytical" | "conversational" | "professional";
+  version_number: number;
+};
+
+export type SavedDraftVersionPage = {
+  items: SavedDraftVersion[];
+  page: number;
+  page_size: number;
+  sort: "version_desc";
+  total_items: number;
+  total_pages: number;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -105,6 +144,16 @@ function isSavedDraftImage(value: unknown): value is SavedDraftImage {
     isPositiveInteger(value.height_px) &&
     typeof value.ai_generated === "boolean" &&
     typeof value.ai_disclosure_required === "boolean"
+  );
+}
+
+function isSavedDraftSource(value: unknown): value is SavedDraft["source"] {
+  return (
+    isRecord(value) &&
+    isArticleId(value.article_id) &&
+    isString(value.title, 500) &&
+    isSafeSourceUrl(value.url) &&
+    isString(value.attribution, 1_000)
   );
 }
 
@@ -172,6 +221,50 @@ export function isSavedDraftPage(value: unknown): value is SavedDraftPage {
   );
 }
 
+export function isSavedDraftVersion(value: unknown): value is SavedDraftVersion {
+  if (!isRecord(value) || !isSavedDraftSource(value.source)) {
+    return false;
+  }
+  if (value.selected_image_id !== null && !isUuid(value.selected_image_id)) {
+    return false;
+  }
+  if (value.selected_image !== null && !isSavedDraftImage(value.selected_image)) {
+    return false;
+  }
+  return (
+    isUuid(value.id) &&
+    isUuid(value.draft_id) &&
+    isUuid(value.post_version_id) &&
+    (value.generation_id === null || isUuid(value.generation_id)) &&
+    (value.restored_from_version_id === null || isUuid(value.restored_from_version_id)) &&
+    isPositiveInteger(value.version_number) &&
+    typeof value.change_type === "string" &&
+    SAVED_DRAFT_CHANGE_TYPES.includes(value.change_type as SavedDraftChangeType) &&
+    (value.title === null || isString(value.title, 200)) &&
+    isString(value.edited_text, 12_000) &&
+    isGenerationTone(value.tone) &&
+    isGenerationLength(value.length) &&
+    isTimestamp(value.created_at)
+  );
+}
+
+export function isSavedDraftVersionPage(value: unknown): value is SavedDraftVersionPage {
+  if (!isRecord(value) || !Array.isArray(value.items) || !value.items.every(isSavedDraftVersion)) {
+    return false;
+  }
+  return (
+    isPositiveInteger(value.page) &&
+    isPositiveInteger(value.page_size) &&
+    value.page_size <= 100 &&
+    isNonnegativeInteger(value.total_items) &&
+    isNonnegativeInteger(value.total_pages) &&
+    value.sort === "version_desc" &&
+    value.items.length <= value.page_size &&
+    value.total_pages ===
+      (value.total_items === 0 ? 0 : Math.ceil(value.total_items / value.page_size))
+  );
+}
+
 export function toSavedDraftEditorDocument(draft: SavedDraft): DraftEditorDocument {
   return {
     articleId: draft.source.article_id,
@@ -196,5 +289,34 @@ export function toSavedDraftImageSelection(draft: SavedDraft): PreviewImageSelec
       draft.selected_image.alt_text?.trim() ||
       "AI-generated illustration selected for this saved draft.",
     id: draft.selected_image.id,
+  };
+}
+
+export function toSavedDraftVersionEditorDocument(version: SavedDraftVersion): DraftEditorDocument {
+  return {
+    articleId: version.source.article_id,
+    generatedText: version.edited_text,
+    generationId: version.generation_id ?? version.post_version_id,
+    groundingStatus: "review_required",
+    length: version.length,
+    sourceAttribution: version.source.attribution,
+    sourceName: "Authorised article source",
+    sourceTitle: version.source.title,
+    sourceUrl: version.source.url,
+    validationWarnings: [],
+  };
+}
+
+export function toSavedDraftVersionImageSelection(
+  version: SavedDraftVersion,
+): PreviewImageSelection | null {
+  if (!version.selected_image) {
+    return null;
+  }
+  return {
+    altText:
+      version.selected_image.alt_text?.trim() ||
+      "AI-generated illustration selected for this historical version.",
+    id: version.selected_image.id,
   };
 }

@@ -150,3 +150,57 @@ class SavedDraftCollectionResponse(BaseModel):
     sort: Literal["updated_at_desc"] = "updated_at_desc"
 
     model_config = ConfigDict(extra="forbid")
+
+
+SavedDraftChangeType = Literal[
+    "initial_save",
+    "manual_edit",
+    "text_regeneration",
+    "image_selection",
+    "image_regeneration",
+    "metadata_update",
+    "version_restoration",
+]
+
+
+class RestoreSavedDraftVersionRequest(BaseModel):
+    """Optimistic concurrency input for a history restoration."""
+
+    expected_version: int = Field(ge=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SavedDraftVersionResponse(BaseModel):
+    """Immutable historical state safe for the owning user."""
+
+    id: UUID
+    draft_id: UUID
+    post_version_id: UUID
+    selected_image_id: UUID | None
+    selected_image: SavedDraftImageResponse | None
+    generation_id: UUID | None
+    restored_from_version_id: UUID | None
+    version_number: int = Field(ge=1)
+    change_type: SavedDraftChangeType
+    title: str | None
+    edited_text: str
+    tone: str
+    length: str
+    source: SavedDraftSourceResponse
+    created_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SavedDraftVersionCollectionResponse(BaseModel):
+    """Bounded immutable history page in newest-first order."""
+
+    items: list[SavedDraftVersionResponse]
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total_items: int = Field(ge=0)
+    total_pages: int = Field(ge=0)
+    sort: Literal["version_desc"] = "version_desc"
+
+    model_config = ConfigDict(extra="forbid")

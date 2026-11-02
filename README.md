@@ -97,6 +97,7 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/draft-persistence.md](docs/draft-persistence.md) - NFA-67 saved-draft schema, immutable version history, API contract, ownership, idempotency, concurrency, failures, and tests.
 - [docs/content-library-api.md](docs/content-library-api.md) - NFA-68 create, list, retrieve, partial-update, pagination, ownership, safe metadata, OpenAPI, error, and test contract.
 - [docs/content-library-interface.md](docs/content-library-interface.md) - NFA-69 authenticated saved-draft browsing, responsive cards, pagination, reopening, secure thumbnails, states, and tests.
+- [docs/draft-version-history.md](docs/draft-version-history.md) - NFA-70 immutable saved-draft history, change classifications, restoration, ownership, retention, frontend review, and tests.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -161,6 +162,7 @@ newsflow-ai/
 │   ├── responsive-accessibility-review.md # NFA-65 responsive and accessibility evidence
 │   ├── content-library-api.md # NFA-68 saved-draft REST API contract
 │   ├── content-library-interface.md # NFA-69 responsive personal content library
+│   ├── draft-version-history.md # NFA-70 immutable saved-draft history and restoration
 │   ├── e4-generation-acceptance.md # E4 joined verification and acceptance record
 │   ├── e6-generation-integration-contract.md # Future frontend generation contract
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
@@ -228,7 +230,8 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/responsive-accessibility-review.md`         | NFA-65 supported viewports, WCAG review, resolved defects, automated evidence, and manual acceptance record                         |
 | `docs/draft-persistence.md`                       | NFA-67 durable draft saves, original-generation lineage, manual versions, ownership, concurrency, errors, and tests                 |
 | `docs/content-library-api.md`                     | NFA-68 content-library routes, pagination, stable sorting, ownership, safe metadata, errors, OpenAPI, and tests                     |
-| `docs/content-library-interface.md`               | NFA-69 saved-draft cards, secure thumbnails, URL pagination, controlled states, reopening, editor restoration, and tests           |
+| `docs/content-library-interface.md`               | NFA-69 saved-draft cards, secure thumbnails, URL pagination, controlled states, reopening, editor restoration, and tests            |
+| `docs/draft-version-history.md`                   | NFA-70 immutable draft history, regeneration associations, restoration, ownership, retention, UI, and tests                         |
 | `docs/authorization.md`                           | Object ownership rules, protected operations, safe errors, and test evidence                                                        |
 | `docs/cnn-adapter.md`                             | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates                                                  |
 | `docs/source-provider-interface.md`               | Provider interface, article contract, fixture adapter, safe errors, and integration instructions                                    |
@@ -367,6 +370,8 @@ NFA-68 completes the backend content-library REST surface with authenticated `GE
 
 NFA-69 replaces the Content Library placeholder with a server-rendered personal library backed by NFA-68. Responsive cards show private titles, bounded excerpts, source references, modified dates, versions, and owner-protected image thumbnails. Six-record backend pages are restored from the URL, invalid and empty pages fail safely, and an owned draft can be reopened with its exact saved text, source, and selected illustration in the existing editor. Session cookies remain server-side, responses are runtime-validated, and private storage information is never rendered. See the [frontend content library guide](docs/content-library-interface.md).
 
+NFA-70 adds an owner-bound, immutable history ledger for meaningful saved-draft changes. Initial saves, manual edits, verified text-generation selections, image selections and regenerations, title updates, and restorations retain their text, source, image, generation, and timestamp associations without copying image files. Protected paginated APIs expose history and selected versions, while restoration uses CSRF and optimistic concurrency to append a new current version instead of rewriting the past. The saved-draft page now displays labelled history and read-only historical details. See the [draft version history guide](docs/draft-version-history.md).
+
 ### Secure local configuration
 
 Copy the safe example when local environment configuration is needed:
@@ -488,7 +493,7 @@ NFA-51 adds synthetic image validation, private storage, metadata, idempotency, 
 
 ## Current next step
 
-Review NFA-69's authenticated library requests, runtime response validation, responsive cards, source and image presentation, URL pagination, controlled states, draft reopening, and editor restoration. After the branch is pushed, confirm the frontend quality workflow passes in GitHub Actions, merge it, pull `main`, and record the final links in Jira. Frontend save and conflict-resolution controls remain separate E7 work. Live CNN access remains blocked because no authorised method or Go decision exists.
+Review NFA-70's immutable history storage, owner-scoped retrieval, change classifications, append-only restoration, retention boundary, and read-only frontend history. After the branch is pushed, confirm the backend and frontend quality workflows pass in GitHub Actions, merge it, pull `main`, and record the final links in Jira. Live CNN access remains blocked because no authorised method or Go decision exists.
 
 ## Licence
 

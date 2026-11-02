@@ -10,6 +10,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     LargeBinary,
@@ -826,6 +827,14 @@ class SavedContentItemTable(Base):
     """Application mapping for a private content-library item."""
 
     __tablename__ = "saved_content_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "id",
+            "user_id",
+            "generated_post_id",
+            name="uq_saved_content_id_owner_post",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
@@ -859,4 +868,99 @@ class SavedContentItemTable(Base):
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+
+class SavedDraftVersionTable(Base):
+    """Immutable ledger entry for one meaningful saved-draft state."""
+
+    __tablename__ = "saved_draft_versions"
+    __table_args__ = (
+        CheckConstraint(
+            "version_number > 0",
+            name="ck_saved_draft_versions_number",
+        ),
+        CheckConstraint(
+            "change_type IN ('initial_save', 'manual_edit', "
+            "'text_regeneration', 'image_selection', 'image_regeneration', "
+            "'metadata_update', 'version_restoration')",
+            name="ck_saved_draft_versions_change_type",
+        ),
+        CheckConstraint(
+            "(change_type = 'version_restoration') = "
+            "(restored_from_version_id IS NOT NULL)",
+            name="ck_saved_draft_versions_restore_reference",
+        ),
+        ForeignKeyConstraint(
+            ["saved_draft_id", "user_id", "generated_post_id"],
+            [
+                "saved_content_items.id",
+                "saved_content_items.user_id",
+                "saved_content_items.generated_post_id",
+            ],
+            name="fk_saved_draft_versions_owned_draft",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["post_version_id", "generated_post_id"],
+            ["post_versions.id", "post_versions.generated_post_id"],
+            name="fk_saved_draft_versions_post_version",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["selected_image_id", "generated_post_id"],
+            ["generated_images.id", "generated_images.generated_post_id"],
+            name="fk_saved_draft_versions_image",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["generation_run_id", "generated_post_id"],
+            ["generation_runs.id", "generation_runs.generated_post_id"],
+            name="fk_saved_draft_versions_generation_run",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "saved_draft_id",
+            "version_number",
+            name="uq_saved_draft_versions_number",
+        ),
+        Index(
+            "ix_saved_draft_versions_owner_draft_created",
+            "user_id",
+            "saved_draft_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    saved_draft_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    generated_post_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    post_version_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=False
+    )
+    selected_image_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    generation_run_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    restored_from_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("saved_draft_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    change_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    library_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

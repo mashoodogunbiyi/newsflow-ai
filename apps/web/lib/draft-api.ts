@@ -3,8 +3,12 @@ import { cookies } from "next/headers";
 import {
   isSavedDraft,
   isSavedDraftPage,
+  isSavedDraftVersion,
+  isSavedDraftVersionPage,
   type SavedDraft,
   type SavedDraftPage,
+  type SavedDraftVersion,
+  type SavedDraftVersionPage,
 } from "@/types/library";
 
 const SESSION_COOKIE_NAME = "newsflow_session";
@@ -20,6 +24,20 @@ export type SavedDraftPageResult =
 
 export type SavedDraftDetailResult =
   | { data: SavedDraft; status: "success" }
+  | {
+      reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
+      status: "error";
+    };
+
+export type SavedDraftVersionPageResult =
+  | { data: SavedDraftVersionPage; status: "success" }
+  | {
+      reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
+      status: "error";
+    };
+
+export type SavedDraftVersionDetailResult =
+  | { data: SavedDraftVersion; status: "success" }
   | {
       reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
       status: "error";
@@ -114,6 +132,81 @@ export async function getSavedDraft(savedDraftId: string): Promise<SavedDraftDet
 
     const payload: unknown = await response.json();
     return isSavedDraft(payload)
+      ? { status: "success", data: payload }
+      : { status: "error", reason: "unavailable" };
+  } catch {
+    return { status: "error", reason: "unavailable" };
+  }
+}
+
+export async function getSavedDraftVersions(
+  savedDraftId: string,
+  page = 1,
+): Promise<SavedDraftVersionPageResult> {
+  if (!UUID_PATTERN.test(savedDraftId) || !Number.isSafeInteger(page) || page < 1) {
+    return { status: "error", reason: "invalid_request" };
+  }
+  const sessionCookie = await getSessionCookie();
+  if (!sessionCookie) {
+    return { status: "error", reason: "authentication_required" };
+  }
+  const parameters = new URLSearchParams({ page: String(page), page_size: "20" });
+  try {
+    const response = await fetch(
+      `${getBackendBaseUrl()}/api/v1/drafts/${encodeURIComponent(savedDraftId)}/versions?${parameters}`,
+      { headers: privateHeaders(sessionCookie), cache: "no-store" },
+    );
+    if (response.status === 401) {
+      return { status: "error", reason: "authentication_required" };
+    }
+    if (response.status === 404) {
+      return { status: "error", reason: "not_found" };
+    }
+    if (response.status === 422) {
+      return { status: "error", reason: "invalid_request" };
+    }
+    if (!response.ok) {
+      return { status: "error", reason: "unavailable" };
+    }
+    const payload: unknown = await response.json();
+    return isSavedDraftVersionPage(payload)
+      ? { status: "success", data: payload }
+      : { status: "error", reason: "unavailable" };
+  } catch {
+    return { status: "error", reason: "unavailable" };
+  }
+}
+
+export async function getSavedDraftVersion(
+  savedDraftId: string,
+  versionId: string,
+): Promise<SavedDraftVersionDetailResult> {
+  if (!UUID_PATTERN.test(savedDraftId) || !UUID_PATTERN.test(versionId)) {
+    return { status: "error", reason: "invalid_request" };
+  }
+  const sessionCookie = await getSessionCookie();
+  if (!sessionCookie) {
+    return { status: "error", reason: "authentication_required" };
+  }
+  try {
+    const response = await fetch(
+      `${getBackendBaseUrl()}/api/v1/drafts/${encodeURIComponent(savedDraftId)}/versions/${encodeURIComponent(versionId)}`,
+      { headers: privateHeaders(sessionCookie), cache: "no-store" },
+    );
+    if (response.status === 401) {
+      return { status: "error", reason: "authentication_required" };
+    }
+    if (response.status === 404) {
+      return { status: "error", reason: "not_found" };
+    }
+    if (response.status === 422) {
+      return { status: "error", reason: "invalid_request" };
+    }
+    if (!response.ok) {
+      return { status: "error", reason: "unavailable" };
+    }
+    const payload: unknown = await response.json();
+    return isSavedDraftVersion(payload)
       ? { status: "success", data: payload }
       : { status: "error", reason: "unavailable" };
   } catch {
