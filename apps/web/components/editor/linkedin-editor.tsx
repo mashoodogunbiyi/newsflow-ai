@@ -13,12 +13,18 @@ import type { PreviewImageSelection } from "@/types/preview";
 
 type LinkedInEditorProps = {
   draft: DraftEditorDocument | null;
+  origin?: "generated" | "saved";
   selectedImage?: PreviewImageSelection | null;
 };
 
-export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorProps) {
+export function LinkedInEditor({
+  draft,
+  origin = "generated",
+  selectedImage = null,
+}: LinkedInEditorProps) {
   const editor = useDraftEditor(draft);
   const activeDraft = editor.activeDocument;
+  const savedDraft = origin === "saved";
   const [generatedSelection, setGeneratedSelection] = useState<{
     generationId: string;
     image: PreviewImageSelection;
@@ -54,10 +60,10 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            AI-assisted draft
+            {savedDraft ? "Saved draft" : "AI-assisted draft"}
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-950">
-            Review and edit before use.
+            {savedDraft ? "Continue reviewing your saved draft." : "Review and edit before use."}
           </h2>
           <p className="mt-3 text-sm leading-6 text-emerald-950/70" id="draft-editor-help">
             This content may contain errors. Edit the wording, then verify its claims, source
@@ -73,7 +79,11 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
           }`}
           role="status"
         >
-          {editor.hasUnsavedChanges ? "Unsaved local edits" : "Generated draft loaded"}
+          {editor.hasUnsavedChanges
+            ? "Unsaved local edits"
+            : savedDraft
+              ? "Saved version loaded"
+              : "Generated draft loaded"}
         </span>
       </div>
 
@@ -161,8 +171,9 @@ export function LinkedInEditor({ draft, selectedImage = null }: LinkedInEditorPr
       </div>
 
       <p className="mt-6 border-t border-emerald-950/10 pt-5 text-xs leading-5 text-emerald-950/70">
-        Edits currently remain only in this browser page. Persistent saving and draft history will
-        be added under E7. Leaving this page with local edits triggers a discard warning.
+        {savedDraft
+          ? "This saved version is loaded from your private library. New edits remain local until the update controls are added in a separate E7 task. Leaving with local edits triggers a discard warning."
+          : "Edits currently remain only in this browser page. Saving and draft-history controls are separate E7 tasks. Leaving this page with local edits triggers a discard warning."}
       </p>
     </Card>
   );
