@@ -71,6 +71,7 @@ from app.security import (
     PasswordHasher,
     RateLimitExceeded,
 )
+from app.security.api import ApiSecurityMiddleware
 from app.services import (
     AuthenticationService,
     ContentDeletionService,
@@ -578,6 +579,12 @@ def create_app(
                 )
 
         return await call_next(request)
+
+    application.add_middleware(
+        ApiSecurityMiddleware,
+        max_request_body_bytes=application_settings.api_max_request_body_bytes,
+        hsts_enabled=application_settings.session_cookie_secure,
+    )
 
     register_exception_handlers(application)
     application.state.session_cookie_secure = application_settings.session_cookie_secure

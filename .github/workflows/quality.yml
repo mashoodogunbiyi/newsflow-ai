@@ -45,9 +45,16 @@ jobs:
           cache: pip
           cache-dependency-path: apps/api/pyproject.toml
 
+      - name: Scan tracked files for secrets
+        run: python scripts/scan_secrets.py
+
       - name: Install backend dependencies
         working-directory: apps/api
         run: python -m pip install -e ".[dev]"
+
+      - name: Audit backend dependencies
+        working-directory: apps/api
+        run: pip-audit
 
       - name: Lint backend
         working-directory: apps/api
@@ -134,6 +141,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: apps/web
         run: npm ci
+
+      - name: Audit production frontend dependencies
+        working-directory: apps/web
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Lint frontend
         working-directory: apps/web

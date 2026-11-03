@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     )
     database_url: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    api_max_request_body_bytes: int = Field(
+        default=1_048_576,
+        ge=1_024,
+        le=10_485_760,
+    )
     registration_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
     registration_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     login_rate_limit_attempts: int = Field(default=5, ge=1, le=100)
