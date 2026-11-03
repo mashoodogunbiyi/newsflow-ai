@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, and the NFA-75 threat-model traceability checks.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, and the NFA-76 API security hardening checks.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -845,6 +845,26 @@ See the [NFA-73 saved-content lifecycle testing guide](saved-content-lifecycle-t
 
 See the [NFA-75 security threat model](security-threat-model.md) for the complete architecture, scored register, responsible tasks, OWASP guidance, residual risk and release gates.
 
+## NFA-76 API security hardening
+
+Run the focused endpoint-boundary checks from `apps/api`:
+
+```bash
+pytest tests/test_api_security.py tests/test_openai_image_service.py tests/test_config.py
+ruff check app/security/api.py app/security/urls.py tests/test_api_security.py
+ruff format --check app/security/api.py app/security/urls.py tests/test_api_security.py
+```
+
+Run the repository and dependency checks from the repository root:
+
+```bash
+python scripts/scan_secrets.py
+cd apps/api && pip-audit
+cd ../web && npm audit --omit=dev --audit-level=high
+```
+
+The focused tests cover the documented endpoint inventory, response security headers, production HSTS, documentation compatibility, declared and chunked request-size limits, JSON content-type enforcement, exact credentialed CORS, and rejection of unsafe provider URLs. Existing security suites remain responsible for authentication, CSRF, cross-user denial, private images, duplicate requests, safe errors, generation quotas, and administrative access.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -1005,10 +1025,15 @@ Verified locally on 3 November 2026:
 - The complete backend run after NFA-75 passed 446 tests, skipped 16 opt-in integration tests, deselected the optional live-model test, and measured 78.15 percent branch-aware coverage, above the enforced 75 percent floor.
 - The complete frontend run after NFA-75 passed 163 tests across 34 files. Ruff, ESLint, Prettier, strict TypeScript, generated route types, and the Next.js production build passed.
 - NFA-75 is documentation and verification work. It records unresolved production controls as release gates and does not claim that local tests prove deployment security.
+- The focused NFA-76 API security run passed 61 tests covering the endpoint inventory, request body limits, JSON enforcement, exact CORS, response headers, production HSTS, safer provider URLs, image-service behaviour, and bounded configuration.
+- The complete backend run after NFA-76 passed 462 tests, skipped 16 opt-in integration tests, deselected the optional live-model test, and measured 78.34 percent branch-aware coverage, above the enforced 75 percent floor.
+- Ruff passed lint and formatting checks across all 206 backend Python files. The project secret scan passed, and `.env` plus `.venv` remain Git-ignored.
+- The initial Python advisory scan found fixed advisories in Pillow 12.3.0 and certifi 2026.7.22. NFA-76 upgraded to Pillow 13.0.0 or newer and certifi 2026.10.18 or newer; the repeated `pip-audit` check reported no known vulnerabilities.
+- The production frontend dependency audit reported zero known vulnerabilities.
 - Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, and NFA-75
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, and NFA-76
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

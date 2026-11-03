@@ -611,7 +611,7 @@ def test_invalid_provider_responses_fail_safely(response: object) -> None:
 
 def test_https_provider_reference_uses_same_internal_interface() -> None:
     client = FakeClient(
-        successful_response(url="https://images.example.invalid/temporary/image.png")
+        successful_response(url="https://images.openai.com/temporary/image.png")
     )
     service = OpenAIImageGenerationService(
         configuration=configuration(),
@@ -625,7 +625,34 @@ def test_https_provider_reference_uses_same_internal_interface() -> None:
     assert reference.data is None
     assert reference.retrieval_url is not None
     assert reference.retrieval_url.get_secret_value().startswith("https://")
-    assert "images.example.invalid" not in repr(reference)
+    assert "images.openai.com" not in repr(reference)
+
+
+@pytest.mark.parametrize(
+    "unsafe_url",
+    [
+        "https://localhost/private.png",
+        "https://127.0.0.1/private.png",
+        "https://10.0.0.7/private.png",
+        "https://[::1]/private.png",
+        "https://metadata.internal/private.png",
+        "https://user:password@images.openai.com/private.png",
+        "https://images.openai.com:8443/private.png",
+        "https://images.openai.com/private.png#fragment",
+    ],
+)
+def test_provider_reference_rejects_local_private_and_credential_urls(
+    unsafe_url: str,
+) -> None:
+    service = OpenAIImageGenerationService(
+        configuration=configuration(),
+        client=FakeClient(successful_response(url=unsafe_url)),
+    )
+
+    with pytest.raises(OpenAIImageInvalidResponseError) as error:
+        run(service.generate(generation_request()))
+
+    assert error.value.code == "openai_image_invalid_response"
 
 
 def test_duplicate_request_returns_cached_result_without_second_provider_call() -> None:

@@ -123,6 +123,7 @@ def test_openai_model_placeholder_is_rejected() -> None:
 def test_openai_settings_have_bounded_defaults() -> None:
     settings = Settings(_env_file=None)
 
+    assert settings.api_max_request_body_bytes == 1_048_576
     assert settings.openai_request_timeout == 30
     assert settings.openai_max_output_tokens == 800
     assert settings.openai_max_retries == 2

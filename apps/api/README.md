@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step. NFA-76 inventories and hardens the complete API surface with bounded JSON bodies, consistent security headers, safer external URLs, secret scanning, dependency auditing, and focused regression tests.
 
 NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests. NFA-67 adds transactional, owner-scoped saved-draft creation and updates with original-generation lineage, immutable manual versions, optional approved-image selection, idempotency, and stale-write protection. NFA-68 completes the backend content-library contract with owner-only listing and retrieval, bounded stable pagination, safe selected-image metadata, partial updates, OpenAPI documentation, and expanded automated evidence.
 
@@ -46,6 +46,7 @@ NEWS_SOURCE_MODE=fixture
 FRONTEND_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://your_local_user:your_local_password@localhost:5432/newsflow
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
+API_MAX_REQUEST_BODY_BYTES=1048576
 REGISTRATION_RATE_LIMIT_ATTEMPTS=5
 REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 LOGIN_RATE_LIMIT_ATTEMPTS=5
@@ -102,6 +103,7 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 | `FRONTEND_ORIGIN` | No | No | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
 | `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
+| `API_MAX_REQUEST_BODY_BYTES` | No | No | Maximum JSON request body from 1 KiB to 10 MiB; defaults to 1 MiB. |
 | `REGISTRATION_RATE_LIMIT_ATTEMPTS` | No | No | Maximum registration requests per client and window; defaults to 5. |
 | `REGISTRATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | Registration rate-limit window; defaults to 60 seconds. |
 | `LOGIN_RATE_LIMIT_ATTEMPTS` | No | No | Maximum login requests per client and window; defaults to 5. |
@@ -725,6 +727,16 @@ pytest tests/test_generation_validator.py \
   tests/test_linkedin_generation_api.py
 ```
 
+Run the focused NFA-76 API security checks with:
+
+```bash
+pytest tests/test_api_security.py tests/test_openai_image_service.py tests/test_config.py
+python ../../scripts/scan_secrets.py
+pip-audit
+```
+
+The endpoint inventory, request limits, response headers, URL rules, CI audits, evidence, and deployment limitations are documented in the [NFA-76 API security guide](../../docs/api-security.md).
+
 Run the focused NFA-67 fast tests with:
 
 ```bash
@@ -827,6 +839,7 @@ Install the development dependencies, including Ruff and Pytest, with `python -m
 ruff check .
 ruff format --check .
 pytest --cov=app --cov-report=term-missing --cov-fail-under=75
+pip-audit
 ```
 
 Apply safe automatic lint fixes and formatting when needed:

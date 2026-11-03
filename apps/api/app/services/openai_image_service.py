@@ -10,7 +10,6 @@ from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
-from urllib.parse import urlparse
 
 import openai
 from openai import AsyncOpenAI
@@ -31,6 +30,7 @@ from app.models.image_generation import (
     OpenAIImageGenerationResult,
 )
 from app.models.image_safety import ImageSafetyDecision
+from app.security.urls import is_safe_external_https_url
 
 logger = logging.getLogger(__name__)
 
@@ -751,13 +751,7 @@ class OpenAIImageGenerationService:
 
     @staticmethod
     def _safe_https_url(value: str) -> bool:
-        parsed = urlparse(value)
-        return (
-            parsed.scheme == "https"
-            and bool(parsed.hostname)
-            and parsed.username is None
-            and parsed.password is None
-        )
+        return is_safe_external_https_url(value)
 
     @staticmethod
     def _duplicate_conflict() -> DuplicateImageGenerationError:
