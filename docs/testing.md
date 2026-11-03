@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, and the NFA-65 responsive and accessibility review.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, and the NFA-73 joined saved-content lifecycle.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -816,6 +816,20 @@ See the [NFA-65 responsive and accessibility review](responsive-accessibility-re
 
 See the [NFA-72 content deletion and retention guide](content-deletion-retention.md) for the lifecycle, retention periods, image-reference protection, retry policy, backup limitations, worker command, and recovery boundary.
 
+## NFA-73 saved-content lifecycle coverage
+
+| Requirement | Automated evidence |
+| --- | --- |
+| Joined save, replay, retrieve, list, edit, history, image download, delete, and retention journey | `test_saved_content_lifecycle_e2e.py` |
+| Authentication, CSRF, owner isolation, image ownership, and history ownership | `test_saved_content_lifecycle_e2e.py` plus focused API tests |
+| Duplicate saves, stale writes, stable pagination, and database constraints | Joined lifecycle and saved-draft repository tests |
+| Current edited-text copy and private image download | `content-export.test.tsx` and private image delivery tests |
+| Version review and restoration | Saved-draft history API tests and `version-history.test.tsx` |
+| Explicit deletion, controlled failure, cleanup retry, and retention | `draft-deletion.test.tsx`, content deletion tests, and joined lifecycle |
+| Disposable database, synthetic data, and CI enforcement | E7 strategy document and `quality.yml` |
+
+See the [NFA-73 saved-content lifecycle testing guide](saved-content-lifecycle-testing.md) for the complete coverage matrix, isolation rules, commands, expected failures, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -883,7 +897,7 @@ Do not add real credentials to workflow files. The committed workflow values are
 
 ## Verification record
 
-Verified locally on 1 November 2026:
+Verified locally on 2 November 2026:
 
 - Backend linting and formatting passed.
 - The normal backend run passed 416 tests, safely skipped 13 opt-in PostgreSQL tests, and deselected the optional live-model test.
@@ -966,10 +980,15 @@ Verified locally on 1 November 2026:
 - The focused NFA-72 frontend run passed 5 tests covering confirmation, cancellation, CSRF-protected deletion, controlled failure, library redirection, cookie allowlisting, and invalid UUID rejection.
 - The complete frontend run after NFA-72 passed 163 tests across 34 files. Prettier, ESLint, strict TypeScript, and the Next.js 16 production build passed, including `/api/drafts/[draftId]`.
 - NFA-72 tests use only synthetic identifiers, content, accounts, and local disposable storage. They make no live CNN, OpenAI, LinkedIn, or production object-storage request.
+- The NFA-73 joined lifecycle test passed against `newsflow_saved_draft_test`, covering authentication, CSRF, idempotent save, duplicate rejection, pagination, editing, stale-write protection, history, owner-authorised image download, cross-user masking, deletion, cleanup, and final retention removal.
+- The isolated E7 PostgreSQL group passed 3 tests, including the retained persistence and retention proofs plus the new joined HTTP lifecycle.
+- The complete backend run after NFA-73 passed 441 tests, skipped 16 opt-in integration tests, deselected the optional live-model test, and measured 78.15 percent branch-aware coverage, above the enforced 75 percent floor.
+- The focused E7 frontend run passed 18 tests across 4 files. The complete frontend run passed 163 tests across 34 files, and ESLint, Prettier, strict TypeScript, generated route types, and the Next.js production build all passed.
+- NFA-73 reuses the focused frontend, API, repository, migration, cleanup-failure, and retention tests instead of weakening or duplicating their detailed assertions. All fixtures remain synthetic and no live CNN, OpenAI, LinkedIn, production database, or production object-storage service is used.
 - Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, and NFA-72
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, and NFA-73
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review
