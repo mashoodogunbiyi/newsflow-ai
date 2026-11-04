@@ -16,3 +16,4 @@ class ReadinessResponse(BaseModel):
 
     status: Literal["ready"]
     database: Literal["connected"]
+    configuration: Literal["valid"]

@@ -30,4 +30,5 @@ def test_fastapi_connects_to_live_postgres() -> None:
     assert response.json() == {
         "status": "ready",
         "database": "connected",
+        "configuration": "valid",
     }

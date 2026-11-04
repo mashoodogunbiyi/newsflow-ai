@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import io
+import logging
 import stat
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,13 +11,14 @@ from uuid import UUID
 
 import pytest
 from PIL import Image
-from pydantic import SecretBytes
+from pydantic import SecretBytes, SecretStr
 
 from app.core.image_storage_config import ImageStorageConfiguration
 from app.models.generated_image import (
     GeneratedImagePersistenceResult,
     GeneratedImageStorageRequest,
     ImageSafetyReviewStatus,
+    PrivateImageObject,
     StoredGeneratedImageRecord,
 )
 from app.models.image_generation import (
@@ -142,6 +144,23 @@ class FailingStorage:
         raise AssertionError("Not used.")
 
 
+class FailingCompensationStorage:
+    async def put(self, data: bytes, *, file_extension: str) -> PrivateImageObject:
+        del file_extension
+        return PrivateImageObject(
+            provider="private_test",
+            storage_key=SecretStr("generated-images/orphan.png"),
+            file_size_bytes=len(data),
+        )
+
+    async def delete(self, storage_key: str) -> None:
+        del storage_key
+        raise PrivateImageStorageError("private cleanup detail")
+
+    async def read(self, storage_key: str) -> bytes:
+        raise AssertionError(storage_key)
+
+
 def service(root: Path, repository) -> GeneratedImageStorageService:
     configuration = ImageStorageConfiguration(local_root=root)
     return GeneratedImageStorageService(
@@ -213,6 +232,33 @@ def test_database_failure_removes_uploaded_file(tmp_path: Path) -> None:
         run(selected_service.store(storage_request(square_png())))
 
     assert list(tmp_path.glob("generated-images/*")) == []
+
+
+def test_failed_compensation_records_orphan_reconciliation_without_private_key(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    selected_service = GeneratedImageStorageService(
+        validator=GeneratedImageValidationService(
+            ImageStorageConfiguration(local_root=tmp_path)
+        ),
+        storage=FailingCompensationStorage(),
+        repository=FailingRepository(),
+    )
+
+    with caplog.at_level(logging.ERROR, logger="app.services.generated_image_storage"):
+        with pytest.raises(RuntimeError, match="synthetic database failure"):
+            run(selected_service.store(storage_request(square_png())))
+
+    event = next(
+        record
+        for record in caplog.records
+        if record.getMessage() == "generated_image_cleanup_failed"
+    )
+    assert event.component == "private_image_storage"
+    assert event.operation == "compensation_delete"
+    assert event.recovery_status == "orphan_reconciliation_required"
+    assert "generated-images/orphan.png" not in caplog.text
 
 
 def test_storage_failure_does_not_create_false_database_success(tmp_path: Path) -> None:

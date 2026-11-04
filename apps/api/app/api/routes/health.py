@@ -60,4 +60,8 @@ async def readiness_check(request: Request) -> ReadinessResponse:
             message="The database is temporarily unavailable.",
         ) from exc
 
-    return ReadinessResponse(status="ready", database="connected")
+    return ReadinessResponse(
+        status="ready",
+        database="connected",
+        configuration="valid",
+    )

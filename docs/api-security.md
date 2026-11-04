@@ -19,7 +19,7 @@ The security inventory is tied to the generated OpenAPI contract by an automated
 | Endpoint | Access and controls |
 |---|---|
 | `GET /health` | Public liveness result with no configuration or dependency detail. |
-| `GET /ready` | Public readiness result limited to a generic PostgreSQL state; safe error on failure. |
+| `GET /ready` | Public readiness result limited to generic PostgreSQL and configuration states; safe error on failure. |
 | `POST /api/v1/auth/register` | Public; validated JSON, Argon2id password hashing, duplicate protection, and per-client rate limiting. |
 | `POST /api/v1/auth/login` | Public; generic credential failure, server-side session creation, secure cookies, and per-client rate limiting. |
 | `POST /api/v1/auth/logout` | Authenticated; CSRF proof required; current server-side session is revoked. |
