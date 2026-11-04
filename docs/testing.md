@@ -19,7 +19,7 @@ The test suite is designed to detect security regressions before a pull request 
 | AI generation evaluation          | `apps/api/tests/evaluation`                                                                 | Uses synthetic articles and mocked outputs to score generation properties and detect prompt regressions without external requests.                                                                                 |
 | Generation monitoring and audit   | `apps/api/tests/test_generation_audit.py` and `test_admin_generation_monitoring.py`         | Checks lifecycle correlation, duration, metrics, token aggregation, retention, safe records, and administrator-only inspection.                                                                                    |
 | Complete E5 image workflow        | `apps/api/tests/test_image_workflow_acceptance.py` and `test_image_workflow_integration.py` | Joins the mocked prompt-to-provider-to-storage-to-delivery path, regeneration, PostgreSQL metadata, versioning, and owner isolation.                                                                               |
-| Threat-model contract             | `apps/api/tests/test_security_threat_model.py`                                              | Requires architecture, assets, boundaries, STRIDE coverage, severity, ownership, significant-threat mitigation, verification, residual risk, and release gates.                                                   |
+| Threat-model contract             | `apps/api/tests/test_security_threat_model.py`                                              | Requires architecture, assets, boundaries, STRIDE coverage, severity, ownership, significant-threat mitigation, verification, residual risk, and release gates.                                                    |
 
 ## NFA-26 coverage
 
@@ -802,46 +802,46 @@ See the [NFA-65 responsive and accessibility review](responsive-accessibility-re
 
 ## NFA-72 deletion and retention coverage
 
-| Requirement                                           | Automated evidence                                          |
-| ----------------------------------------------------- | ----------------------------------------------------------- |
-| Authenticated, CSRF-protected owner deletion          | `test_content_deletion.py`                                  |
-| Cross-user and missing-resource non-disclosure        | `test_content_deletion.py`                                  |
-| Immediate unreferenced private-image cleanup          | `test_content_deletion.py`                                  |
-| Storage-failure retry without restoring draft access  | `test_content_deletion.py`                                  |
-| Bounded retention worker and final content redaction  | `test_content_deletion.py` and migration integration tests  |
-| Explicit confirmation and cancellation                | `draft-deletion.test.tsx`                                   |
-| Loading, controlled failure, and library confirmation | `draft-deletion.test.tsx`                                   |
-| Session and CSRF-only same-origin gateway              | `draft-deletion-proxy.test.ts`                              |
-| Invalid identifier rejected before backend contact    | `draft-deletion-proxy.test.ts`                              |
-| Versioned tables, constraints, rollback, and rebuild  | `test_migrations_integration.py`                            |
+| Requirement                                           | Automated evidence                                         |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| Authenticated, CSRF-protected owner deletion          | `test_content_deletion.py`                                 |
+| Cross-user and missing-resource non-disclosure        | `test_content_deletion.py`                                 |
+| Immediate unreferenced private-image cleanup          | `test_content_deletion.py`                                 |
+| Storage-failure retry without restoring draft access  | `test_content_deletion.py`                                 |
+| Bounded retention worker and final content redaction  | `test_content_deletion.py` and migration integration tests |
+| Explicit confirmation and cancellation                | `draft-deletion.test.tsx`                                  |
+| Loading, controlled failure, and library confirmation | `draft-deletion.test.tsx`                                  |
+| Session and CSRF-only same-origin gateway             | `draft-deletion-proxy.test.ts`                             |
+| Invalid identifier rejected before backend contact    | `draft-deletion-proxy.test.ts`                             |
+| Versioned tables, constraints, rollback, and rebuild  | `test_migrations_integration.py`                           |
 
 See the [NFA-72 content deletion and retention guide](content-deletion-retention.md) for the lifecycle, retention periods, image-reference protection, retry policy, backup limitations, worker command, and recovery boundary.
 
 ## NFA-73 saved-content lifecycle coverage
 
-| Requirement | Automated evidence |
-| --- | --- |
-| Joined save, replay, retrieve, list, edit, history, image download, delete, and retention journey | `test_saved_content_lifecycle_e2e.py` |
-| Authentication, CSRF, owner isolation, image ownership, and history ownership | `test_saved_content_lifecycle_e2e.py` plus focused API tests |
-| Duplicate saves, stale writes, stable pagination, and database constraints | Joined lifecycle and saved-draft repository tests |
-| Current edited-text copy and private image download | `content-export.test.tsx` and private image delivery tests |
-| Version review and restoration | Saved-draft history API tests and `version-history.test.tsx` |
-| Explicit deletion, controlled failure, cleanup retry, and retention | `draft-deletion.test.tsx`, content deletion tests, and joined lifecycle |
-| Disposable database, synthetic data, and CI enforcement | E7 strategy document and `quality.yml` |
+| Requirement                                                                                       | Automated evidence                                                      |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Joined save, replay, retrieve, list, edit, history, image download, delete, and retention journey | `test_saved_content_lifecycle_e2e.py`                                   |
+| Authentication, CSRF, owner isolation, image ownership, and history ownership                     | `test_saved_content_lifecycle_e2e.py` plus focused API tests            |
+| Duplicate saves, stale writes, stable pagination, and database constraints                        | Joined lifecycle and saved-draft repository tests                       |
+| Current edited-text copy and private image download                                               | `content-export.test.tsx` and private image delivery tests              |
+| Version review and restoration                                                                    | Saved-draft history API tests and `version-history.test.tsx`            |
+| Explicit deletion, controlled failure, cleanup retry, and retention                               | `draft-deletion.test.tsx`, content deletion tests, and joined lifecycle |
+| Disposable database, synthetic data, and CI enforcement                                           | E7 strategy document and `quality.yml`                                  |
 
 See the [NFA-73 saved-content lifecycle testing guide](saved-content-lifecycle-testing.md) for the complete coverage matrix, isolation rules, commands, expected failures, and limitations.
 
 ## NFA-75 threat-model coverage
 
-| Requirement | Automated evidence |
-| --- | --- |
-| Architecture, data flows, assets, dependencies and trust boundaries | `test_security_threat_model.py` document contract |
-| Complete STRIDE categories and unique threat identifiers | Threat-register parsing and category assertions |
-| Likelihood, impact and severity consistency | Automatic score-to-severity verification |
-| Mitigation, responsible task and verification for every significant threat | High and Critical row traceability assertions |
+| Requirement                                                                                                              | Automated evidence                                                     |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Architecture, data flows, assets, dependencies and trust boundaries                                                      | `test_security_threat_model.py` document contract                      |
+| Complete STRIDE categories and unique threat identifiers                                                                 | Threat-register parsing and category assertions                        |
+| Likelihood, impact and severity consistency                                                                              | Automatic score-to-severity verification                               |
+| Mitigation, responsible task and verification for every significant threat                                               | High and Critical row traceability assertions                          |
 | Authentication, sessions, ownership, injection, XSS, CSRF, SSRF, secrets, prompt injection, files, logs and supply chain | Required attack-class assertions plus existing focused security suites |
-| Residual risk and release review | Explicit non-acceptance and review-gate assertions |
-| No credential material in the document | Secret-pattern and connection-string checks |
+| Residual risk and release review                                                                                         | Explicit non-acceptance and review-gate assertions                     |
+| No credential material in the document                                                                                   | Secret-pattern and connection-string checks                            |
 
 See the [NFA-75 security threat model](security-threat-model.md) for the complete architecture, scored register, responsible tasks, OWASP guidance, residual risk and release gates.
 
@@ -865,6 +865,27 @@ cd ../web && npm audit --omit=dev --audit-level=high
 
 The focused tests cover the documented endpoint inventory, response security headers, production HSTS, documentation compatibility, declared and chunked request-size limits, JSON content-type enforcement, exact credentialed CORS, and rejection of unsafe provider URLs. Existing security suites remain responsible for authentication, CSRF, cross-user denial, private images, duplicate requests, safe errors, generation quotas, and administrative access.
 
+## NFA-77 integration and browser end-to-end coverage
+
+| Requirement                                                                                                              | Automated evidence                                                |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Real authentication, sessions, CSRF, ownership, PostgreSQL, and private storage                                          | Existing safety-gated backend integration suites                  |
+| Protected route and valid or invalid sign-in                                                                             | `e2e/authentication.spec.ts`                                      |
+| Article discovery, selection, mocked text and image generation, editing, saving, reopening, copy, download, and deletion | `e2e/content-workflow.spec.ts`                                    |
+| Empty catalogue and controlled provider failure                                                                          | `e2e/failure-and-ownership.spec.ts`                               |
+| Cross-user draft non-disclosure                                                                                          | Backend lifecycle integration plus the browser ownership scenario |
+| Synthetic fixtures, mocked providers, reset state, and no production access                                              | `e2e/support/mock-api.mjs` and Playwright configuration           |
+| Automatic pull-request and main-branch execution                                                                         | `.github/workflows/quality.yml`                                   |
+
+Run the browser suite from `apps/web`:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+See the [NFA-77 integration and end-to-end testing guide](integration-e2e-testing.md) for the complete scope, separation between mocked browser and real backend layers, primary journey, CI behaviour, defect record, and limitations.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -874,6 +895,7 @@ npm run lint
 npm run format:check
 npm run typecheck
 npm test
+npm run test:e2e
 npm run build
 ```
 
@@ -1030,10 +1052,16 @@ Verified locally on 3 November 2026:
 - Ruff passed lint and formatting checks across all 206 backend Python files. The project secret scan passed, and `.env` plus `.venv` remain Git-ignored.
 - The initial Python advisory scan found fixed advisories in Pillow 12.3.0 and certifi 2026.7.22. NFA-76 upgraded to Pillow 13.0.0 or newer and certifi 2026.10.18 or newer; the repeated `pip-audit` check reported no known vulnerabilities.
 - The production frontend dependency audit reported zero known vulnerabilities.
+- The focused NFA-77 draft-save, gateway, editor, and export run passed 22 tests across 3 Vitest files.
+- The complete NFA-77 frontend component run passed 167 tests across 35 files. ESLint, Prettier, generated Next.js route types, strict TypeScript, and the production build passed.
+- All 5 Playwright Chromium scenarios passed, covering route protection, valid and invalid login, synthetic article selection, mocked text and image generation, editing, save, reopen, copy, download, deletion, empty results, provider failure, retry presentation, and cross-user non-disclosure.
+- The deterministic backend run passed 462 tests, and Ruff passed lint plus formatting across all 206 backend Python files.
+- The safety-gated NFA-77 PostgreSQL integration matrix passed 8 scenarios: 3 article-pipeline, 1 article-catalogue, 1 image-workflow, and 3 saved-draft lifecycle scenarios.
+- The NFA-77 production frontend dependency audit reported zero known vulnerabilities. No live CNN, OpenAI, LinkedIn, production database, or production object-storage service was used.
 - Automated tests verify responsive layout contracts and keyboard-reachable links. A final human review at 375 px, 768 px, and 1440 px remains appropriate before release.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, and NFA-76
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, and NFA-77
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

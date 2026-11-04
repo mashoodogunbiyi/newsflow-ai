@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import type { DraftEditorDocument } from "@/types/draft";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 const imageId = "10000000-0000-4000-8000-000000000071";
 const originalCreateObjectUrl = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
 const originalRevokeObjectUrl = Object.getOwnPropertyDescriptor(URL, "revokeObjectURL");

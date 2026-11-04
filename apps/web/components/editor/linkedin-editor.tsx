@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { CharacterCounter } from "@/components/editor/character-counter";
@@ -9,6 +10,7 @@ import { LinkedInPreview } from "@/components/preview/linkedin-preview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useDraftEditor } from "@/hooks/use-draft-editor";
+import { saveGeneratedDraft } from "@/lib/draft-persistence";
 import type { DraftEditorDocument } from "@/types/draft";
 import type { PreviewImageSelection } from "@/types/preview";
 
@@ -23,6 +25,7 @@ export function LinkedInEditor({
   origin = "generated",
   selectedImage = null,
 }: LinkedInEditorProps) {
+  const router = useRouter();
   const editor = useDraftEditor(draft);
   const activeDraft = editor.activeDocument;
   const savedDraft = origin === "saved";
@@ -30,6 +33,8 @@ export function LinkedInEditor({
     generationId: string;
     image: PreviewImageSelection;
   } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (!activeDraft) {
     return (
@@ -55,6 +60,26 @@ export function LinkedInEditor({
     generatedSelection?.generationId === activeDraft.generationId
       ? generatedSelection.image
       : selectedImage;
+  const activeGenerationId = activeDraft.generationId;
+  const activeSourceTitle = activeDraft.sourceTitle;
+
+  async function saveToLibrary() {
+    setSaving(true);
+    setSaveError(null);
+    const result = await saveGeneratedDraft({
+      editedText: editor.editedText,
+      generationId: activeGenerationId,
+      selectedImageId: activeImage?.id ?? null,
+      title: activeSourceTitle,
+    });
+    if (result.status === "success") {
+      router.push(`/library/${result.data.id}`);
+      router.refresh();
+      return;
+    }
+    setSaveError(result.message);
+    setSaving(false);
+  }
 
   return (
     <Card className="scroll-mt-24" id="draft-editor">
@@ -173,10 +198,37 @@ export function LinkedInEditor({
 
       <ContentExportActions imageId={activeImage?.id ?? null} text={editor.editedText} />
 
+      {!savedDraft ? (
+        <div className="mt-6 border-t border-emerald-950/10 pt-5">
+          {saveError ? (
+            <p
+              className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+              role="alert"
+            >
+              {saveError}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-2xl text-xs leading-5 text-emerald-950/70">
+              Saving creates a private library copy of your reviewed text and selected image. It
+              does not publish anything to LinkedIn.
+            </p>
+            <Button
+              className="w-full shrink-0 sm:w-auto"
+              disabled={saving || emptyDraft}
+              onClick={() => void saveToLibrary()}
+              type="button"
+            >
+              {saving ? "Saving draft..." : "Save to library"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <p className="mt-6 border-t border-emerald-950/10 pt-5 text-xs leading-5 text-emerald-950/70">
         {savedDraft
           ? "This saved version is loaded from your private library. New edits remain local until the update controls are added in a separate E7 task. Leaving with local edits triggers a discard warning."
-          : "Edits currently remain only in this browser page. Saving and draft-history controls are separate E7 tasks. Leaving this page with local edits triggers a discard warning."}
+          : "Edits remain on this page until you save them to your private content library. Leaving with local edits triggers a discard warning."}
       </p>
     </Card>
   );

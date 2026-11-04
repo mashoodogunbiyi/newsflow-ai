@@ -123,9 +123,9 @@ jobs:
           tests/test_saved_content_lifecycle_e2e.py
 
   frontend:
-    name: Frontend lint, format, types, tests, and build
+    name: Frontend lint, format, unit tests, browser tests, and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -166,6 +166,23 @@ jobs:
         working-directory: apps/web
         run: npm test
 
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run deterministic browser end-to-end tests
+        working-directory: apps/web
+        run: npm run test:e2e
+
       - name: Build frontend
         working-directory: apps/web
         run: npm run build
+
+      - name: Upload browser test report after failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
