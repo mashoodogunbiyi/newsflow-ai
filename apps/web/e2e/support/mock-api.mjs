@@ -38,9 +38,31 @@ const article = {
 
 let state;
 function reset() {
-  state = { drafts: new Map(), generationFailure: false };
+  state = {
+    drafts: new Map(),
+    generationFailure: false,
+    generationTimeout: false,
+    metrics: createMetrics(),
+  };
 }
 reset();
+
+function createMetrics() {
+  return {
+    articleDetail: 0,
+    articleList: 0,
+    authenticationState: 0,
+    draftDetail: 0,
+    draftList: 0,
+    generation: 0,
+    imageContent: 0,
+    imageDownload: 0,
+  };
+}
+
+function recordMetric(name) {
+  state.metrics[name] += 1;
+}
 
 function cookies(request) {
   return Object.fromEntries(
@@ -158,8 +180,19 @@ const server = createServer(async (request, response) => {
     reset();
     return json(response, 200, { status: "reset" });
   }
+  if (method === "POST" && url.pathname === "/__test/metrics/reset") {
+    state.metrics = createMetrics();
+    return json(response, 200, { status: "reset" });
+  }
+  if (method === "GET" && url.pathname === "/__test/metrics") {
+    return json(response, 200, state.metrics);
+  }
   if (method === "POST" && url.pathname === "/__test/generation-failure") {
     state.generationFailure = true;
+    return json(response, 200, { status: "configured" });
+  }
+  if (method === "POST" && url.pathname === "/__test/generation-timeout") {
+    state.generationTimeout = true;
     return json(response, 200, { status: "configured" });
   }
   if (method === "POST" && url.pathname === "/__test/seed-owner-draft") {
@@ -197,6 +230,7 @@ const server = createServer(async (request, response) => {
     );
   }
   if (method === "GET" && url.pathname === "/api/v1/auth/me") {
+    recordMetric("authenticationState");
     const email = requireAuthentication(request, response);
     return email ? json(response, 200, { id: USER_IDS[email], email }) : undefined;
   }
@@ -215,16 +249,27 @@ const server = createServer(async (request, response) => {
   }
 
   if (method === "GET" && url.pathname === "/api/articles") {
+    recordMetric("articleList");
     if (!requireAuthentication(request, response)) return;
     const items = url.searchParams.get("search") === "no-results" ? [] : [article];
     return json(response, 200, { items, next_cursor: null });
   }
   if (method === "GET" && url.pathname === `/api/articles/${ARTICLE_ID}`) {
+    recordMetric("articleDetail");
     if (!requireAuthentication(request, response)) return;
     return json(response, 200, { ...article, generation: { allowed: true, status: "available" } });
   }
   if (method === "POST" && url.pathname === "/api/generations") {
+    recordMetric("generation");
     if (!requireAuthentication(request, response)) return;
+    if (state.generationTimeout) {
+      return json(response, 504, {
+        error: {
+          code: "openai_timeout",
+          message: "The AI provider took too long to respond. Please try again deliberately.",
+        },
+      });
+    }
     if (state.generationFailure) {
       return json(response, 503, {
         error: {
@@ -268,11 +313,13 @@ const server = createServer(async (request, response) => {
     });
   }
   if (method === "GET" && url.pathname === `/api/images/${IMAGE_ID}/content`) {
+    recordMetric("imageContent");
     if (!requireAuthentication(request, response)) return;
     response.writeHead(200, { "Cache-Control": "private, no-store", "Content-Type": "image/png" });
     return response.end(png);
   }
   if (method === "GET" && url.pathname === `/api/images/${IMAGE_ID}/download`) {
+    recordMetric("imageDownload");
     if (!requireAuthentication(request, response)) return;
     response.writeHead(200, {
       "Cache-Control": "private, no-store",
@@ -291,6 +338,7 @@ const server = createServer(async (request, response) => {
     return json(response, 201, publicDraft(draft));
   }
   if (method === "GET" && url.pathname === "/api/v1/drafts") {
+    recordMetric("draftList");
     const email = requireAuthentication(request, response);
     if (!email) return;
     const items = [...state.drafts.values()]
@@ -344,6 +392,7 @@ const server = createServer(async (request, response) => {
     });
   }
   if (url.pathname === `/api/v1/drafts/${DRAFT_ID}`) {
+    if (method === "GET") recordMetric("draftDetail");
     const email = requireAuthentication(request, response);
     const draft = state.drafts.get(DRAFT_ID);
     if (!email) return;
@@ -367,5 +416,5 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  process.stdout.write(`NFA-77 deterministic mock API listening on ${PORT}\n`);
+  process.stdout.write(`NFA-80 deterministic mock API listening on ${PORT}\n`);
 });
