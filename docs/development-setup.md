@@ -198,7 +198,7 @@ The seed command is repeatable and does not create duplicate fixtures.
 | ------------------ | ------------------------------------------------------------ | ----------------------------------------- |
 | Frontend           | [http://localhost:3000](http://localhost:3000)               | NewsFlow AI homepage                      |
 | Backend health     | [http://localhost:8000/health](http://localhost:8000/health) | {"status":"ok"}                           |
-| Database readiness | [http://localhost:8000/ready](http://localhost:8000/ready)   | {"status":"ready","database":"connected"} |
+| Database readiness | [http://localhost:8000/ready](http://localhost:8000/ready)   | {"status":"ready","database":"connected","configuration":"valid"} |
 | Swagger UI         | [http://localhost:8000/docs](http://localhost:8000/docs)     | Interactive API documentation             |
 
 These links work only while the services are running. They are not public website links.

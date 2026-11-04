@@ -9,6 +9,7 @@ from typing import Any
 _HANDLER_NAME = "newsflow-structured"
 _STRUCTURED_FIELDS = {
     "attempt",
+    "component",
     "counts",
     "delay_seconds",
     "duration_ms",
@@ -19,9 +20,11 @@ _STRUCTURED_FIELDS = {
     "health_status",
     "job_id",
     "model",
+    "operation",
     "provider_duration_ms",
     "provider_id",
     "request_id",
+    "recovery_status",
     "status",
     "trigger_type",
 }

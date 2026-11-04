@@ -14,6 +14,11 @@ from app.services.authorization import (
 )
 from app.services.content_deletion import ContentDeletionService, RetentionRunResult
 from app.services.library import SavedContentService
+from app.services.recovery import (
+    RecoveryOperationError,
+    ReliabilityRecoveryService,
+    StorageRecoveryResult,
+)
 from app.services.registration import RegistrationService
 from app.services.saved_drafts import SavedDraftService
 
@@ -26,9 +31,12 @@ __all__ = [
     "LoginSession",
     "PrivateResourceNotFoundError",
     "RegistrationService",
+    "RecoveryOperationError",
+    "ReliabilityRecoveryService",
     "RetentionRunResult",
     "SavedContentService",
     "SavedDraftService",
+    "StorageRecoveryResult",
     "hash_session_token",
     "require_owned_resource",
 ]

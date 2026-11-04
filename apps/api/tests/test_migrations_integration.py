@@ -252,6 +252,7 @@ def test_upgrade_seed_repeat_rollback_and_rebuild(
     assert readiness_response.json() == {
         "status": "ready",
         "database": "connected",
+        "configuration": "valid",
     }
 
     first_counts = seed_database(settings)

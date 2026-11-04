@@ -191,5 +191,9 @@ class GeneratedImageStorageService:
                 logger,
                 logging.ERROR,
                 "generated_image_cleanup_failed",
+                component="private_image_storage",
+                operation="compensation_delete",
                 status="orphan_reconciliation_required",
+                recovery_status="orphan_reconciliation_required",
+                error_category="private_object_cleanup_failed",
             )

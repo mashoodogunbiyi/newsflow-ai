@@ -59,6 +59,7 @@ def test_readiness_check_confirms_database_connection(client: TestClient) -> Non
     assert response.json() == {
         "status": "ready",
         "database": "connected",
+        "configuration": "valid",
     }
 
 

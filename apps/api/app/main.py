@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -103,6 +104,7 @@ from app.services.linkedin_generation import (
 )
 from app.services.openai_image_service import OpenAIImageGenerationService
 from app.services.openai_service import OpenAIService
+from app.services.recovery import ReliabilityRecoveryService
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +135,7 @@ def create_app(
     generation_monitoring_service: GenerationMonitoringService | None = None,
     image_delivery_service: ImageDeliveryService | None = None,
     image_regeneration_service: ImageRegenerationService | None = None,
+    recovery_service: ReliabilityRecoveryService | None = None,
     openai_factory: AITextGeneratorFactory | None = None,
     image_generator_factory: ImageGeneratorFactory | None = None,
     generation_rate_limiter: InMemoryRateLimiter | None = None,
@@ -191,6 +194,7 @@ def create_app(
         configured_generation_monitoring_service = generation_monitoring_service
         configured_image_delivery_service = image_delivery_service
         configured_image_regeneration_service = image_regeneration_service
+        configured_recovery_service = recovery_service
         if (
             configured_user_repository is None
             or configured_authentication_repository is None
@@ -395,6 +399,13 @@ def create_app(
                     ),
                 )
         if (
+            configured_recovery_service is None
+            and configured_content_deletion_service is not None
+        ):
+            configured_recovery_service = ReliabilityRecoveryService(
+                configured_content_deletion_service
+            )
+        if (
             configured_ingestion_observability_service is None
             and configured_article_sync_repository is not None
         ):
@@ -435,6 +446,7 @@ def create_app(
             configured_saved_draft_repository
         )
         application.state.content_deletion_service = configured_content_deletion_service
+        application.state.recovery_service = configured_recovery_service
         application.state.article_catalogue_service = (
             configured_article_catalogue_service
         )
@@ -515,7 +527,21 @@ def create_app(
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
+        expose_headers=["Retry-After", "X-Request-ID"],
     )
+
+    @application.middleware("http")
+    async def attach_request_correlation(
+        request: Request,
+        call_next: RequestResponseEndpoint,
+    ) -> Response:
+        """Assign one non-secret server request ID to responses and safe logs."""
+
+        request_id = uuid4().hex
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
 
     @application.middleware("http")
     async def limit_authentication_attempts(
