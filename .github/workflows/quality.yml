@@ -78,6 +78,10 @@ jobs:
         working-directory: apps/api
         run: pytest tests/reliability
 
+      - name: Run performance guardrails and record measurements
+        working-directory: apps/api
+        run: pytest tests/performance -s
+
       - name: Run isolated article-pipeline tests
         working-directory: apps/api
         env:
@@ -182,9 +186,9 @@ jobs:
         working-directory: apps/web
         run: npm run test:e2e
 
-      - name: Build frontend
+      - name: Check production JavaScript bundle budget
         working-directory: apps/web
-        run: npm run build
+        run: npm run performance:bundle
 
       - name: Upload browser test report after failure
         if: failure()

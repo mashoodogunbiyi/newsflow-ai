@@ -58,7 +58,7 @@ export function ArticleCard({ article }: { article: Article }) {
           <div className="mt-auto flex flex-col gap-2 pt-6 sm:flex-row">
             <ArticleSelection articleId={article.id} className="flex-1" />
             <a
-              aria-label={`View original source for ${article.title}`}
+              aria-label={`View source: ${article.title} (opens in a new tab)`}
               className={`${buttonStyles("secondary")} flex-1`}
               href={article.source_url}
               rel="noopener noreferrer"

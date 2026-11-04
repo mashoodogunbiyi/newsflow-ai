@@ -4,7 +4,7 @@
 
 NFA-65 reviews the NewsFlow AI frontend against representative responsive layouts and applicable WCAG 2.2 Level AA requirements. It covers the public pages, authentication forms, authenticated shell, article discovery, source review, generation controls and states, draft editor, LinkedIn-inspired preview, and image controls.
 
-The implementation and automated review are complete. No known release-blocking defect remains in the reviewed code. A final human browser pass at the three supported widths and a representative VoiceOver pass remain required before the Jira issue is moved to Done because native browser automation was unavailable during this workspace session.
+The implementation and automated review are complete. No known release-blocking defect remains in the reviewed code. NFA-80 subsequently added production-build Chromium checks at the three supported widths, keyboard and focus checks, full browser axe checks with colour contrast enabled, accessibility-tree inspection, overflow checks, and reduced-motion verification. A representative human VoiceOver pass remains required before claiming complete accessibility acceptance.
 
 ## Supported viewports
 
@@ -118,6 +118,8 @@ Verified on 1 November 2026:
 | Protected route smoke test  | `/dashboard` returned 307 to the authentication-required login route |
 | Live CNN or OpenAI requests | None                                                                 |
 
+NFA-80 later completed the native Chromium coverage that was unavailable during the original NFA-65 session. See the [performance and accessibility verification report](performance-accessibility-verification.md) for the measured browser results and the accessible-name defect found and fixed by that review.
+
 ## Contrast evidence
 
 The deterministic checks use the sRGB relative-luminance formula required for WCAG contrast evaluation.
@@ -172,17 +174,17 @@ Record each result as Pass or create a Jira Bug with the viewport, route, steps,
 
 ## Manual review record
 
-| Review                           | Reviewer | Date    | Result  | Evidence or defect link |
-| -------------------------------- | -------- | ------- | ------- | ----------------------- |
-| 375 px browser review            | Pending  | Pending | Pending | Pending                 |
-| 768 px browser review            | Pending  | Pending | Pending | Pending                 |
-| 1440 px browser review           | Pending  | Pending | Pending | Pending                 |
-| Keyboard-only journey            | Pending  | Pending | Pending | Pending                 |
-| VoiceOver representative journey | Pending  | Pending | Pending | Pending                 |
+| Review                           | Reviewer           | Date            | Result  | Evidence or defect link |
+| -------------------------------- | ------------------ | --------------- | ------- | ----------------------- |
+| 375 px browser review            | Automated Chromium | 4 November 2026 | Pass    | NFA-80 browser suite    |
+| 768 px browser review            | Automated Chromium | 4 November 2026 | Pass    | NFA-80 browser suite    |
+| 1440 px browser review           | Automated Chromium | 4 November 2026 | Pass    | NFA-80 browser suite    |
+| Keyboard-only journey            | Automated Chromium | 4 November 2026 | Pass    | NFA-80 browser suite    |
+| VoiceOver representative journey | Pending            | Pending         | Pending | Pending                 |
 
 ## Known limitations
 
-- The workspace browser-control connection was unavailable during implementation, so this record does not claim that a live viewport inspection was performed.
+- NFA-80 now provides automated production-build Chromium evidence at the supported viewports. A human visual pass on representative physical devices is still appropriate before public release.
 - A screen reader is a human interaction tool. Automated role and axe checks do not replace the pending VoiceOver journey.
 - jsdom cannot calculate the final painted colour contrast, element geometry, clipping, or horizontal scrolling. Deterministic token tests and responsive class checks reduce regression risk but do not replace the browser pass.
 - Authenticated generation and image journeys require FastAPI, PostgreSQL, a fixture user, and permitted fixture content. The component suite exercises those interface states with synthetic data without making paid or external requests.
@@ -193,5 +195,5 @@ Record each result as Pass or create a Jira Bug with the viewport, route, steps,
 - Implementation status: Ready for review.
 - Automated quality status: Passed.
 - Release-blocking defects found by this review: None unresolved.
-- Manual acceptance status: Pending Mashood Ogunbiyi's responsive, keyboard, and VoiceOver review.
+- Manual acceptance status: Responsive and keyboard automation passed; Mashood Ogunbiyi's representative VoiceOver review remains pending.
 - Jira status recommendation: Keep NFA-65 in Review until the manual review record is completed, then move it to Done if no release-blocking defect is found.

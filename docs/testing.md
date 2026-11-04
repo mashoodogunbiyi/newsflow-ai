@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, the NFA-76 API security hardening checks, the NFA-77 integration and browser workflows, the NFA-78 grounding and content-safety evaluation, and the NFA-79 reliability and failure-recovery framework.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, the NFA-76 API security hardening checks, the NFA-77 integration and browser workflows, the NFA-78 grounding and content-safety evaluation, the NFA-79 reliability and failure-recovery framework, and the NFA-80 performance and accessibility verification.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -888,18 +888,18 @@ See the [NFA-77 integration and end-to-end testing guide](integration-e2e-testin
 
 ## NFA-78 AI grounding and content-safety evaluation
 
-| Requirement | Automated evidence |
-| --- | --- |
-| Straightforward, limited, ambiguous, conflicting, sensitive, general, and injection source cases | `evaluations/fixtures/synthetic_articles.json` |
-| Human-reviewed claims, evidence, verdicts, and severity | `evaluations/fixtures/expected_claims.json` |
-| Supported claims and insufficient context | `test_content_safety_evaluation.py` |
-| Invented statistics and quotations | `test_content_safety_evaluation.py` |
-| Source attribution and mismatched-reference detection | `test_content_safety_evaluation.py` |
-| Misleading certainty and conflicting details | `test_content_safety_evaluation.py` |
-| Prompt-injection resistance | `test_content_safety_evaluation.py` |
-| Sensitive conceptual and restricted realistic imagery | `evaluations/fixtures/sensitive_news_cases.json` and the production NFA-49 policy |
-| AI-generated illustration designation | `test_content_safety_evaluation.py` |
-| Predefined thresholds and repeatability | `test_content_safety_evaluation.py` and `evaluations/reports/nfa-78-baseline.json` |
+| Requirement                                                                                      | Automated evidence                                                                 |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Straightforward, limited, ambiguous, conflicting, sensitive, general, and injection source cases | `evaluations/fixtures/synthetic_articles.json`                                     |
+| Human-reviewed claims, evidence, verdicts, and severity                                          | `evaluations/fixtures/expected_claims.json`                                        |
+| Supported claims and insufficient context                                                        | `test_content_safety_evaluation.py`                                                |
+| Invented statistics and quotations                                                               | `test_content_safety_evaluation.py`                                                |
+| Source attribution and mismatched-reference detection                                            | `test_content_safety_evaluation.py`                                                |
+| Misleading certainty and conflicting details                                                     | `test_content_safety_evaluation.py`                                                |
+| Prompt-injection resistance                                                                      | `test_content_safety_evaluation.py`                                                |
+| Sensitive conceptual and restricted realistic imagery                                            | `evaluations/fixtures/sensitive_news_cases.json` and the production NFA-49 policy  |
+| AI-generated illustration designation                                                            | `test_content_safety_evaluation.py`                                                |
+| Predefined thresholds and repeatability                                                          | `test_content_safety_evaluation.py` and `evaluations/reports/nfa-78-baseline.json` |
 
 Run from `apps/api`:
 
@@ -912,20 +912,20 @@ The runner makes no network request. It prints a machine-readable report and ret
 
 ## NFA-79 reliability and failure-recovery coverage
 
-| Requirement | Automated evidence |
-| --- | --- |
-| Critical dependency inventory, timeouts, and retry limits | `tests/reliability/test_recovery_framework.py` |
-| Safe liveness, readiness, and PostgreSQL failure | `tests/reliability/test_recovery_framework.py` and `test_api.py` |
-| Safe request correlation without private exception text | `tests/reliability/test_recovery_framework.py` |
-| Bounded cleanup reconciliation and retry-required state | `tests/reliability/test_recovery_framework.py` |
-| Text provider timeout, rate limit, authentication, quota, and connection failure | `test_openai_service.py` |
-| Image provider timeout, bounded retry, duplicate prevention, and invalid response | `test_openai_image_service.py` |
-| Original image preservation after regeneration failure | `test_image_regeneration.py` |
-| Storage failure, database compensation, and private orphan evidence | `test_image_storage.py` |
-| Interrupted draft update and unchanged committed version | `test_saved_drafts.py` |
-| Partial deletion, cleanup retry, and retention ordering | `test_content_deletion.py` |
-| Article-provider failure, bounded retry, checkpoint, and stale-job recovery | `test_article_sync.py` |
-| Browser timeout, network failure, duplicate lock, stale response, and deliberate retry | `apps/web/__tests__/generation-state.test.tsx` |
+| Requirement                                                                            | Automated evidence                                               |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Critical dependency inventory, timeouts, and retry limits                              | `tests/reliability/test_recovery_framework.py`                   |
+| Safe liveness, readiness, and PostgreSQL failure                                       | `tests/reliability/test_recovery_framework.py` and `test_api.py` |
+| Safe request correlation without private exception text                                | `tests/reliability/test_recovery_framework.py`                   |
+| Bounded cleanup reconciliation and retry-required state                                | `tests/reliability/test_recovery_framework.py`                   |
+| Text provider timeout, rate limit, authentication, quota, and connection failure       | `test_openai_service.py`                                         |
+| Image provider timeout, bounded retry, duplicate prevention, and invalid response      | `test_openai_image_service.py`                                   |
+| Original image preservation after regeneration failure                                 | `test_image_regeneration.py`                                     |
+| Storage failure, database compensation, and private orphan evidence                    | `test_image_storage.py`                                          |
+| Interrupted draft update and unchanged committed version                               | `test_saved_drafts.py`                                           |
+| Partial deletion, cleanup retry, and retention ordering                                | `test_content_deletion.py`                                       |
+| Article-provider failure, bounded retry, checkpoint, and stale-job recovery            | `test_article_sync.py`                                           |
+| Browser timeout, network failure, duplicate lock, stale response, and deliberate retry | `apps/web/__tests__/generation-state.test.tsx`                   |
 
 Run the focused backend framework from the repository root:
 
@@ -954,6 +954,41 @@ npm test -- __tests__/generation-state.test.tsx
 
 These tests use synthetic failures, temporary storage, and mocked providers. They do not call live CNN or OpenAI services and do not require real provider credentials. See [the NFA-79 reliability and recovery guide](reliability-and-recovery.md) for the failure contract, operational runbooks, results, and limitations.
 
+## NFA-80 performance and accessibility coverage
+
+| Requirement                                              | Automated evidence                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------- |
+| Article and library latency plus payload budgets         | `apps/api/tests/performance/test_api_performance.py`       |
+| Representative concurrent article requests               | `apps/api/tests/performance/test_api_performance.py`       |
+| Bounded article and library pagination                   | `apps/api/tests/performance/test_api_performance.py`       |
+| One MiB private-image delivery                           | `apps/api/tests/performance/test_api_performance.py`       |
+| Dashboard navigation and request count                   | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Browser axe and colour contrast at 375, 768, and 1440 px | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Accessibility tree and horizontal overflow               | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Skip link, focus visibility, and mobile keyboard control | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Accessible form and generation errors                    | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Timeout recovery and choice preservation                 | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Private browser image delivery                           | `apps/web/e2e/performance-accessibility.spec.ts`           |
+| Production JavaScript budgets                            | `apps/web/scripts/check-performance-budget.mjs`            |
+| Article source-link accessible name                      | `apps/web/__tests__/article-card.test.tsx` and browser axe |
+
+Run the focused backend guardrails from `apps/api`:
+
+```bash
+.venv/bin/pytest tests/performance -s
+.venv/bin/ruff check tests/performance
+.venv/bin/ruff format --check tests/performance
+```
+
+Run the production browser and bundle checks from `apps/web`:
+
+```bash
+npm run test:e2e
+npm run performance:bundle
+```
+
+The Playwright configuration builds and serves the production Next.js application. The test API uses only synthetic content and mocked provider behaviour. Local results are regression evidence, not production latency claims. See [the NFA-80 report](performance-accessibility-verification.md) for targets, measurements, database review, defect evidence, and remaining release gates.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -964,7 +999,7 @@ npm run format:check
 npm run typecheck
 npm test
 npm run test:e2e
-npm run build
+npm run performance:bundle
 ```
 
 ## Run the PostgreSQL account-security proof
@@ -1013,8 +1048,8 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
 
-- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the deterministic NFA-78 content-safety evaluation, run the focused NFA-79 reliability suite, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 and NFA-68 saved-draft and content-library proof against `newsflow_saved_draft_test`.
-- Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, run deterministic Playwright browser tests, and build Next.js.
+- Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the deterministic NFA-78 content-safety evaluation, run the focused NFA-79 reliability suite, run the NFA-80 performance guardrails with visible measurements, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 and NFA-68 saved-draft and content-library proof against `newsflow_saved_draft_test`.
+- Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, build and serve production Next.js for deterministic Playwright browser tests, and enforce the NFA-80 production JavaScript budget.
 
 The NFA-36, NFA-58, NFA-54, NFA-67, and NFA-68 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
@@ -1136,9 +1171,15 @@ Verified locally through 4 November 2026:
 - The focused NFA-79 frontend network-recovery run passed 9 tests covering timeout, interruption, deliberate retry, duplicate locking, stale-response protection, and preservation of successful output.
 - The complete backend run after NFA-79 passed 480 tests, skipped 16 safety-gated PostgreSQL tests, and deselected the optional live-model test. Branch-aware coverage measured 79.10 percent, above the enforced 75 percent floor.
 - Ruff linting and formatting passed, the project secret scan passed, and no NFA-79 test made a live CNN, OpenAI, production database, production user-data, or production object-storage request.
+- The focused NFA-80 backend run passed 5 tests. The measured in-process p95 results were 1.217 ms for 100 articles, 1.437 ms for 100 saved drafts, 1.012 ms for a 1 MiB private image, and 6.422 ms for 24 article requests using 8 workers.
+- The NFA-80 production JavaScript check passed with 42 chunks, 1,041,667 raw bytes, 326,988 gzip bytes, and a 243,671-byte largest raw chunk.
+- The NFA-80 Chromium checks passed at 375 x 812, 768 x 1024, and 1440 x 900 with colour contrast enabled, no selected axe violation, no page overflow, and the expected accessibility tree. Keyboard, form-error, timeout-recovery, request-count, private-image, and reduced-motion scenarios also passed.
+- The NFA-80 browser audit found and resolved one serious source-link accessible-name mismatch. The updated component test and full browser axe check protect the corrected label.
+- The complete NFA-80 backend run passed 485 tests, skipped 16 safety-gated tests, deselected the optional live-model test, and measured 79.10 percent branch-aware coverage. The complete frontend component run passed 167 tests across 35 files, and the complete Playwright run passed all 13 Chromium scenarios.
+- NFA-80 used synthetic content and mocked providers. PostgreSQL query plans, deployment-like Lighthouse measurements, and human VoiceOver verification remain explicit release gates rather than invented local results.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, and NFA-79
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, and NFA-80
 - Implementation status: Ready for review
 - Approval status: Pending Mashood Ogunbiyi's review

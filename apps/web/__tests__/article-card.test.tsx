@@ -37,7 +37,7 @@ describe("article dashboard components", () => {
     expect(screen.getByText("Synthetic fixture only")).toBeDefined();
 
     const sourceLink = screen.getByRole("link", {
-      name: `View original source for ${article.title}`,
+      name: `View source: ${article.title} (opens in a new tab)`,
     });
     expect(sourceLink.getAttribute("href")).toBe(article.source_url);
     expect(sourceLink.getAttribute("target")).toBe("_blank");
