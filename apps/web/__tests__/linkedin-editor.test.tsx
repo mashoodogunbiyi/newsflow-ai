@@ -1,8 +1,11 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import type { DraftEditorDocument } from "@/types/draft";
+
+const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 
 const draft: DraftEditorDocument = {
   articleId: "10000000-0000-4000-8000-000000000003",
@@ -18,6 +21,11 @@ const draft: DraftEditorDocument = {
 };
 
 describe("LinkedIn draft editor", () => {
+  beforeEach(() => {
+    navigation.push.mockReset();
+    navigation.refresh.mockReset();
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -51,6 +59,98 @@ describe("LinkedIn draft editor", () => {
     expect(screen.getByTestId("draft-preview").textContent).toBe(edited);
     expect(screen.getByText("Unsaved local edits")).toBeDefined();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("saves reviewed generated text and its selected image to the private library", async () => {
+    document.cookie = "newsflow_csrf=csrf-test-token; path=/";
+    const selectedImage = {
+      altText: "Conceptual illustration of a reviewed information network",
+      id: "10000000-0000-4000-8000-000000000031",
+    };
+    const savedDraft = {
+      id: "72000000-0000-4000-8000-000000000003",
+      generated_post_id: "72000000-0000-4000-8000-000000000004",
+      current_post_version_id: "72000000-0000-4000-8000-000000000005",
+      selected_image_id: selectedImage.id,
+      selected_image: {
+        id: selectedImage.id,
+        alt_text: selectedImage.altText,
+        mime_type: "image/png",
+        width_px: 1536,
+        height_px: 1024,
+        ai_generated: true,
+        ai_disclosure_required: true,
+      },
+      title: draft.sourceTitle,
+      edited_text: "A reviewed and edited draft.",
+      tone: "professional",
+      length: "medium",
+      status: "saved",
+      version: 1,
+      source: {
+        article_id: draft.articleId,
+        title: draft.sourceTitle,
+        url: draft.sourceUrl,
+        attribution: draft.sourceAttribution,
+      },
+      generation: {
+        generation_id: draft.generationId,
+        original_post_version_id: "72000000-0000-4000-8000-000000000006",
+        model_identifier: "mock-openai-text-model",
+        prompt_version: "linkedin_v1",
+        created_at: "2026-11-03T09:00:00Z",
+      },
+      created_at: "2026-11-03T09:05:00Z",
+      updated_at: "2026-11-03T09:05:00Z",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(savedDraft, { status: 201 })));
+    render(<LinkedInEditor draft={draft} selectedImage={selectedImage} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "LinkedIn draft text" }), {
+      target: { value: savedDraft.edited_text },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save to library" }));
+
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(`/library/${savedDraft.id}`));
+    const [, options] = vi.mocked(fetch).mock.calls[0] ?? [];
+    expect(options).toEqual(
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
+    expect(JSON.parse(String(options?.body))).toEqual({
+      generation_id: draft.generationId,
+      title: draft.sourceTitle,
+      edited_text: savedDraft.edited_text,
+      selected_image_id: selectedImage.id,
+    });
+    expect(new Headers(options?.headers).get("x-csrf-token")).toBe("csrf-test-token");
+    expect(new Headers(options?.headers).get("idempotency-key")).toMatch(/^draft:/);
+    expect(navigation.refresh).toHaveBeenCalledOnce();
+    document.cookie = "newsflow_csrf=; Max-Age=0; path=/";
+  });
+
+  test("keeps local edits visible when saving fails", async () => {
+    document.cookie = "newsflow_csrf=csrf-test-token; path=/";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            error: { code: "draft_persistence_unavailable", message: "Storage is unavailable." },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    render(<LinkedInEditor draft={draft} />);
+    const textarea = screen.getByRole("textbox", { name: "LinkedIn draft text" });
+    fireEvent.change(textarea, { target: { value: "Keep this reviewed local edit." } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save to library" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Storage is unavailable.");
+    expect(textarea).toHaveProperty("value", "Keep this reviewed local edit.");
+    expect(navigation.push).not.toHaveBeenCalled();
+    document.cookie = "newsflow_csrf=; Max-Age=0; path=/";
   });
 
   test("integrates a selected illustration into the live preview", () => {
