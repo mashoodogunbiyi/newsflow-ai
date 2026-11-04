@@ -70,6 +70,10 @@ jobs:
           pytest -m "not live_ai"
           --cov=app --cov-report=term-missing --cov-fail-under=75
 
+      - name: Run AI grounding and content safety evaluation
+        working-directory: apps/api
+        run: pytest tests/evaluation/test_content_safety_evaluation.py
+
       - name: Run isolated article-pipeline tests
         working-directory: apps/api
         env:
