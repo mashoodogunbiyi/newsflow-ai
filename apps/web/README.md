@@ -1,6 +1,6 @@
 # NewsFlow AI Frontend
 
-The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection. NFA-62 adds the accessible multiline draft editor, source and warning preservation, and local unsaved-change protection. NFA-63 adds the responsive LinkedIn-inspired text and image preview, owner-protected image gateway, AI designation, controlled fallbacks, and preview limitations. NFA-64 adds supported illustration preferences, secure initial generation and regeneration gateways, immutable version selection, and live preview updates. NFA-65 adds the responsive and accessibility review, consistent focus behaviour, reviewed contrast, reduced-motion support, overflow protection, axe checks, and final manual acceptance checklist. NFA-69 adds the authenticated personal content library, runtime-validated draft API integration, responsive saved-draft cards, backend pagination, secure thumbnails, and saved-draft reopening in the editor. NFA-77 adds the generated-draft save action and deterministic Playwright journeys across authentication, articles, mocked generation, editing, private saving, export, deletion, empty states, provider errors, and ownership denial. NFA-81 extends that controlled browser environment with deterministic image regeneration so all planned human UAT scenarios can be completed without live providers.
+The NewsFlow AI frontend is a Next.js, React, TypeScript, and Tailwind CSS application. It is located in `apps/web` and provides the user-facing layer of the project. NFA-17 adds automated linting, formatting, type checking, and component testing. NFA-24 adds the complete frontend authentication experience. NFA-56 adds the reusable authenticated application shell, responsive navigation, primary routes, shared interface components, and protected loading and error states. NFA-57 adds the responsive authorised-article dashboard and FastAPI catalogue integration. NFA-58 adds approved category filtering and URL-based browsing state. NFA-59 adds UUID-only article selection, protected detail retrieval, and the responsive source information panel. NFA-60 adds accessible tone and length controls, the same-origin generation gateway, duplicate protection, safe response validation, and controlled request feedback. NFA-61 adds a reusable text and image generation lifecycle, deliberate retries, accessible announcements, and stale-response protection. NFA-62 adds the accessible multiline draft editor, source and warning preservation, and local unsaved-change protection. NFA-63 adds the responsive LinkedIn-inspired text and image preview, owner-protected image gateway, AI designation, controlled fallbacks, and preview limitations. NFA-64 adds supported illustration preferences, secure initial generation and regeneration gateways, immutable version selection, and live preview updates. NFA-65 adds the responsive and accessibility review, consistent focus behaviour, reviewed contrast, reduced-motion support, overflow protection, axe checks, and final manual acceptance checklist. NFA-69 adds the authenticated personal content library, runtime-validated draft API integration, responsive saved-draft cards, backend pagination, secure thumbnails, and saved-draft reopening in the editor. NFA-77 adds the generated-draft save action and deterministic Playwright journeys across authentication, articles, mocked generation, editing, private saving, export, deletion, empty states, provider errors, and ownership denial. NFA-81 extends that controlled browser environment with deterministic image regeneration so all planned human UAT scenarios can be completed without live providers. NFA-84 packages its standalone production output in a multi-stage, non-root Docker image and verifies it through the complete Compose lifecycle.
 
 The application contains a responsive homepage, registration and login pages, a protected workspace, session restoration, and logout. The workspace includes Dashboard, Create Post, Content Library, and Account routes. The dashboard retrieves rights-approved synthetic article metadata from FastAPI and does not retrieve live CNN information. The Create Post route restores the selected article from its UUID, presents permitted source information and current generation readiness, lets an authorised user request a private LinkedIn draft using supported tone and length choices, and opens a responsive editor after a valid result. The editor keeps text editable while the user generates a private illustration, creates immutable alternatives, selects the version displayed in the combined preview, and saves the reviewed result through the authenticated E7 API. The Content Library lists only the authenticated user's saved drafts, restores URL-based pages, and reopens one saved record with its source and selected image. It never receives an OpenAI credential or publishes automatically.
 
@@ -25,14 +25,14 @@ Open [http://localhost:3000](http://localhost:3000) in a browser. FastAPI and Po
 
 ## Run with Docker Compose
 
-NFA-16 adds a frontend development image and runs it with FastAPI and PostgreSQL from the repository-root `compose.yaml` file. From the repository root:
+NFA-84 finalises the frontend image as a multi-stage Node.js 22 Alpine build. The runtime stage contains the standalone Next.js server and static assets without the development dependency tree or source bind mounts. From the repository root:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build --detach --wait
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The browser sends authentication requests to same-origin Next.js route handlers. Those server-side handlers use `API_INTERNAL_BASE_URL` to reach FastAPI at `http://backend:8000` inside Docker. Use `docker compose down` for a normal shutdown. See the [complete Docker development guide](../../infrastructure/docker/README.md) for all commands and service checks.
+Open [http://localhost:3000](http://localhost:3000). The browser sends authentication requests to same-origin Next.js route handlers. Those server-side handlers use `API_INTERNAL_BASE_URL` to reach FastAPI at `http://backend:8000` inside Docker. Compose waits for FastAPI readiness, runs the frontend as a non-root user, and checks its HTTP health. Use `docker compose down` for a normal shutdown. See the [complete Docker development guide](../../infrastructure/docker/README.md) and [NFA-84 verification record](../../docs/docker-packaging.md).
 
 ## Authentication journey
 
@@ -83,11 +83,13 @@ npm run test:watch
 
 Vitest covers the homepage, authentication, route protection, reusable components, article contracts, generation states, editing, private image gateways, saving, the content library, export, deletion, accessibility, and responsive layout contracts. Playwright runs the real Next.js application in Chromium against a deterministic local FastAPI contract mock and completes the joined user journeys, including image regeneration. The tests use synthetic values and mocked provider responses, so they make no live CNN, OpenAI, LinkedIn, production-account, or paid API call. See the [NFA-77 integration guide](../../docs/integration-e2e-testing.md) and [NFA-81 UAT plan](../../docs/user-acceptance-testing.md).
 
-To serve the production build locally after a successful build:
+To serve the standalone production build locally after a successful build:
 
 ```bash
 npm run start
 ```
+
+The `prestart` script copies public and static assets into the standalone directory before the server starts. Set `HOSTNAME` and `PORT` in the process environment when a different bind address or port is required. The Docker runtime assembles the same layout and sets both values automatically.
 
 ## Project structure
 
@@ -95,7 +97,7 @@ npm run start
 apps/web/
 ├── .dockerignore          # Files excluded from the image build context
 ├── .prettierignore        # Files excluded from formatting checks
-├── Dockerfile             # Next.js development image
+├── Dockerfile             # Multi-stage standalone Next.js runtime image
 ├── __tests__/              # Homepage, authentication, article, selection, and generation tests
 ├── e2e/                    # Playwright browser journeys and deterministic API fixture server
 ├── app/
@@ -123,6 +125,7 @@ apps/web/
 ├── lib/                     # Authentication, article, and generation API utilities
 ├── types/                   # Runtime-validated frontend data contracts
 ├── public/                  # Static assets
+├── scripts/                 # Bundle checks and local standalone asset preparation
 ├── proxy.ts                 # Optimistic protected-workspace cookie check
 ├── eslint.config.mjs        # Next.js and TypeScript linting
 ├── next.config.ts           # Next.js and Tailwind build configuration
@@ -317,6 +320,6 @@ The complete scope, isolation model, primary journey, CI behaviour, defect recor
 
 The production dependency audit completed with no known vulnerabilities on 23 October 2026. NFA-17 updated Next.js and its matching ESLint configuration from 16.4.0 to 16.4.2 to resolve the critical advisories found during the quality-tool setup. The complete development audit still reports a transitive `braces` advisory through `eslint-config-next`; npm does not provide a compatible non-breaking fix. Track the upstream dependency and do not use the suggested forced downgrade because it would make the Next.js toolchain inconsistent.
 
-The project uses ESLint 10, which Next.js 16.4 supports. Some plugins bundled by `eslint-config-next` have not yet added ESLint 10 to their peer-version declarations, so npm can display peer dependency warnings during a clean install. The installed configuration has been verified with `npm run lint` under both the local runtime and the Node 20 Docker image. Do not enable `legacy-peer-deps` or suppress the warnings globally; remove this note when the upstream plugin declarations are updated.
+The project uses ESLint 10, which Next.js 16.4 supports. Some plugins bundled by `eslint-config-next` have not yet added ESLint 10 to their peer-version declarations, so npm can display peer dependency warnings during a clean install. The installed configuration has been verified with `npm run lint` under both the local runtime and the Node 22 Docker build stage. Do not enable `legacy-peer-deps` or suppress the warnings globally; remove this note when the upstream plugin declarations are updated.
 
 The production build uses Next.js's supported Webpack option with Tailwind's official PostCSS plugin. Local development continues to use the standard `next dev` command.

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
-    "start": "next start",
+    "prestart": "node scripts/prepare-standalone.mjs",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "performance:bundle": "node scripts/check-performance-budget.mjs",
     "format": "prettier --write .",

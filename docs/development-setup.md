@@ -108,38 +108,38 @@ Use the same username and password in POSTGRES_USER, POSTGRES_PASSWORD, and DATA
 
 ### Environment variable reference
 
-| Variable                         | Purpose                                           | Required now                                     |
-| -------------------------------- | ------------------------------------------------- | ------------------------------------------------ |
-| APP_ENV                          | Selects the application environment.              | No - defaults to development                     |
-| NEWS_SOURCE_MODE                 | Selects the approved news source mode.            | No - must remain fixture                         |
-| FRONTEND_ORIGIN                  | Allows this exact browser origin to send API cookies. | No - defaults to http://localhost:3000        |
-| FRONTEND_PORT                    | Host port for the Docker frontend.                | No - defaults to 3000                            |
-| BACKEND_PORT                     | Host port for the Docker backend.                 | No - defaults to 8000                            |
-| POSTGRES_PORT                    | Host port for Docker PostgreSQL.                  | No - defaults to 5432                            |
-| POSTGRES_USER                    | Creates the Docker database user.                 | Yes for Docker Compose                           |
-| POSTGRES_PASSWORD                | Creates the Docker database password.             | Yes for Docker Compose                           |
-| POSTGRES_DB                      | Creates the Docker database.                      | Yes for Docker Compose                           |
-| DATABASE_URL                     | Connects a host-run backend to PostgreSQL.        | Yes for a manually run backend                   |
-| DATABASE_CONNECT_TIMEOUT_SECONDS | Sets the database timeout.                        | No - defaults to 5                               |
-| REGISTRATION_RATE_LIMIT_ATTEMPTS | Limits registration attempts per client.         | No - defaults to 5                               |
-| REGISTRATION_RATE_LIMIT_WINDOW_SECONDS | Sets the rate-limit window in seconds.      | No - defaults to 60                              |
-| LOGIN_RATE_LIMIT_ATTEMPTS        | Limits login attempts per client.                | No - defaults to 5                               |
-| LOGIN_RATE_LIMIT_WINDOW_SECONDS  | Sets the login rate-limit window in seconds.     | No - defaults to 60                              |
-| SESSION_LIFETIME_MINUTES         | Sets the absolute authenticated-session lifetime.| No - defaults to 60                              |
-| GENERATION_RATE_LIMIT_ATTEMPTS   | Limits short bursts per authenticated user.      | No - defaults to 10                              |
-| GENERATION_RATE_LIMIT_WINDOW_SECONDS | Sets the short burst window.                 | No - defaults to 60                              |
-| GENERATION_DAILY_LIMIT           | Limits provider-bound attempts per user and UTC day. | No - defaults to 50                           |
-| GENERATION_CONCURRENT_LIMIT      | Limits active provider-bound attempts per user.  | No - defaults to 2                               |
-| GENERATION_ATTEMPT_TIMEOUT_SECONDS | Sets the active-attempt recovery lease.        | No - defaults to 180                             |
-| GENERATION_USAGE_RETENTION_DAYS  | Retains completed usage evidence.                | No - defaults to 90                              |
-| SEED_DATA_ENABLED                | Explicitly allows synthetic seed loading.        | No - keep false except for one seed command      |
-| OPENAI_API_KEY                   | Authenticates the server-side OpenAI service.     | Required only for a live OpenAI call             |
-| OPENAI_MODEL                     | Selects the approved OpenAI model.                | Required only for a live OpenAI call             |
-| OPENAI_REQUEST_TIMEOUT           | Limits one OpenAI request in seconds.             | No - defaults to 30                              |
-| OPENAI_MAX_OUTPUT_TOKENS         | Caps generated output tokens.                     | No - defaults to 800                             |
-| OPENAI_MAX_RETRIES               | Bounds eligible temporary SDK retries.            | No - defaults to 2                               |
-| NEXT_PUBLIC_API_BASE_URL         | Gives the browser the public backend URL.         | No - defaults to http://localhost:8000 in Docker |
-| API_INTERNAL_BASE_URL            | Lets the Next.js server reach FastAPI.            | No - defaults to http://localhost:8000 manually  |
+| Variable                               | Purpose                                               | Required now                                     |
+| -------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ |
+| APP_ENV                                | Selects the application environment.                  | No - defaults to development                     |
+| NEWS_SOURCE_MODE                       | Selects the approved news source mode.                | No - must remain fixture                         |
+| FRONTEND_ORIGIN                        | Allows this exact browser origin to send API cookies. | No - defaults to http://localhost:3000           |
+| FRONTEND_PORT                          | Host port for the Docker frontend.                    | No - defaults to 3000                            |
+| BACKEND_PORT                           | Host port for the Docker backend.                     | No - defaults to 8000                            |
+| POSTGRES_PORT                          | Host port for Docker PostgreSQL.                      | No - defaults to 5432                            |
+| POSTGRES_USER                          | Creates the Docker database user.                     | Yes for Docker Compose                           |
+| POSTGRES_PASSWORD                      | Creates the Docker database password.                 | Yes for Docker Compose                           |
+| POSTGRES_DB                            | Creates the Docker database.                          | Yes for Docker Compose                           |
+| DATABASE_URL                           | Connects a host-run backend to PostgreSQL.            | Yes for a manually run backend                   |
+| DATABASE_CONNECT_TIMEOUT_SECONDS       | Sets the database timeout.                            | No - defaults to 5                               |
+| REGISTRATION_RATE_LIMIT_ATTEMPTS       | Limits registration attempts per client.              | No - defaults to 5                               |
+| REGISTRATION_RATE_LIMIT_WINDOW_SECONDS | Sets the rate-limit window in seconds.                | No - defaults to 60                              |
+| LOGIN_RATE_LIMIT_ATTEMPTS              | Limits login attempts per client.                     | No - defaults to 5                               |
+| LOGIN_RATE_LIMIT_WINDOW_SECONDS        | Sets the login rate-limit window in seconds.          | No - defaults to 60                              |
+| SESSION_LIFETIME_MINUTES               | Sets the absolute authenticated-session lifetime.     | No - defaults to 60                              |
+| GENERATION_RATE_LIMIT_ATTEMPTS         | Limits short bursts per authenticated user.           | No - defaults to 10                              |
+| GENERATION_RATE_LIMIT_WINDOW_SECONDS   | Sets the short burst window.                          | No - defaults to 60                              |
+| GENERATION_DAILY_LIMIT                 | Limits provider-bound attempts per user and UTC day.  | No - defaults to 50                              |
+| GENERATION_CONCURRENT_LIMIT            | Limits active provider-bound attempts per user.       | No - defaults to 2                               |
+| GENERATION_ATTEMPT_TIMEOUT_SECONDS     | Sets the active-attempt recovery lease.               | No - defaults to 180                             |
+| GENERATION_USAGE_RETENTION_DAYS        | Retains completed usage evidence.                     | No - defaults to 90                              |
+| SEED_DATA_ENABLED                      | Explicitly allows synthetic seed loading.             | No - keep false except for one seed command      |
+| OPENAI_API_KEY                         | Authenticates the server-side OpenAI service.         | Required only for a live OpenAI call             |
+| OPENAI_MODEL                           | Selects the approved OpenAI model.                    | Required only for a live OpenAI call             |
+| OPENAI_REQUEST_TIMEOUT                 | Limits one OpenAI request in seconds.                 | No - defaults to 30                              |
+| OPENAI_MAX_OUTPUT_TOKENS               | Caps generated output tokens.                         | No - defaults to 800                             |
+| OPENAI_MAX_RETRIES                     | Bounds eligible temporary SDK retries.                | No - defaults to 2                               |
+| NEXT_PUBLIC_API_BASE_URL               | Gives the browser the public backend URL.             | No - defaults to http://localhost:8000 in Docker |
+| API_INTERNAL_BASE_URL                  | Lets the Next.js server reach FastAPI.                | No - defaults to http://localhost:8000 manually  |
 
 Docker Compose constructs its own backend database URL using database as the hostname and sets the frontend's internal API URL to http://backend:8000. The DATABASE_URL and API_INTERNAL_BASE_URL values in .env are for services running directly on the host.
 
@@ -166,27 +166,27 @@ Validate the configuration without printing resolved secrets:
 docker compose config --quiet
 ```
 
-Build and start all services:
+Build all images, start the services in the background, and wait for health checks:
+
+```bash
+docker compose up --build --detach --wait
+docker compose ps
+```
+
+Docker starts PostgreSQL first, automatically applies Alembic migrations, starts FastAPI after the database is healthy and the migration succeeds, and starts Next.js after FastAPI is ready.
+
+To keep all service logs in the current terminal instead:
 
 ```bash
 docker compose up --build
 ```
 
-Keep that terminal open. Docker starts PostgreSQL first, FastAPI after the database is healthy, and Next.js after the backend is healthy.
-
-To run in the background:
-
-```bash
-docker compose up --build --detach
-docker compose ps
-```
-
 All three services should eventually report running or healthy.
 
-Create the database schema and optionally load the synthetic fixture:
+The one-shot `migrate` service creates or updates the database schema automatically. Confirm its result and optionally load the synthetic fixture:
 
 ```bash
-docker compose exec backend alembic upgrade head
+docker compose exec backend alembic current
 docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.seed
 ```
 
@@ -194,12 +194,12 @@ The seed command is repeatable and does not create duplicate fixtures.
 
 ### Local addresses
 
-| Service            | Address                                                      | Expected result                           |
-| ------------------ | ------------------------------------------------------------ | ----------------------------------------- |
-| Frontend           | [http://localhost:3000](http://localhost:3000)               | NewsFlow AI homepage                      |
-| Backend health     | [http://localhost:8000/health](http://localhost:8000/health) | {"status":"ok"}                           |
+| Service            | Address                                                      | Expected result                                                   |
+| ------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Frontend           | [http://localhost:3000](http://localhost:3000)               | NewsFlow AI homepage                                              |
+| Backend health     | [http://localhost:8000/health](http://localhost:8000/health) | {"status":"ok"}                                                   |
 | Database readiness | [http://localhost:8000/ready](http://localhost:8000/ready)   | {"status":"ready","database":"connected","configuration":"valid"} |
-| Swagger UI         | [http://localhost:8000/docs](http://localhost:8000/docs)     | Interactive API documentation             |
+| Swagger UI         | [http://localhost:8000/docs](http://localhost:8000/docs)     | Interactive API documentation                                     |
 
 These links work only while the services are running. They are not public website links.
 
@@ -450,7 +450,8 @@ A working environment meets this checklist:
 - The dashboard logout button revokes the session and returns to the login page.
 - Frontend linting, formatting, type checking, tests, and build pass.
 - Backend linting, formatting, and tests pass.
-- `alembic current` reports revision `20261025_0002`.
+- `alembic current` reports the latest committed migration revision.
+- `bash scripts/verify_docker_packaging.sh` passes the isolated build, migration, health, restart, persistence, and cleanup checks.
 - Running the seed command twice reports the same fixture counts without duplicates.
 - git status --short does not show .env, dependency directories, build output, or test caches.
 
@@ -532,11 +533,12 @@ Health checks, the fixture homepage, and normal tests do not need an OpenAI key.
 - [Secure OpenAI integration](openai-integration.md)
 - [Automated testing guide](testing.md)
 - [Docker guide](../infrastructure/docker/README.md)
+- [Docker packaging verification](docker-packaging.md)
 - [Project plan](../PROJECT_PLAN.md)
 - [Project management workflow](../PROJECT_MANAGEMENT.md)
 
 ## 13. Verification record
 
-These instructions were checked on 29 October 2026 against the repository structure, environment template, Docker Compose configuration, authentication interface, NFA-38 OpenAI service, frontend scripts, backend package configuration, and working toolchain.
+These instructions were checked on 5 November 2026 against the repository structure, environment template, final Docker Compose configuration, automatic migration service, authentication interface, frontend scripts, backend package configuration, health checks, restart behaviour, and persistent storage.
 
-The verified environment used Git 2.50.1, Docker 29.8.2, Docker Compose v5.5.1, Node.js 26.11.1, npm 11.20.0, Python 3.12.15 in the backend virtual environment, and the Compose-managed postgres:16-alpine image. Other developers should use the supported versions listed above.
+The verified Docker environment used Docker Desktop on Apple Silicon, Node.js 22 Alpine for the frontend image, Python 3.12 slim for the backend image, and the Compose-managed PostgreSQL 16 Alpine image. The complete isolated lifecycle passed. Other developers should use the supported versions listed above.
