@@ -1221,9 +1221,22 @@ Verified locally through 4 November 2026:
 - The first NFA-84 clean run correctly failed because the packaged backend command used a source-file path that is absent from the installed runtime image. The command now loads `app.main:app` through Uvicorn, and the complete lifecycle passes without adding the source tree back to the runtime image.
 - The NFA-84 standalone frontend run initially exposed the outdated `next start` command and missing local standalone asset preparation. The final `prestart` step prepares public and static assets, the packaged server starts without the configuration warning, and all 13 Chromium journeys pass.
 - NFA-84 tests use only synthetic database settings, fixture mode, isolated ports, and disposable volumes. They do not read the developer's `.env`, make a live OpenAI or CNN request, or publish an external service.
+- The NFA-85 deployment-documentation contract passed on 5 November 2026. It confirmed that all four operational documents exist, every current FastAPI `Settings` field and required frontend or Compose variable is documented, health and administrator endpoints remain accurate, No-Go and private-storage restrictions remain explicit, and only normal ASCII hyphens are used in the new package.
+- The NFA-85 project secret scan passed. The package contains names and safe examples only; it does not contain a production credential, provider key, private object path, or real environment export.
+- The focused backend configuration and health-check run passed all 27 tests, confirming the documented validation, secret handling, `/health`, and `/ready` contracts.
+- `git diff --check` passed for the NFA-85 changes. No hosting, backup, restore, monitoring, or public-release claim was converted into a passing result. These remain proposed controls and release gates until implemented and exercised in an approved environment.
+- GitHub Actions now runs `python3 scripts/verify_deployment_documentation.py` as a separate deployment-documentation job on pull requests and updates to `main`.
+
+Run the focused NFA-85 checks from the repository root:
+
+```bash
+python3 scripts/verify_deployment_documentation.py
+python3 scripts/scan_secrets.py
+git diff --check
+```
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, and NFA-84
-- Implementation status: NFA-84 Docker package ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, and NFA-85
+- Implementation status: NFA-85 deployment and operations documentation package ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review
