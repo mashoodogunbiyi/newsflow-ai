@@ -6,9 +6,11 @@ NewsFlow AI is a planned full-stack application that turns authorised CNN Intern
 
 > NFA-84 status: the reproducible local Docker package, automatic migrations, non-root runtimes, health checks, restart and persistence proof, and CI lifecycle verification are implemented and locally verified.
 
+> NFA-85 status: the proposed deployment architecture, complete environment reference, operations runbook, backup and recovery policy, release restrictions, and automated documentation contract are implemented. No production deployment or backup is claimed.
+
 > NFA-82 status: final E8 evidence is consolidated. Packaging and a controlled local synthetic-data demonstration have a proposed Conditional Go. Public release and live CNN integration remain No-Go.
 >
-> Current implementation: NFA-84 completes the E9 local Docker package within NFA-82's Conditional Go scope. Multi-stage non-root images, required configuration, automatic Alembic migrations, persistent volumes, health-based startup, clean restarts, stop/start recovery, and an isolated CI lifecycle check are implemented and locally verified. Public release and live CNN integration remain No-Go.
+> Current implementation: NFA-84 completes the E9 local Docker package within NFA-82's Conditional Go scope. NFA-85 now documents how an approved deployment would be configured, operated, monitored, backed up, recovered, verified, and rolled back. The guidance is deliberately platform-neutral because no hosting environment has been selected. Public release, production storage and backups, and live CNN integration remain No-Go.
 
 ## Product workflow
 
@@ -114,6 +116,10 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/user-acceptance-testing.md](docs/user-acceptance-testing.md) - NFA-81 objectives, participant profiles, controlled environment, session procedure, acceptance thresholds, evidence package, and current Pending decision.
 - [docs/release-readiness-quality-signoff.md](docs/release-readiness-quality-signoff.md) - NFA-82 consolidated E8 evidence, readiness categories, restricted release decision, conditions, risks, actions, and pending owner sign-off.
 - [docs/docker-packaging.md](docs/docker-packaging.md) - NFA-84 image design, Compose lifecycle, automatic migrations, security controls, persistence evidence, CI verification, commands, and production limitations.
+- [docs/deployment/deployment-guide.md](docs/deployment/deployment-guide.md) - NFA-85 proposed architecture, component requirements, release gates, migration, verification, shutdown, and rollback guidance.
+- [docs/deployment/environment-configuration.md](docs/deployment/environment-configuration.md) - NFA-85 complete runtime variable classification, secret handling, environment differences, and validation guidance.
+- [docs/deployment/operations-runbook.md](docs/deployment/operations-runbook.md) - NFA-85 health, logging, monitoring, maintenance, incident, startup, shutdown, and dependency recovery procedures.
+- [docs/deployment/backup-and-recovery.md](docs/deployment/backup-and-recovery.md) - NFA-85 proposed backup scope, recovery objectives, retention, consistency, restore, and verification controls.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -143,7 +149,7 @@ newsflow-ai/
 │   ├── api/                 # FastAPI application, Alembic migrations, seed data, and Dockerfile
 │   └── web/                 # Next.js application and standalone runtime Dockerfile
 ├── packages/                # Shared contracts, schemas, or generated clients
-├── scripts/                 # Secret scanning and isolated Docker packaging verification
+├── scripts/                 # Secret, Docker packaging, and deployment-documentation verification
 ├── infrastructure/
 │   ├── database/            # Future hosted database, backup, and restore configuration
 │   └── docker/              # Container and local-service configuration
@@ -194,6 +200,7 @@ newsflow-ai/
 │   ├── release-readiness-quality-signoff.md # NFA-82 final E8 review and proposed decision
 │   ├── release-readiness/    # NFA-82 defects, residual risks, and follow-up actions
 │   ├── docker-packaging.md   # NFA-84 Docker decisions, verification, and limitations
+│   ├── deployment/           # NFA-85 deployment, configuration, operations, backup, and recovery guides
 │   ├── e4-generation-acceptance.md # E4 joined verification and acceptance record
 │   ├── e6-generation-integration-contract.md # Future frontend generation contract
 │   ├── cnn-adapter.md       # Disabled CNN adapter decision and test evidence
@@ -277,6 +284,10 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/release-readiness-quality-signoff.md`       | NFA-82 consolidated evidence, readiness assessment, Conditional Go scope, No-Go boundaries, and sign-off status                     |
 | `docs/release-readiness`                          | NFA-82 release defect, residual-risk, and follow-up-action registers                                                                |
 | `docs/docker-packaging.md`                        | NFA-84 Docker image, Compose, migration, persistence, verification, command, and limitation record                                  |
+| `docs/deployment/deployment-guide.md`             | NFA-85 proposed architecture, hosting requirements, deployment sequence, verification, rollback, and limitations                    |
+| `docs/deployment/environment-configuration.md`    | NFA-85 runtime variables, secret classification, environment rules, validation, and known limitations                               |
+| `docs/deployment/operations-runbook.md`           | NFA-85 health, monitoring, routine operations, incident response, recovery, and shutdown procedures                                  |
+| `docs/deployment/backup-and-recovery.md`          | NFA-85 proposed backup schedule, objectives, consistency rules, restore procedures, and release gates                                |
 | `docs/authorization.md`                           | Object ownership rules, protected operations, safe errors, and test evidence                                                        |
 | `docs/cnn-adapter.md`                             | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates                                                  |
 | `docs/source-provider-interface.md`               | Provider interface, article contract, fixture adapter, safe errors, and integration instructions                                    |
@@ -480,6 +491,18 @@ docker compose up --build --detach --wait
 
 Docker waits for PostgreSQL health, successful migrations, and FastAPI readiness before starting Next.js. Stop the stack with `docker compose down`; this preserves both named data volumes. The isolated verification script proves clean build, configuration failure, migration, health, non-root execution, restart recovery, database persistence, and clean stop/start behaviour. See the [Docker development guide](infrastructure/docker/README.md) and [NFA-84 packaging evidence](docs/docker-packaging.md).
 
+### Proposed deployment and operations
+
+NFA-85 documents the next operational layer without pretending that production already exists. The package defines:
+
+- A proposed HTTPS edge, Next.js, FastAPI, managed PostgreSQL, private object storage, secret store, logging, monitoring, and backup architecture.
+- A complete reference for current backend, frontend, provider, storage, retention, and local Docker configuration names.
+- Startup, shutdown, migration, health, monitoring, incident, rollback, backup, restore, and cross-system reconciliation procedures.
+- Explicit release restrictions: production remains No-Go, `NEWS_SOURCE_MODE` must remain `disabled`, live CNN access is not authorised, and local image storage cannot be used in staging or production.
+- An automated repository contract check that detects missing documents, undocumented configuration variables, altered operational endpoints, weakened No-Go language, and non-standard dash characters in the NFA-85 documents.
+
+Start with the [deployment guide](docs/deployment/deployment-guide.md), then use the linked [environment configuration](docs/deployment/environment-configuration.md), [operations runbook](docs/deployment/operations-runbook.md), and [backup and recovery guide](docs/deployment/backup-and-recovery.md). These documents are planning and operational guidance, not proof of deployment, backup execution, or production readiness.
+
 ### Code quality and testing
 
 NFA-17 records the following tool selection:
@@ -545,7 +568,7 @@ NFA-51 adds synthetic image validation, private storage, metadata, idempotency, 
 
 ## Current next step
 
-Review the NFA-84 Docker package and its local verification evidence. After this branch is pushed, confirm the backend, frontend, and new Docker packaging jobs pass in GitHub Actions. Production deployment work remains outside this development package, and live CNN access remains blocked because no authorised method or Go decision exists.
+Review the NFA-85 deployment and operations package. After this branch is pushed, confirm the deployment-documentation, backend, frontend, and Docker packaging jobs pass in GitHub Actions. Before any real deployment, select an approved hosting platform, close the NFA-82 and SEC-01 through SEC-06 release blockers, implement private production object storage, approve recovery targets, and complete an isolated restore exercise. Live CNN access remains blocked because no authorised method or Go decision exists.
 
 ## Licence
 
