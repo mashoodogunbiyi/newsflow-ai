@@ -5,6 +5,7 @@ const ARTICLE_ID = "10000000-0000-4000-8000-000000000001";
 const GENERATION_ID = "20000000-0000-4000-8000-000000000002";
 const GENERATED_POST_ID = "30000000-0000-4000-8000-000000000003";
 const IMAGE_ID = "40000000-0000-4000-8000-000000000004";
+const REGENERATED_IMAGE_ID = "40000000-0000-4000-8000-000000000005";
 const DRAFT_ID = "50000000-0000-4000-8000-000000000005";
 const POST_VERSION_ID = "60000000-0000-4000-8000-000000000006";
 const USER_IDS = {
@@ -312,18 +313,39 @@ const server = createServer(async (request, response) => {
       created_at: "2026-11-03T09:07:00Z",
     });
   }
-  if (method === "GET" && url.pathname === `/api/images/${IMAGE_ID}/content`) {
+  if (method === "POST" && url.pathname === `/api/images/${IMAGE_ID}/regenerate`) {
+    if (!requireAuthentication(request, response)) return;
+    return json(response, 201, {
+      image_id: REGENERATED_IMAGE_ID,
+      generation_id: GENERATION_ID,
+      generated_post_id: GENERATED_POST_ID,
+      parent_image_id: IMAGE_ID,
+      regeneration_sequence: 1,
+      status: "completed",
+      safety_status: "approved",
+      is_ai_generated: true,
+      review_required: true,
+      created_at: "2026-11-03T09:08:00Z",
+    });
+  }
+  const requestedImageId = [IMAGE_ID, REGENERATED_IMAGE_ID].find(
+    (imageId) => url.pathname === `/api/images/${imageId}/content`,
+  );
+  if (method === "GET" && requestedImageId) {
     recordMetric("imageContent");
     if (!requireAuthentication(request, response)) return;
     response.writeHead(200, { "Cache-Control": "private, no-store", "Content-Type": "image/png" });
     return response.end(png);
   }
-  if (method === "GET" && url.pathname === `/api/images/${IMAGE_ID}/download`) {
+  const downloadedImageId = [IMAGE_ID, REGENERATED_IMAGE_ID].find(
+    (imageId) => url.pathname === `/api/images/${imageId}/download`,
+  );
+  if (method === "GET" && downloadedImageId) {
     recordMetric("imageDownload");
     if (!requireAuthentication(request, response)) return;
     response.writeHead(200, {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `attachment; filename="newsflow-ai-illustration-${IMAGE_ID}.png"`,
+      "Content-Disposition": `attachment; filename="newsflow-ai-illustration-${downloadedImageId}.png"`,
       "Content-Type": "image/png",
     });
     return response.end(png);
@@ -416,5 +438,5 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  process.stdout.write(`NFA-80 deterministic mock API listening on ${PORT}\n`);
+  process.stdout.write(`NewsFlow AI deterministic mock API listening on ${PORT}\n`);
 });
