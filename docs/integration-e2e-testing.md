@@ -33,7 +33,7 @@ The browser suite verifies:
 - synthetic article browsing and selection;
 - mocked LinkedIn draft generation;
 - live draft editing and preview;
-- mocked illustration generation and selection;
+- mocked illustration generation, regeneration, original-version retention, and selection;
 - durable save through the Next.js gateway contract;
 - saved-draft reopening with text and selected image;
 - clipboard copy and private image download;
@@ -68,13 +68,14 @@ The primary scenario executes these user-visible steps:
 3. Select an article and review its attribution.
 4. Request a deterministic mocked LinkedIn draft.
 5. Edit the draft and confirm the preview changes.
-6. Request and select a deterministic mocked illustration.
-7. Save the reviewed text and selected image to the private library.
-8. Reopen the saved draft and verify its text and image.
-9. Copy the current edited text.
-10. Download the private image through the same-origin gateway.
-11. Confirm deletion.
-12. Verify the draft disappears and the library returns to its empty state.
+6. Request a deterministic mocked illustration.
+7. Regenerate the illustration, verify the original remains available, and select the new version.
+8. Save the reviewed text and selected image to the private library.
+9. Reopen the saved draft and verify its text and selected regenerated image.
+10. Copy the current edited text.
+11. Download the private image through the same-origin gateway.
+12. Confirm deletion.
+13. Verify the draft disappears and the library returns to its empty state.
 
 No step publishes to LinkedIn.
 

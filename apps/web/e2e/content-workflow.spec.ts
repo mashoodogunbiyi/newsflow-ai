@@ -26,6 +26,12 @@ test("completes article-to-generation-to-private-library lifecycle", async ({ co
   await page.getByRole("button", { name: "Generate image" }).click();
   await expect(page.getByText("Your private illustration is ready for review.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Regenerate image" })).toBeVisible();
+  await page.getByRole("button", { name: "Regenerate image" }).click();
+  await expect(page.getByRole("radio", { name: "Use original in preview" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Use version 2 in preview" })).toBeChecked();
+  await expect(page.getByRole("textbox", { name: "LinkedIn draft text" })).toHaveValue(
+    reviewedText,
+  );
 
   await page.getByRole("button", { name: "Save to library" }).click();
   await expect(page).toHaveURL(/\/library\/50000000-0000-4000-8000-000000000005$/);

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, the NFA-76 API security hardening checks, the NFA-77 integration and browser workflows, the NFA-78 grounding and content-safety evaluation, the NFA-79 reliability and failure-recovery framework, and the NFA-80 performance and accessibility verification.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, the NFA-76 API security hardening checks, the NFA-77 integration and browser workflows, the NFA-78 grounding and content-safety evaluation, the NFA-79 reliability and failure-recovery framework, the NFA-80 performance and accessibility verification, and the NFA-81 controlled UAT environment rehearsal.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -989,6 +989,27 @@ npm run performance:bundle
 
 The Playwright configuration builds and serves the production Next.js application. The test API uses only synthetic content and mocked provider behaviour. Local results are regression evidence, not production latency claims. See [the NFA-80 report](performance-accessibility-verification.md) for targets, measurements, database review, defect evidence, and remaining release gates.
 
+## NFA-81 UAT environment rehearsal
+
+NFA-81 is a human acceptance activity, so automated checks cannot produce participant feedback or approve the product. Automation is used only to prove that the controlled environment is ready for participants.
+
+| UAT prerequisite                                      | Technical evidence                                                     |
+| ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| Synthetic authentication and article catalogue        | Existing Playwright authentication and workflow scenarios              |
+| Mocked draft and illustration generation              | `apps/web/e2e/content-workflow.spec.ts`                                |
+| Image regeneration with original-version preservation | Expanded `content-workflow.spec.ts` and deterministic mock child image |
+| Save, reopen, copy, download, and delete              | `apps/web/e2e/content-workflow.spec.ts`                                |
+| Controlled provider failure                           | `apps/web/e2e/failure-and-ownership.spec.ts`                           |
+| No live CNN or OpenAI dependency                      | Local `e2e/support/mock-api.mjs` contract boundary                     |
+
+Run the technical rehearsal from `apps/web`:
+
+```bash
+npm run test:e2e
+```
+
+The human plan, participant instructions, scenario script, result record, feedback questionnaire, defect register, and acceptance decision are in [the NFA-81 UAT package](user-acceptance-testing.md). A passing Playwright run means the test environment is ready; it does not mean UAT has passed.
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -1177,9 +1198,13 @@ Verified locally through 4 November 2026:
 - The NFA-80 browser audit found and resolved one serious source-link accessible-name mismatch. The updated component test and full browser axe check protect the corrected label.
 - The complete NFA-80 backend run passed 485 tests, skipped 16 safety-gated tests, deselected the optional live-model test, and measured 79.10 percent branch-aware coverage. The complete frontend component run passed 167 tests across 35 files, and the complete Playwright run passed all 13 Chromium scenarios.
 - NFA-80 used synthetic content and mocked providers. PostgreSQL query plans, deployment-like Lighthouse measurements, and human VoiceOver verification remain explicit release gates rather than invented local results.
+- The NFA-81 frontend component run passed 167 tests across 35 files. ESLint, Prettier, strict TypeScript, mock-server syntax validation, and the production build used by Playwright passed.
+- The expanded NFA-81 Playwright run passed all 13 Chromium scenarios. The primary workflow regenerated an illustration, retained the original version, selected Version 2, preserved the human-edited draft, and completed save, reopen, copy, private download, and deletion.
+- The NFA-80 production bundle guardrail remained within budget at 1,041,667 raw bytes and 326,988 gzip bytes across 42 JavaScript files. The project secret scan also passed.
+- NFA-81 used synthetic accounts, article metadata, draft text, images, and mocked provider responses. These results prove that the controlled UAT environment is ready; they do not replace participant sessions, feedback, defect review, retesting, or product acceptance.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, and NFA-80
-- Implementation status: Ready for review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, and NFA-81
+- Implementation status: UAT package ready for human execution
 - Approval status: Pending Mashood Ogunbiyi's review
