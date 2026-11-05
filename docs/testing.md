@@ -1010,6 +1010,17 @@ npm run test:e2e
 
 The human plan, participant instructions, scenario script, result record, feedback questionnaire, defect register, and acceptance decision are in [the NFA-81 UAT package](user-acceptance-testing.md). A passing Playwright run means the test environment is ready; it does not mean UAT has passed.
 
+## NFA-82 release-readiness review
+
+NFA-82 consolidates the existing E0 to E8 evidence rather than introducing another product test layer. Its evidence baseline is main commit `29e94c69a1709ea3e78574869c6fdc712cd05241`.
+
+[GitHub Actions quality run 104](https://github.com/mashoodogunbiyi/newsflow-ai/actions/runs/41945748020) completed successfully on 5 November 2026. Both jobs passed:
+
+- the backend job ran secret and dependency scans, Ruff, the coverage-enforced suite, AI safety, reliability, performance, and isolated PostgreSQL article, catalogue, image, and saved-content tests; and
+- the frontend job ran its production dependency audit, ESLint, Prettier, route types, strict TypeScript, 167 component tests, 13 Chromium scenarios, the production build, and the bundle budget.
+
+The passing run supports a Conditional Go only for packaging and a controlled local synthetic-data demonstration. It does not complete human UAT, production security controls, staging measurements, VoiceOver review, CNN authorisation, or owner sign-off. See [the NFA-82 release-readiness report](release-readiness-quality-signoff.md).
+
 ## Run the frontend suite
 
 Run from `apps/web`:
@@ -1202,9 +1213,11 @@ Verified locally through 4 November 2026:
 - The expanded NFA-81 Playwright run passed all 13 Chromium scenarios. The primary workflow regenerated an illustration, retained the original version, selected Version 2, preserved the human-edited draft, and completed save, reopen, copy, private download, and deletion.
 - The NFA-80 production bundle guardrail remained within budget at 1,041,667 raw bytes and 326,988 gzip bytes across 42 JavaScript files. The project secret scan also passed.
 - NFA-81 used synthetic accounts, article metadata, draft text, images, and mocked provider responses. These results prove that the controlled UAT environment is ready; they do not replace participant sessions, feedback, defect review, retesting, or product acceptance.
+- GitHub Actions run 104 passed both complete quality jobs against the NFA-81 merge commit. The run includes the backend, frontend, isolated PostgreSQL, browser, security, dependency, AI safety, reliability, performance, accessibility, build, and bundle checks required by the current workflow.
+- NFA-82 records Conditional Go for a controlled local synthetic-data demonstration only. Public release, production use, live CNN integration, and any claim of completed UAT or full accessibility acceptance remain blocked.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, and NFA-81
-- Implementation status: UAT package ready for human execution
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, and NFA-82
+- Implementation status: NFA-82 report ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review
