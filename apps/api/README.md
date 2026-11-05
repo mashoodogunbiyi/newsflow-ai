@@ -1,6 +1,6 @@
 # NewsFlow AI API
 
-This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step. NFA-76 inventories and hardens the complete API surface with bounded JSON bodies, consistent security headers, safer external URLs, secret scanning, dependency auditing, and focused regression tests.
+This directory contains NewsFlow AI's Python FastAPI backend. NFA-13 to NFA-17 establish the application, PostgreSQL, configuration, Docker, and quality foundations. NFA-21 adds SQLAlchemy, Alembic migrations, and synthetic seed data. NFA-22 to NFA-26 add the secure account lifecycle, object-level authorisation, regression coverage, and automated pull-request checks. NFA-28 to NFA-32 add the fixture-first provider boundary, validation, identity, provenance, and rights controls. NFA-33 adds durable article synchronisation. NFA-34 adds the authenticated article catalogue REST API. NFA-35 adds safe structured ingestion logs, operational metrics, protected status endpoints, and configurable health indicators. NFA-36 adds reusable synthetic fixtures and a complete isolated provider-to-PostgreSQL-to-REST pipeline test. NFA-38 adds a secure, reusable, and mocked OpenAI Responses API service. NFA-39 adds versioned, rights-aware, source-grounded LinkedIn prompt construction. NFA-40 adds authenticated, rate-limited generation orchestration, strict output validation, and private draft persistence. NFA-41 adds the documented frontend-facing `POST /api/generations` REST contract with a minimal public response and safe HTTP failure mapping. NFA-42 adds deterministic factual-grounding evaluation, safe warnings, trusted source-reference checks, and persisted validation evidence. NFA-43 adds shared daily and concurrent usage limits, active duplicate protection, safe failure statuses, token tracking, and operational guidance. NFA-45 adds content-free request lifecycle auditing, aggregate generation metrics, retention, and administrator-only inspection. NFA-46 documents and verifies the complete joined E4 request path and prepares the exact E6 integration contract. NFA-48 adds a reusable, rights-aware, versioned image-prompt composer with controlled illustration and layout choices. NFA-49 adds the central pre-provider sensitive-news image safety policy and content-free decision recording boundary. NFA-58 extends the article catalogue with validated category filtering applied before pagination. NFA-59 adds a safe current generation-readiness result to protected article detail responses for the frontend source-review step. NFA-76 inventories and hardens the complete API surface with bounded JSON bodies, consistent security headers, safer external URLs, secret scanning, dependency auditing, and focused regression tests. NFA-84 packages the installed application in a multi-stage, non-root runtime image and verifies automatic migrations, readiness, restarts, and persistence.
 
 NFA-50 adds the official OpenAI Images API boundary, current-model configuration, enforced rights and safety inputs, controlled output settings, response validation, safe errors, bounded rate-limit retries, duplicate protection, usage metadata, and fully mocked tests. NFA-67 adds transactional, owner-scoped saved-draft creation and updates with original-generation lineage, immutable manual versions, optional approved-image selection, idempotency, and stale-write protection. NFA-68 completes the backend content-library contract with owner-only listing and retrieval, bounded stable pagination, safe selected-image metadata, partial updates, OpenAPI documentation, and expanded automated evidence.
 
@@ -94,60 +94,60 @@ Do not add real credentials to `.env.example`, source code, browser code, docume
 
 ### Configuration reference
 
-| Variable | Required | Sensitive | Purpose |
-|---|---|---|---|
-| `APP_ENV` | No | No | Selects `development`, `test`, `staging`, or `production`; defaults to `development`. |
-| `LOG_LEVEL` | No | No | Minimum application level: `DEBUG`, `INFO`, `WARNING`, or `ERROR`; defaults to `INFO`. |
-| `LOG_FORMAT` | No | No | Structured `json` or readable structured `console`; defaults to `json`. |
-| `NEWS_SOURCE_MODE` | No | No | Defaults to `disabled`; local development explicitly selects the approved `fixture` provider. |
-| `FRONTEND_ORIGIN` | No | No | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
-| `DATABASE_URL` | Yes at API startup | Yes | PostgreSQL connection string containing the database credentials. |
-| `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | No | Database connection timeout from 1 to 30 seconds; defaults to 5. |
-| `API_MAX_REQUEST_BODY_BYTES` | No | No | Maximum JSON request body from 1 KiB to 10 MiB; defaults to 1 MiB. |
-| `REGISTRATION_RATE_LIMIT_ATTEMPTS` | No | No | Maximum registration requests per client and window; defaults to 5. |
-| `REGISTRATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | Registration rate-limit window; defaults to 60 seconds. |
-| `LOGIN_RATE_LIMIT_ATTEMPTS` | No | No | Maximum login requests per client and window; defaults to 5. |
-| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | No | Login rate-limit window; defaults to 60 seconds. |
-| `SESSION_LIFETIME_MINUTES` | No | No | Absolute authenticated-session lifetime; defaults to 60 minutes. |
-| `ARTICLE_SYNC_INTERVAL_SECONDS` | No | No | Durable scheduled interval; defaults to four hours. |
-| `ARTICLE_SYNC_PAGE_SIZE` | No | No | Provider page size from 1 to 100; defaults to 50. |
-| `ARTICLE_SYNC_MAX_RETRIES` | No | No | Extra attempts for retryable provider failures; defaults to 2. |
-| `ARTICLE_SYNC_RETRY_BASE_SECONDS` | No | No | Initial exponential-backoff delay; defaults to 1 second. |
-| `ARTICLE_SYNC_LEASE_SECONDS` | No | No | Active worker lease duration; defaults to 300 seconds. |
-| `MANUAL_SYNC_RATE_LIMIT_ATTEMPTS` | No | No | Manual triggers per administrator and window; defaults to 2. |
-| `MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS` | No | No | Manual trigger rate-limit window; defaults to 60 seconds. |
-| `GENERATION_RATE_LIMIT_ATTEMPTS` | No | No | LinkedIn generation requests per authenticated user and window; defaults to 10. |
-| `GENERATION_RATE_LIMIT_WINDOW_SECONDS` | No | No | LinkedIn generation rate-limit window; defaults to 60 seconds. |
-| `GENERATION_DAILY_LIMIT` | No | No | Shared provider-bound attempts per user and UTC day; defaults to 50. |
-| `GENERATION_CONCURRENT_LIMIT` | No | No | Shared active attempts per user; defaults to 2. |
-| `GENERATION_ATTEMPT_TIMEOUT_SECONDS` | No | No | Active-attempt lease before recovery; defaults to 180 seconds. |
-| `GENERATION_USAGE_RETENTION_DAYS` | No | No | Completed usage-evidence retention; defaults to 90 days. |
-| `GENERATION_AUDIT_RETENTION_DAYS` | No | No | Content-free audit-event retention; defaults to 90 days. |
-| `GENERATION_MONITORING_WINDOW_HOURS` | No | No | Default administrator metrics window from 1 to 168 hours; defaults to 24. |
-| `INGESTION_METRICS_ENABLED` | No | No | Enables ingestion aggregate calculation; defaults to `true`. |
-| `INGESTION_METRICS_WINDOW_HOURS` | No | No | Default metrics window from 1 to 168 hours; defaults to 24. |
-| `INGESTION_FAILURE_THRESHOLD` | No | No | Consecutive failures before critical health; defaults to 3. |
-| `INGESTION_SUCCESS_STALE_SECONDS` | No | No | Maximum time since a successful sync; defaults to 21600 seconds. |
-| `INGESTION_LONG_RUNNING_SECONDS` | No | No | Active-job runtime warning threshold; defaults to 600 seconds. |
-| `INGESTION_REJECTION_RATE_PERCENT` | No | No | Recent rejection-rate warning threshold; defaults to 25 percent. |
-| `SEED_DATA_ENABLED` | No | No | Explicit safety switch for synthetic development seeding; defaults to `false`. |
-| `OPENAI_API_KEY` | Yes for OpenAI features | Yes | Authenticates server-side OpenAI API requests. |
-| `OPENAI_MODEL` | Yes for OpenAI features | No | Selects an approved model without hard-coding it in service code. |
-| `OPENAI_REQUEST_TIMEOUT` | No | No | OpenAI request timeout from 1 to 300 seconds; defaults to 30. |
-| `OPENAI_MAX_OUTPUT_TOKENS` | No | No | Maximum generated output from 1 to 100000 tokens; defaults to 800. |
-| `OPENAI_MAX_RETRIES` | No | No | Extra SDK attempts for eligible temporary failures from 0 to 5; defaults to 2. |
-| `OPENAI_IMAGE_MODEL` | Yes for image generation | No | Reviewed GPT Image model; defaults to `gpt-image-2.5-flare`. |
-| `IMAGE_GENERATION_TIMEOUT` | No | No | Image request deadline from 1 to 300 seconds; defaults to 120. |
-| `IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS` | No | No | Per-process image calls from 1 to 10; defaults to 2. |
-| `IMAGE_GENERATION_MAX_RETRIES` | No | No | Extra explicit rate-limit attempts from 0 to 2; defaults to 1. |
-| `IMAGE_GENERATION_RETRY_BASE_SECONDS` | No | No | Bounded retry fallback delay; defaults to 1 second. |
-| `IMAGE_GENERATION_MAX_RESPONSE_BYTES` | No | No | Maximum accepted inline image size; defaults to 25 MiB. |
-| `IMAGE_GENERATION_DUPLICATE_CACHE_SIZE` | No | No | Per-process completed request cache; defaults to 100. |
-| `IMAGE_STORAGE_BACKEND` | No | No | Private storage adapter; only `local` is approved for development and test. |
-| `IMAGE_STORAGE_LOCAL_ROOT` | No | No | Ignored private local root; defaults to `.local/image-storage`. |
-| `IMAGE_STORAGE_MAX_BYTES` | No | No | Maximum file accepted for storage; defaults to 10 MiB. |
-| `IMAGE_STORAGE_MAX_PIXELS` | No | No | Maximum decoded pixel count; defaults to 4,000,000. |
-| `NEXT_PUBLIC_API_BASE_URL` | No | No | Public URL used by the frontend to reach the backend. Never place credentials here. |
+| Variable                                   | Required                 | Sensitive | Purpose                                                                                         |
+| ------------------------------------------ | ------------------------ | --------- | ----------------------------------------------------------------------------------------------- |
+| `APP_ENV`                                  | No                       | No        | Selects `development`, `test`, `staging`, or `production`; defaults to `development`.           |
+| `LOG_LEVEL`                                | No                       | No        | Minimum application level: `DEBUG`, `INFO`, `WARNING`, or `ERROR`; defaults to `INFO`.          |
+| `LOG_FORMAT`                               | No                       | No        | Structured `json` or readable structured `console`; defaults to `json`.                         |
+| `NEWS_SOURCE_MODE`                         | No                       | No        | Defaults to `disabled`; local development explicitly selects the approved `fixture` provider.   |
+| `FRONTEND_ORIGIN`                          | No                       | No        | Exact browser origin allowed to call the API with cookies; defaults to `http://localhost:3000`. |
+| `DATABASE_URL`                             | Yes at API startup       | Yes       | PostgreSQL connection string containing the database credentials.                               |
+| `DATABASE_CONNECT_TIMEOUT_SECONDS`         | No                       | No        | Database connection timeout from 1 to 30 seconds; defaults to 5.                                |
+| `API_MAX_REQUEST_BODY_BYTES`               | No                       | No        | Maximum JSON request body from 1 KiB to 10 MiB; defaults to 1 MiB.                              |
+| `REGISTRATION_RATE_LIMIT_ATTEMPTS`         | No                       | No        | Maximum registration requests per client and window; defaults to 5.                             |
+| `REGISTRATION_RATE_LIMIT_WINDOW_SECONDS`   | No                       | No        | Registration rate-limit window; defaults to 60 seconds.                                         |
+| `LOGIN_RATE_LIMIT_ATTEMPTS`                | No                       | No        | Maximum login requests per client and window; defaults to 5.                                    |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS`          | No                       | No        | Login rate-limit window; defaults to 60 seconds.                                                |
+| `SESSION_LIFETIME_MINUTES`                 | No                       | No        | Absolute authenticated-session lifetime; defaults to 60 minutes.                                |
+| `ARTICLE_SYNC_INTERVAL_SECONDS`            | No                       | No        | Durable scheduled interval; defaults to four hours.                                             |
+| `ARTICLE_SYNC_PAGE_SIZE`                   | No                       | No        | Provider page size from 1 to 100; defaults to 50.                                               |
+| `ARTICLE_SYNC_MAX_RETRIES`                 | No                       | No        | Extra attempts for retryable provider failures; defaults to 2.                                  |
+| `ARTICLE_SYNC_RETRY_BASE_SECONDS`          | No                       | No        | Initial exponential-backoff delay; defaults to 1 second.                                        |
+| `ARTICLE_SYNC_LEASE_SECONDS`               | No                       | No        | Active worker lease duration; defaults to 300 seconds.                                          |
+| `MANUAL_SYNC_RATE_LIMIT_ATTEMPTS`          | No                       | No        | Manual triggers per administrator and window; defaults to 2.                                    |
+| `MANUAL_SYNC_RATE_LIMIT_WINDOW_SECONDS`    | No                       | No        | Manual trigger rate-limit window; defaults to 60 seconds.                                       |
+| `GENERATION_RATE_LIMIT_ATTEMPTS`           | No                       | No        | LinkedIn generation requests per authenticated user and window; defaults to 10.                 |
+| `GENERATION_RATE_LIMIT_WINDOW_SECONDS`     | No                       | No        | LinkedIn generation rate-limit window; defaults to 60 seconds.                                  |
+| `GENERATION_DAILY_LIMIT`                   | No                       | No        | Shared provider-bound attempts per user and UTC day; defaults to 50.                            |
+| `GENERATION_CONCURRENT_LIMIT`              | No                       | No        | Shared active attempts per user; defaults to 2.                                                 |
+| `GENERATION_ATTEMPT_TIMEOUT_SECONDS`       | No                       | No        | Active-attempt lease before recovery; defaults to 180 seconds.                                  |
+| `GENERATION_USAGE_RETENTION_DAYS`          | No                       | No        | Completed usage-evidence retention; defaults to 90 days.                                        |
+| `GENERATION_AUDIT_RETENTION_DAYS`          | No                       | No        | Content-free audit-event retention; defaults to 90 days.                                        |
+| `GENERATION_MONITORING_WINDOW_HOURS`       | No                       | No        | Default administrator metrics window from 1 to 168 hours; defaults to 24.                       |
+| `INGESTION_METRICS_ENABLED`                | No                       | No        | Enables ingestion aggregate calculation; defaults to `true`.                                    |
+| `INGESTION_METRICS_WINDOW_HOURS`           | No                       | No        | Default metrics window from 1 to 168 hours; defaults to 24.                                     |
+| `INGESTION_FAILURE_THRESHOLD`              | No                       | No        | Consecutive failures before critical health; defaults to 3.                                     |
+| `INGESTION_SUCCESS_STALE_SECONDS`          | No                       | No        | Maximum time since a successful sync; defaults to 21600 seconds.                                |
+| `INGESTION_LONG_RUNNING_SECONDS`           | No                       | No        | Active-job runtime warning threshold; defaults to 600 seconds.                                  |
+| `INGESTION_REJECTION_RATE_PERCENT`         | No                       | No        | Recent rejection-rate warning threshold; defaults to 25 percent.                                |
+| `SEED_DATA_ENABLED`                        | No                       | No        | Explicit safety switch for synthetic development seeding; defaults to `false`.                  |
+| `OPENAI_API_KEY`                           | Yes for OpenAI features  | Yes       | Authenticates server-side OpenAI API requests.                                                  |
+| `OPENAI_MODEL`                             | Yes for OpenAI features  | No        | Selects an approved model without hard-coding it in service code.                               |
+| `OPENAI_REQUEST_TIMEOUT`                   | No                       | No        | OpenAI request timeout from 1 to 300 seconds; defaults to 30.                                   |
+| `OPENAI_MAX_OUTPUT_TOKENS`                 | No                       | No        | Maximum generated output from 1 to 100000 tokens; defaults to 800.                              |
+| `OPENAI_MAX_RETRIES`                       | No                       | No        | Extra SDK attempts for eligible temporary failures from 0 to 5; defaults to 2.                  |
+| `OPENAI_IMAGE_MODEL`                       | Yes for image generation | No        | Reviewed GPT Image model; defaults to `gpt-image-2.5-flare`.                                    |
+| `IMAGE_GENERATION_TIMEOUT`                 | No                       | No        | Image request deadline from 1 to 300 seconds; defaults to 120.                                  |
+| `IMAGE_GENERATION_MAX_CONCURRENT_REQUESTS` | No                       | No        | Per-process image calls from 1 to 10; defaults to 2.                                            |
+| `IMAGE_GENERATION_MAX_RETRIES`             | No                       | No        | Extra explicit rate-limit attempts from 0 to 2; defaults to 1.                                  |
+| `IMAGE_GENERATION_RETRY_BASE_SECONDS`      | No                       | No        | Bounded retry fallback delay; defaults to 1 second.                                             |
+| `IMAGE_GENERATION_MAX_RESPONSE_BYTES`      | No                       | No        | Maximum accepted inline image size; defaults to 25 MiB.                                         |
+| `IMAGE_GENERATION_DUPLICATE_CACHE_SIZE`    | No                       | No        | Per-process completed request cache; defaults to 100.                                           |
+| `IMAGE_STORAGE_BACKEND`                    | No                       | No        | Private storage adapter; only `local` is approved for development and test.                     |
+| `IMAGE_STORAGE_LOCAL_ROOT`                 | No                       | No        | Ignored private local root; defaults to `.local/image-storage`.                                 |
+| `IMAGE_STORAGE_MAX_BYTES`                  | No                       | No        | Maximum file accepted for storage; defaults to 10 MiB.                                          |
+| `IMAGE_STORAGE_MAX_PIXELS`                 | No                       | No        | Maximum decoded pixel count; defaults to 4,000,000.                                             |
+| `NEXT_PUBLIC_API_BASE_URL`                 | No                       | No        | Public URL used by the frontend to reach the backend. Never place credentials here.             |
 
 Operating rules:
 
@@ -635,16 +635,16 @@ See the [NFA-51 secure generated-image storage guide](../../docs/image-storage.m
 
 ## Run with Docker Compose
 
-NFA-16 adds a backend development image and runs it with the frontend and PostgreSQL from the root `compose.yaml` file. From the repository root:
+NFA-84 finalises the backend as a multi-stage Python 3.12 slim image. It installs the application and runtime dependencies in a build stage, copies the prepared virtual environment and Alembic files into the runtime stage, and runs Uvicorn as a non-root user. From the repository root:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build --detach --wait
 ```
 
-Replace the PostgreSQL placeholders in `.env` before starting. Compose supplies a container-specific database URL that uses `database` as the PostgreSQL hostname. The backend waits for PostgreSQL to become healthy, performs its own startup connection check, and then exposes its health and readiness endpoints on `http://localhost:8000`.
+Replace the PostgreSQL placeholders in `.env` before starting. Compose supplies a container-specific database URL that uses `database` as the PostgreSQL hostname. A one-shot service applies all Alembic migrations before the backend starts. The backend then performs its own startup connection check and exposes liveness and readiness endpoints on `http://localhost:8000`.
 
-Use `docker compose down` for a normal shutdown. The PostgreSQL named volume remains available for the next startup. See the [complete Docker development guide](../../infrastructure/docker/README.md) for configuration, service checks, logs, persistence, and troubleshooting.
+Use `docker compose down` for a normal shutdown. The PostgreSQL and private-image named volumes remain available for the next startup. See the [complete Docker development guide](../../infrastructure/docker/README.md) and [NFA-84 verification record](../../docs/docker-packaging.md) for configuration, service checks, logs, persistence, security controls, and troubleshooting.
 
 ## Database migrations and seed data
 
@@ -855,7 +855,7 @@ Ruff checks Python syntax errors, undefined names, import ordering, modern Pytho
 
 ```text
 apps/api/
-|-- Dockerfile                  # FastAPI development image
+|-- Dockerfile                  # Multi-stage non-root FastAPI runtime image
 |-- .dockerignore               # Files excluded from the image build context
 |-- app/
 |   |-- api/routes/health.py    # GET /health

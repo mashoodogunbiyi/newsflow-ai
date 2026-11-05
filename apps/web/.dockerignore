@@ -5,6 +5,10 @@ dist
 coverage
 .turbo
 .npm
+e2e
+__tests__
+playwright-report
+test-results
 *.tsbuildinfo
 npm-debug.log*
 .env
@@ -12,3 +16,5 @@ npm-debug.log*
 !.env.example
 *.pem
 *.key
+.git
+.gitignore

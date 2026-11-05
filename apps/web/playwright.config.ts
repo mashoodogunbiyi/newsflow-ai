@@ -27,10 +27,12 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: "npm run build && npm run start -- --hostname 127.0.0.1 --port 3100",
+      command: "npm run build && npm run start",
       env: {
         API_INTERNAL_BASE_URL: "http://127.0.0.1:4100",
+        HOSTNAME: "127.0.0.1",
         NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:4100",
+        PORT: "3100",
       },
       port: 3100,
       reuseExistingServer: !process.env.CI,

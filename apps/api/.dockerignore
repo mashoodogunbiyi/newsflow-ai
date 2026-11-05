@@ -8,8 +8,13 @@ __pycache__
 htmlcov
 build
 *.egg-info
+tests
+evaluations
+.local
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+.git
+.gitignore

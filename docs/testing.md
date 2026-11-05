@@ -1078,10 +1078,11 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 ## GitHub quality checks
 
-When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs two independent jobs:
+When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs three independent jobs:
 
 - Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the deterministic NFA-78 content-safety evaluation, run the focused NFA-79 reliability suite, run the NFA-80 performance guardrails with visible measurements, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 and NFA-68 saved-draft and content-library proof against `newsflow_saved_draft_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, build and serve production Next.js for deterministic Playwright browser tests, and enforce the NFA-80 production JavaScript budget.
+- Docker packaging: build the frontend and backend images, migrate a fresh isolated PostgreSQL database, verify health and non-root users, exercise container restarts and a clean stop/start, and prove named-volume database persistence before automatic cleanup.
 
 The NFA-36, NFA-58, NFA-54, NFA-67, and NFA-68 workflow steps receive test-only credentials and reset permission only for their short-lived service databases. Other destructive PostgreSQL modules keep their separate safety-gated database names and remain opt-in.
 
@@ -1215,9 +1216,14 @@ Verified locally through 4 November 2026:
 - NFA-81 used synthetic accounts, article metadata, draft text, images, and mocked provider responses. These results prove that the controlled UAT environment is ready; they do not replace participant sessions, feedback, defect review, retesting, or product acceptance.
 - GitHub Actions run 104 passed both complete quality jobs against the NFA-81 merge commit. The run includes the backend, frontend, isolated PostgreSQL, browser, security, dependency, AI safety, reliability, performance, accessibility, build, and bundle checks required by the current workflow.
 - NFA-82 records Conditional Go for a controlled local synthetic-data demonstration only. Public release, production use, live CNN integration, and any claim of completed UAT or full accessibility acceptance remain blocked.
+- The NFA-84 clean Docker build and lifecycle verification passed on 5 November 2026. It rejected missing database configuration, built multi-stage runtime images, applied all migrations through `20261102_0015`, started healthy frontend, backend, and PostgreSQL services, verified non-root application users, preserved a database marker through restart and stop/start, and removed isolated test containers, networks, volumes, and local images afterward.
+- The NFA-84 clean build measured uncompressed Apple Silicon images of 308 MB for the standalone Next.js runtime, 472 MB for the installed FastAPI runtime, and 411 MB for the official PostgreSQL 16 Alpine image.
+- The first NFA-84 clean run correctly failed because the packaged backend command used a source-file path that is absent from the installed runtime image. The command now loads `app.main:app` through Uvicorn, and the complete lifecycle passes without adding the source tree back to the runtime image.
+- The NFA-84 standalone frontend run initially exposed the outdated `next start` command and missing local standalone asset preparation. The final `prestart` step prepares public and static assets, the packaged server starts without the configuration warning, and all 13 Chromium journeys pass.
+- NFA-84 tests use only synthetic database settings, fixture mode, isolated ports, and disposable volumes. They do not read the developer's `.env`, make a live OpenAI or CNN request, or publish an external service.
 
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, and NFA-82
-- Implementation status: NFA-82 report ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, and NFA-84
+- Implementation status: NFA-84 Docker package ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review
