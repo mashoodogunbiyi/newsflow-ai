@@ -1268,8 +1268,31 @@ python3 scripts/scan_secrets.py
 git diff --check
 ```
 
+## NFA-89 technical report and portfolio case-study verification
+
+The NFA-89 documentation package converts the implemented architecture, requirements, data model, source pipeline, AI controls, security, testing, challenges, results and limitations into a long-form technical report and a concise recruiter-facing case study.
+
+Verified results on 6 November 2026:
+
+- The normal deterministic backend run passed 489 tests, skipped 16 safety-gated tests, and deselected the optional live-model test.
+- The NFA-78 runner and focused test passed 9 tests across the committed baseline of 10 grounding cases, 7 image-safety cases and 12 evaluated claims; every predefined deterministic percentage remained 100 percent.
+- The current frontend component baseline passed 173 tests across 36 files.
+- The current Playwright baseline passed all 13 Chromium scenarios.
+- `verify_technical_report.py` checks the report structure, case-study structure, local links, GitHub links, all four screenshot files, framework versions, 15 migrations, fail-closed provider factory, Argon2id boundary, generation options, evaluation metrics, README links, CI integration, unsupported claims and normal ASCII hyphens.
+- The report distinguishes current local results from the older CI coverage baseline and from production performance claims.
+- Live CNN integration, automatic LinkedIn publishing and public production release remain explicitly unimplemented.
+
+Run the focused NFA-89 checks from the repository root:
+
+```bash
+python3 scripts/verify_technical_report.py
+python3 scripts/verify_readme_documentation.py
+python3 scripts/scan_secrets.py
+git diff --check
+```
+
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, and NFA-87
-- Implementation status: NFA-87 professional README and developer-documentation package ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, NFA-87, NFA-88, and NFA-89
+- Implementation status: NFA-89 technical report and portfolio case study ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review

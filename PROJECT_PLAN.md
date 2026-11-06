@@ -299,7 +299,7 @@ The IDs below are stable planning IDs and should be copied into Jira labels or a
 - [ ] **T9.3 — Finalise CI/CD release gates.** Require tests, builds, scans, migration validation, environment approval, and tagged/versioned artifacts.
 - [ ] **T9.4 — Complete the README.** Add prerequisites, installation, configuration, local run, test, troubleshooting, architecture, limitations, and licensing instructions.
 - [ ] **T9.5 — Publish API and schema documentation.** Ensure OpenAPI reflects real endpoints and provide data-model and error-code notes.
-- [ ] **T9.6 — Write the technical report.** Explain architecture, authorised source method, AI grounding, image safety, key decisions, testing, limitations, and future work.
+- [x] **T9.6 — Write the technical report.** Explain architecture, authorised source method, AI grounding, image safety, key decisions, testing, limitations, and future work.
 - [ ] **T9.7 — Prepare and rehearse the demonstration.** Cover sign-in, article discovery, generation choices, grounded post, image, edit, save, history, export, and one handled failure.
 - [ ] **T9.8 — Release and verify.** Apply migrations, run smoke tests, verify monitoring/backups, record the release version, and keep rollback ready.
 - [ ] **T9.9 — Close the project.** Archive evidence, capture known issues and lessons learned, transfer ownership, and convert deferred work into a prioritised backlog.

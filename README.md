@@ -314,6 +314,7 @@ python3 scripts/scan_secrets.py
 python3 scripts/verify_architecture_documentation.py
 python3 scripts/verify_deployment_documentation.py
 python3 scripts/verify_demonstration_package.py
+python3 scripts/verify_technical_report.py
 python3 scripts/verify_readme_documentation.py
 git diff --check
 ```
@@ -335,6 +336,12 @@ npm run demo
 Open [http://127.0.0.1:3100](http://127.0.0.1:3100). The terminal prints the mock-only account and approved synthetic article URL. These public fixture credentials work only with the loopback demonstration API and are not application, database or provider secrets.
 
 The [complete demonstration package](docs/demonstration/README.md) contains the presenter script, architecture talking points, rehearsal checklist, fallback plan, screenshots, verification evidence and honest limitations. A real OpenAI key is optional for the integrated Docker environment and is deliberately not read by this reliable mock demonstration.
+
+## Technical report and portfolio case study
+
+The [technical report](docs/technical-report.md) explains the project background, requirements, architecture, database, ingestion pipeline, provenance, text and image generation, authentication, content lifecycle, testing, challenges, decisions, results and limitations.
+
+The shorter [portfolio case study](docs/portfolio-case-study.md) presents the same verified work for technical recruiters and hiring managers. It highlights the implemented software engineering, data engineering, AI integration, security, testing, Docker, Git, CI and Jira experience without claiming live CNN access or a production deployment.
 
 ## API documentation
 
@@ -425,6 +432,7 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 | Saved-content lifecycle, export and deletion                    | Implemented and tested                                        |
 | Security, reliability, accessibility and performance automation | Implemented with documented manual and production limitations |
 | Architecture and developer documentation                        | Implemented                                                   |
+| Technical report and portfolio case study                       | Implemented and verified                                      |
 | Controlled local synthetic-data demonstration                   | Package prepared; manual rehearsal and owner acceptance pending |
 | Live CNN integration                                            | No-Go                                                         |
 | Public production release                                       | No-Go                                                         |
@@ -446,6 +454,8 @@ Detailed evidence is available in the [testing guide](docs/testing.md), [release
 | [Operations runbook](docs/deployment/operations-runbook.md)               | Health, monitoring, maintenance and incidents              |
 | [Backup and recovery](docs/deployment/backup-and-recovery.md)             | Proposed backup, restore and reconciliation controls       |
 | [Demonstration package](docs/demonstration/README.md)                     | Presenter script, rehearsal, fallback and evidence         |
+| [Technical report](docs/technical-report.md)                              | Design, implementation, evaluation and outcomes            |
+| [Portfolio case study](docs/portfolio-case-study.md)                      | Concise recruiter-facing project summary                   |
 | [Project plan](PROJECT_PLAN.md)                                           | Epics and delivery tasks                                   |
 | [Project management](PROJECT_MANAGEMENT.md)                               | Jira workflow and working agreements                       |
 
