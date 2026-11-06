@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, the NFA-61 reusable frontend generation lifecycle, the NFA-62 LinkedIn draft editor, the NFA-63 combined content preview, the NFA-64 image generation controls, the NFA-65 responsive and accessibility review, the NFA-73 joined saved-content lifecycle, the NFA-75 threat-model traceability checks, the NFA-76 API security hardening checks, the NFA-77 integration and browser workflows, the NFA-78 grounding and content-safety evaluation, the NFA-79 reliability and failure-recovery framework, the NFA-80 performance and accessibility verification, and the NFA-81 controlled UAT environment rehearsal.
+This guide records the automated test strategy for account security, the provider-to-database article workflow, and the backend AI boundary, including NFA-33 synchronisation, the NFA-34 article catalogue REST API, NFA-35 ingestion observability, the NFA-36 complete synthetic pipeline suite, the mocked NFA-38 OpenAI integration, NFA-39 grounded prompt construction, NFA-40 private LinkedIn draft generation, the NFA-41 frontend-facing generation REST API, NFA-42 deterministic factual-grounding validation, NFA-43 generation operations, the NFA-44 AI evaluation and regression framework, NFA-45 generation monitoring and audit, the NFA-46 joined E4 acceptance workflow, NFA-48 safe image-prompt composition, NFA-49 sensitive-news image safety, the mocked NFA-50 OpenAI image boundary, NFA-51 secure image validation and storage, NFA-52 immutable regeneration, NFA-53 private delivery, the NFA-54 complete E5 image-workflow suite, NFA-61 reusable frontend generation lifecycle, NFA-62 LinkedIn draft editing, NFA-63 combined content preview, NFA-64 image generation controls, NFA-65 responsive and accessibility review, NFA-73 joined saved-content lifecycle, NFA-75 threat-model traceability, NFA-76 API security hardening, NFA-77 integration and browser workflows, NFA-78 grounding and content-safety evaluation, NFA-79 failure recovery, NFA-80 performance and accessibility, NFA-81 controlled UAT rehearsal, and NFA-87 portfolio-documentation verification.
 
 The test suite is designed to detect security regressions before a pull request is merged. It uses only synthetic users, passwords, sessions, and content.
 
@@ -1078,8 +1078,11 @@ pytest -m integration tests/test_article_catalogue_integration.py
 
 ## GitHub quality checks
 
-When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs three independent jobs:
+When a pull request is opened or a commit reaches `main`, `.github/workflows/quality.yml` runs six independent jobs:
 
+- README documentation: verify the portfolio README, supporting guides, local links, screenshots, commands, technology versions, source-rights status, and an isolated candidate checkout.
+- Architecture documentation: verify Mermaid diagrams, route prefixes, trust boundaries, implementation status, and repository evidence.
+- Deployment documentation: verify the deployment, environment, operations, and backup guidance against current settings and release restrictions.
 - Backend: start an isolated PostgreSQL 16 service, install Python dependencies, lint, check formatting, run Pytest with a 75 percent coverage floor, run the deterministic NFA-78 content-safety evaluation, run the focused NFA-79 reliability suite, run the NFA-80 performance guardrails with visible measurements, run the NFA-36 pipeline suite against `newsflow_pipeline_test`, run the NFA-58 catalogue proof against `newsflow_article_catalogue_test`, run the NFA-54 image-workflow proof against `newsflow_image_pipeline_test`, and run the NFA-67 and NFA-68 saved-draft and content-library proof against `newsflow_saved_draft_test`.
 - Frontend: install locked npm dependencies, lint, check formatting, check TypeScript, run Vitest, build and serve production Next.js for deterministic Playwright browser tests, and enforce the NFA-80 production JavaScript budget.
 - Docker packaging: build the frontend and backend images, migrate a fresh isolated PostgreSQL database, verify health and non-root users, exercise container restarts and a clean stop/start, and prove named-volume database persistence before automatic cleanup.
@@ -1250,8 +1253,23 @@ python3 scripts/scan_secrets.py
 git diff --check
 ```
 
+- The NFA-87 README documentation contract passed on 6 November 2026. It verified the required portfolio sections, setup and quality commands, FastAPI documentation routes, current framework versions, Docker services, fixture-only article provider, safe environment template, local Markdown links, and source-rights and release-status statements.
+- The NFA-87 isolated candidate-checkout test passed. It copied every tracked and intended untracked file into a temporary directory and reran the documentation contract without relying on the working repository or ignored local files.
+- Four 1440 by 960 screenshots were captured through the deterministic local Playwright fixture. They show the public homepage, synthetic article dashboard, editable generation workspace, and private content library without live CNN content, a real user, a provider credential, or a paid OpenAI call.
+- The complete frontend component run passed all 167 tests across 35 files, and the Next.js production build completed successfully. ESLint, Prettier, strict TypeScript, JavaScript syntax validation, Ruff lint and formatting for the new Python checks, the project secret scan, Docker Compose configuration parsing, the NFA-85 and NFA-86 documentation contracts, and `git diff --check` also passed.
+- GitHub Actions now runs the NFA-87 documentation and isolated-checkout checks as a separate job on pull requests and updates to `main`.
+
+Run the focused NFA-87 checks from the repository root:
+
+```bash
+python3 scripts/verify_readme_documentation.py
+python3 scripts/verify_readme_clean_checkout.py
+python3 scripts/scan_secrets.py
+git diff --check
+```
+
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, and NFA-86
-- Implementation status: NFA-86 architecture and data-flow documentation package ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, and NFA-87
+- Implementation status: NFA-87 professional README and developer-documentation package ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review

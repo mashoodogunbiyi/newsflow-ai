@@ -527,8 +527,13 @@ Health checks, the fixture homepage, and normal tests do not need an OpenAI key.
 ## 12. Related documentation
 
 - [Project overview](../README.md)
+- [Developer guide](developer-guide.md)
+- [API reference](api-reference.md)
 - [Frontend guide](../apps/web/README.md)
 - [Backend guide](../apps/api/README.md)
+- [System architecture](architecture/system-architecture.md)
+- [Data-flow diagrams](architecture/data-flow.md)
+- [Environment configuration reference](deployment/environment-configuration.md)
 - [Object-level authorisation](authorization.md)
 - [Secure OpenAI integration](openai-integration.md)
 - [Automated testing guide](testing.md)
@@ -539,6 +544,6 @@ Health checks, the fixture homepage, and normal tests do not need an OpenAI key.
 
 ## 13. Verification record
 
-These instructions were checked on 5 November 2026 against the repository structure, environment template, final Docker Compose configuration, automatic migration service, authentication interface, frontend scripts, backend package configuration, health checks, restart behaviour, and persistent storage.
+These instructions were checked on 6 November 2026 against the repository structure, environment template, final Docker Compose configuration, automatic migration service, authentication interface, frontend scripts, backend package configuration, health checks, restart behaviour, persistent storage, API reference, and NFA-87 clean-checkout documentation contract.
 
 The verified Docker environment used Docker Desktop on Apple Silicon, Node.js 22 Alpine for the frontend image, Python 3.12 slim for the backend image, and the Compose-managed PostgreSQL 16 Alpine image. The complete isolated lifecycle passed. Other developers should use the supported versions listed above.
