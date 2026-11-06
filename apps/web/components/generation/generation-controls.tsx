@@ -5,6 +5,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 
 import { LinkedInEditor } from "@/components/editor/linkedin-editor";
 import { GenerationStatus } from "@/components/generation/generation-status";
+import { LanguageSelector } from "@/components/generation/language-selector";
 import { LengthSelector } from "@/components/generation/length-selector";
 import { ToneSelector } from "@/components/generation/tone-selector";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,11 @@ import type { ArticleGenerationStatus } from "@/types/article";
 import { toDraftEditorDocument } from "@/types/draft";
 import {
   isArticleId,
+  isGenerationLanguage,
   isGenerationLength,
   isGenerationTone,
   type GenerationLength,
+  type GenerationLanguage,
   type GenerationTone,
 } from "@/types/generation";
 import type { GenerationFailure, GenerationOperationResult } from "@/types/generation-state";
@@ -90,6 +93,7 @@ export function GenerationControls({
   const router = useRouter();
   const [tone, setTone] = useState<GenerationTone>("professional");
   const [length, setLength] = useState<GenerationLength>("medium");
+  const [language, setLanguage] = useState<GenerationLanguage>("english");
   const [editorDraft, setEditorDraft] = useState<
     Extract<GenerationResult, { status: "success" }>["data"] | null
   >(null);
@@ -98,12 +102,17 @@ export function GenerationControls({
   const requestKeyRef = useRef<{ key: string; signature: string } | null>(null);
   const executeGeneration = useCallback(
     async (
-      request: { article_id: string; tone: GenerationTone; length: GenerationLength },
+      request: {
+        article_id: string;
+        tone: GenerationTone;
+        length: GenerationLength;
+        language: GenerationLanguage;
+      },
       { signal }: { signal: AbortSignal },
     ): Promise<
       GenerationOperationResult<Extract<GenerationResult, { status: "success" }>["data"]>
     > => {
-      const signature = `${request.article_id}:${request.tone}:${request.length}`;
+      const signature = `${request.article_id}:${request.tone}:${request.length}:${request.language}`;
       if (!requestKeyRef.current || requestKeyRef.current.signature !== signature) {
         requestKeyRef.current = { key: createGenerationRequestKey(), signature };
       }
@@ -155,15 +164,26 @@ export function GenerationControls({
     resetRequestIdentity();
   }
 
+  function updateLanguage(value: GenerationLanguage) {
+    setLanguage(value);
+    resetRequestIdentity();
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isAvailable || !articleId || !isGenerationTone(tone) || !isGenerationLength(length)) {
+    if (
+      !isAvailable ||
+      !articleId ||
+      !isGenerationTone(tone) ||
+      !isGenerationLength(length) ||
+      !isGenerationLanguage(language)
+    ) {
       return;
     }
     if (retrySeconds > 0) {
       return;
     }
-    handleRunResult(await generation.start({ article_id: articleId, tone, length }));
+    handleRunResult(await generation.start({ article_id: articleId, tone, length, language }));
   }
 
   function handleRunResult(
@@ -212,7 +232,7 @@ export function GenerationControls({
             </p>
           </div>
           <span className="rounded-full border border-emerald-950/10 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950/65">
-            Defaults: Professional and Medium
+            Defaults: Professional, Medium, and English
           </span>
         </div>
 
@@ -237,6 +257,11 @@ export function GenerationControls({
           onSubmit={handleSubmit}
         >
           <ToneSelector disabled={controlsDisabled} onChange={updateTone} value={tone} />
+          <LanguageSelector
+            disabled={controlsDisabled}
+            onChange={updateLanguage}
+            value={language}
+          />
           <LengthSelector disabled={controlsDisabled} onChange={updateLength} value={length} />
 
           <GenerationStatus

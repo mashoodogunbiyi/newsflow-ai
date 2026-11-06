@@ -63,6 +63,7 @@ class LinkedInPromptBuilder:
         instructions, length = build_linkedin_instructions(
             tone=preferences.tone,
             post_length=preferences.post_length,
+            language=preferences.language,
         )
         source_data = {
             "title": article.title,

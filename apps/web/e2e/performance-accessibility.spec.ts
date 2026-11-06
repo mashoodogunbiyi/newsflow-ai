@@ -75,7 +75,9 @@ test("keeps dashboard navigation within performance and request-count budgets", 
   expect(resetMetrics.ok()).toBeTruthy();
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Find a story worth sharing." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "From trusted link to thoughtful post." }),
+  ).toBeVisible();
   const navigation = await page.evaluate(() => {
     const entry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
     return {
@@ -104,7 +106,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize({ height: viewport.height, width: viewport.width });
     await signIn(page);
-    await expect(page.getByLabel("Search permitted topics")).toBeVisible();
+    await expect(page.getByLabel("Filter catalogue by topic")).toBeVisible();
 
     expectNoAxeViolations(await runAxe(page));
     const layout = await page.evaluate(() => ({
@@ -114,8 +116,9 @@ for (const viewport of [
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
 
     const accessibilityTree = await page.locator("#workspace-content").ariaSnapshot();
-    expect(accessibilityTree).toContain("Find a story worth sharing.");
-    expect(accessibilityTree).toContain("Search permitted topics");
+    expect(accessibilityTree).toContain("From trusted link to thoughtful post.");
+    expect(accessibilityTree).toContain("Search URL");
+    expect(accessibilityTree).toContain("Filter catalogue by topic");
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     const longestMotionMs = await page

@@ -35,6 +35,7 @@ class ArticleCatalogueFilters:
     """Repository-safe filters created from a validated API query."""
 
     search: str | None
+    source_url: str | None
     category: str | None
     provider: str | None
     published_from: datetime | None
@@ -124,6 +125,10 @@ class SqlAlchemyArticleCatalogueRepository:
                         autoescape=True,
                     ),
                 )
+            )
+        if filters.source_url is not None:
+            statement = statement.where(
+                ArticleSnapshotTable.canonical_url == filters.source_url
             )
         if filters.category is not None:
             statement = statement.where(

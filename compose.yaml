@@ -97,6 +97,27 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  demo-data:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command:
+      - python
+      - -m
+      - app.database.seed
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *backend-environment
+      SEED_DATA_ENABLED: "true"
+    cap_drop:
+      - ALL
+    init: true
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
   backend:
     build:
       context: ./apps/api
@@ -105,7 +126,7 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      migrate:
+      demo-data:
         condition: service_completed_successfully
     healthcheck:
       test:

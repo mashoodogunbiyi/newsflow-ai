@@ -73,6 +73,9 @@ class ArticleCatalogueService:
         records = await self._repository.list_visible(
             filters=ArticleCatalogueFilters(
                 search=query.search,
+                source_url=(
+                    None if query.source_url is None else str(query.source_url)
+                ),
                 category=None if query.category is None else query.category.value,
                 provider=query.provider,
                 published_from=query.published_from,

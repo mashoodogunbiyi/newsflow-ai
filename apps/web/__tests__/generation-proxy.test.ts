@@ -24,6 +24,7 @@ describe("generation gateway", () => {
       article_id: "10000000-0000-4000-8000-000000000003",
       tone: "professional",
       length: "medium",
+      language: "english",
     });
     const request = new Request("http://localhost:3000/api/generations", {
       method: "POST",

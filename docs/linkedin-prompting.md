@@ -19,7 +19,7 @@ Current NFA-32 rights decision
              +
 Validated NFA-6 article contract
              +
-Validated tone and length choices
+Validated tone, language and length choices
              |
              v
 LinkedInPromptBuilder
@@ -52,13 +52,13 @@ Separation reduces prompt-injection risk but cannot guarantee model behaviour. T
 
 Only these NFA-6 fields enter the model input:
 
-| Field | Purpose |
-|---|---|
-| `title` | Identifies the subject described by the source. |
-| `source_name` | Identifies the provider or approved fixture source. |
-| `publication_date` | Supplies the exact source publication time. |
-| `category` | Supplies the approved normalised category. |
-| `description` | Supplies the permitted description when available. |
+| Field               | Purpose                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `title`             | Identifies the subject described by the source.                                     |
+| `source_name`       | Identifies the provider or approved fixture source.                                 |
+| `publication_date`  | Supplies the exact source publication time.                                         |
+| `category`          | Supplies the approved normalised category.                                          |
+| `description`       | Supplies the permitted description when available.                                  |
 | `permitted_content` | Supplies only the text explicitly approved for AI processing and derivative output. |
 
 The builder does not pass the source URL, provider item ID, authorisation reference, retention rule, internal rights record, byline, copyright notice, or database fields to the model. It keeps the URL, source item ID, attribution, and rights-version ID in `LinkedInArticleReference` for application use.
@@ -99,20 +99,20 @@ Prompt rules are one defence. Output validation, factual evaluation, rate limiti
 
 `LinkedInGenerationPreferences` accepts only the following enums:
 
-| Preference | Supported values |
-|---|---|
-| Tone | `professional`, `conversational`, `analytical` |
-| Length | `short`, `medium`, `long` |
+| Preference | Supported values                               |
+| ---------- | ---------------------------------------------- |
+| Tone       | `professional`, `conversational`, `analytical` |
+| Length     | `short`, `medium`, `long`                      |
 
 The application converts each enum into a fixed instruction. Free-form preferences cannot override grounding or security rules.
 
 Length targets are versioned with the template:
 
 | Length | Approximate target | Maximum output tokens |
-|---|---:|---:|
-| Short | 80 to 120 words | 220 |
-| Medium | 130 to 200 words | 360 |
-| Long | 220 to 320 words | 560 |
+| ------ | -----------------: | --------------------: |
+| Short  |    80 to 120 words |                   220 |
+| Medium |   130 to 200 words |                   360 |
+| Long   |   220 to 320 words |                   560 |
 
 The token values are upper bounds for the complete JSON response, not guaranteed word counts.
 
@@ -169,11 +169,12 @@ These controls limit the influence of hostile text but do not make prompt inject
 
 ## Prompt versioning
 
-Current template identifier: `linkedin_post_v1`
+Current template identifier: `linkedin_post_v2`
 
-| Version | Date | Change |
-|---|---|---|
+| Version            | Date            | Change                                                                                                                                                                                                      |
+| ------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `linkedin_post_v1` | 29 October 2026 | Initial grounded LinkedIn template with rights gates, field allowlist, three tones, three length bands, JSON output, insufficiency handling, article-reference separation, and prompt-injection safeguards. |
+| `linkedin_post_v2` | 6 November 2026 | Adds validated English, French and Spanish output choices while requiring translation to preserve proper names, numbers and source-supported meaning without adding facts.                                  |
 
 Any behavioural prompt change must create a new version, update evaluation expectations and tests, and preserve the version used with a future generation record. Do not silently edit a production prompt version after generated outputs depend on it.
 
@@ -181,11 +182,11 @@ Any behavioural prompt change must create a new version, update evaluation expec
 
 The versioned synthetic evaluation set is stored at `apps/api/tests/fixtures/linkedin_prompt_evaluations.json`. It includes:
 
-| Case | Expected behaviour |
-|---|---|
-| Grounded healthcare summary | Build the prompt from supplied synthetic facts and reject invented performance statistics or quotations. |
-| Prompt-injection source | Keep the malicious sentence in untrusted data and do not convert its requests into application instructions. |
-| Title-only record | Decline generation before provider access because permitted factual context is missing. |
+| Case                        | Expected behaviour                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Grounded healthcare summary | Build the prompt from supplied synthetic facts and reject invented performance statistics or quotations.     |
+| Prompt-injection source     | Keep the malicious sentence in untrusted data and do not convert its requests into application instructions. |
+| Title-only record           | Decline generation before provider access because permitted factual context is missing.                      |
 
 Each case records supported claims and forbidden unsupported claims for later live-model evaluation. NFA-39 verifies the fixture structure and builder decision without making an OpenAI request.
 
@@ -201,6 +202,7 @@ apps/api/.venv/bin/pytest -q apps/api/tests/test_prompt_builder.py
 The focused suite covers:
 
 - Professional, conversational, and analytical tone instructions.
+- English, French, and Spanish output instructions with translation-grounding safeguards.
 - Short, medium, and long word and token limits.
 - Exact source-field filtering.
 - Trusted and untrusted prompt separation.
@@ -224,14 +226,14 @@ Verified locally on 29 October 2026:
 
 ## Implementation evidence
 
-| Deliverable | Repository location |
-|---|---|
-| Versioned LinkedIn template | `apps/api/app/prompts/linkedin_post.py` |
-| Preference and prompt-package models | `apps/api/app/models/generation_preferences.py` |
-| Rights-aware builder | `apps/api/app/services/prompt_builder.py` |
-| Automated tests | `apps/api/tests/test_prompt_builder.py` |
-| Evaluation examples | `apps/api/tests/fixtures/linkedin_prompt_evaluations.json` |
-| Technical documentation | `docs/linkedin-prompting.md` |
+| Deliverable                          | Repository location                                        |
+| ------------------------------------ | ---------------------------------------------------------- |
+| Versioned LinkedIn template          | `apps/api/app/prompts/linkedin_post.py`                    |
+| Preference and prompt-package models | `apps/api/app/models/generation_preferences.py`            |
+| Rights-aware builder                 | `apps/api/app/services/prompt_builder.py`                  |
+| Automated tests                      | `apps/api/tests/test_prompt_builder.py`                    |
+| Evaluation examples                  | `apps/api/tests/fixtures/linkedin_prompt_evaluations.json` |
+| Technical documentation              | `docs/linkedin-prompting.md`                               |
 
 ## Limitations and next steps
 

@@ -14,7 +14,11 @@ from pydantic import (
 )
 
 from app.models.ai import AITokenUsage
-from app.models.generation_preferences import LinkedInPostLength, LinkedInTone
+from app.models.generation_preferences import (
+    LinkedInLanguage,
+    LinkedInPostLength,
+    LinkedInTone,
+)
 from app.models.grounding import (
     GroundingResult,
     GroundingStatus,
@@ -28,6 +32,7 @@ class LinkedInGenerationRequest(BaseModel):
     article_id: UUID
     tone: LinkedInTone = LinkedInTone.PROFESSIONAL
     length: LinkedInPostLength = LinkedInPostLength.MEDIUM
+    language: LinkedInLanguage = LinkedInLanguage.ENGLISH
 
     model_config = ConfigDict(extra="forbid")
 
@@ -38,6 +43,7 @@ class GenerationRequest(BaseModel):
     article_id: UUID
     tone: LinkedInTone
     length: LinkedInPostLength
+    language: LinkedInLanguage = LinkedInLanguage.ENGLISH
 
     model_config = ConfigDict(extra="forbid")
 

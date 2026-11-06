@@ -1,6 +1,7 @@
 import {
   isArticleId,
   isGenerationLength,
+  isGenerationLanguage,
   isGenerationResponse,
   isGenerationTone,
   type GenerationRequest,
@@ -140,10 +141,11 @@ export async function generateLinkedInDraft(
     !isArticleId(request.article_id) ||
     !isGenerationTone(request.tone) ||
     !isGenerationLength(request.length) ||
+    !isGenerationLanguage(request.language) ||
     !/^generation:[0-9a-f-]{36}$/i.test(idempotencyKey)
   ) {
     return {
-      message: "Choose a valid article, tone, and post length before generating.",
+      message: "Choose a valid article, tone, language, and post length before generating.",
       reason: "invalid_request",
       retryAfterSeconds: null,
       status: "error",

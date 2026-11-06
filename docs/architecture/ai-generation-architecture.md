@@ -34,19 +34,19 @@ PostgreSQL stores application records and operational metadata. The OpenAI API i
 
 ## Components and responsibilities
 
-| Component | Main implementation | Responsibility |
-|---|---|---|
-| Generation REST API | `app/api/routes/generations.py` | Defines `POST /api/generations`, authentication dependency, request model, response model, and documented HTTP outcomes. |
-| Shared API boundary | `app/api/generation.py` | Applies the burst limiter, delegates to the generation service, and maps safe service failures to HTTP responses. |
-| Authentication and CSRF | `app/api/dependencies.py` | Resolves the server-managed session and requires matching CSRF proof before generation. |
-| Article retrieval | `repositories/linkedin_generation.py` | Loads the current active article snapshot and saves the resulting private draft for its owner. |
-| Rights verification | `services/article_rights.py` | Evaluates current source, verification, retention, attribution, AI-processing, and derivative-output permission. |
-| Prompt construction | `services/prompt_builder.py` and `prompts/linkedin_post.py` | Builds the versioned trusted instructions and separates them from the allowed untrusted source fields. |
-| OpenAI boundary | `services/openai_service.py` | Uses the official asynchronous SDK with bounded timeout, output, retry, safe error, and usage behaviour. |
-| Generation orchestration | `services/linkedin_generation.py` | Coordinates retrieval, rights, prompts, OpenAI, output checks, persistence, usage, and audit recording. |
-| Grounding validator | `services/generation_validator.py` | Checks trusted references and source support for numbers, quotations, dates, entities, and factual assertions. |
-| Usage controls | `services/generation_usage.py` | Enforces shared daily, concurrency, and duplicate controls and stores safe provider-attempt outcomes and token counts. |
-| Monitoring and audit | `services/generation_audit.py` and `services/generation_monitoring.py` | Correlates lifecycle events, measures duration, applies retention, and provides administrator-only audit and aggregate metrics. |
+| Component                | Main implementation                                                    | Responsibility                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Generation REST API      | `app/api/routes/generations.py`                                        | Defines `POST /api/generations`, authentication dependency, request model, response model, and documented HTTP outcomes.        |
+| Shared API boundary      | `app/api/generation.py`                                                | Applies the burst limiter, delegates to the generation service, and maps safe service failures to HTTP responses.               |
+| Authentication and CSRF  | `app/api/dependencies.py`                                              | Resolves the server-managed session and requires matching CSRF proof before generation.                                         |
+| Article retrieval        | `repositories/linkedin_generation.py`                                  | Loads the current active article snapshot and saves the resulting private draft for its owner.                                  |
+| Rights verification      | `services/article_rights.py`                                           | Evaluates current source, verification, retention, attribution, AI-processing, and derivative-output permission.                |
+| Prompt construction      | `services/prompt_builder.py` and `prompts/linkedin_post.py`            | Builds the versioned trusted instructions and separates them from the allowed untrusted source fields.                          |
+| OpenAI boundary          | `services/openai_service.py`                                           | Uses the official asynchronous SDK with bounded timeout, output, retry, safe error, and usage behaviour.                        |
+| Generation orchestration | `services/linkedin_generation.py`                                      | Coordinates retrieval, rights, prompts, OpenAI, output checks, persistence, usage, and audit recording.                         |
+| Grounding validator      | `services/generation_validator.py`                                     | Checks trusted references and source support for numbers, quotations, dates, entities, and factual assertions.                  |
+| Usage controls           | `services/generation_usage.py`                                         | Enforces shared daily, concurrency, and duplicate controls and stores safe provider-attempt outcomes and token counts.          |
+| Monitoring and audit     | `services/generation_audit.py` and `services/generation_monitoring.py` | Correlates lifecycle events, measures duration, applies retention, and provides administrator-only audit and aggregate metrics. |
 
 ## Complete request lifecycle
 
@@ -70,7 +70,7 @@ A failure at any stage produces a stable safe category. Restricted article conte
 
 ## Prompt design and versioning
 
-The current prompt version is `linkedin_post_v1`.
+The current prompt version is `linkedin_post_v2`.
 
 The prompt package has two security boundaries:
 
@@ -79,16 +79,17 @@ The prompt package has two security boundaries:
 
 The allowed source fields are fixed by `PERMITTED_AI_SOURCE_FIELDS`. The prompt builder fails closed when permission, attribution, or permitted factual information is missing.
 
-A future prompt change must create a new version rather than silently changing the meaning of `linkedin_post_v1`. The NFA-44 regression framework must compare the new version against the current baseline before release.
+A future prompt change must create a new version rather than silently changing the meaning of `linkedin_post_v2`. The NFA-44 regression framework must compare the new version against the current baseline before release.
 
 See [LinkedIn prompting](../linkedin-prompting.md) and [AI generation evaluation](../ai-generation-evaluation.md).
 
 ## Writing preferences
 
-| Preference | Supported values | Behaviour |
-|---|---|---|
-| Tone | `professional`, `conversational`, `analytical` | Maps to application-owned trusted wording. Free-text tone instructions are not accepted. |
-| Length | `short`, `medium`, `long` | Enforces 80-120, 130-200, or 220-320 words and a corresponding provider output cap. |
+| Preference | Supported values                               | Behaviour                                                                                                         |
+| ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Tone       | `professional`, `conversational`, `analytical` | Maps to application-owned trusted wording. Free-text tone instructions are not accepted.                          |
+| Length     | `short`, `medium`, `long`                      | Enforces 80-120, 130-200, or 220-320 words and a corresponding provider output cap.                               |
+| Language   | `english`, `french`, `spanish`                 | Produces the complete draft in one validated language while preserving source-supported facts, names and numbers. |
 
 The browser cannot submit a system prompt, model name, owner ID, token budget, rights override, provider key, or publishing instruction.
 
@@ -96,21 +97,21 @@ The browser cannot submit a system prompt, model name, owner ID, token budget, r
 
 Real values belong only in the ignored `.env` file or an approved deployment secret store.
 
-| Variable | Default | Purpose |
-|---|---:|---|
-| `OPENAI_API_KEY` | None | Required server-side credential for OpenAI generation. Sensitive. |
-| `OPENAI_MODEL` | None | Approved OpenAI model identifier. |
-| `OPENAI_REQUEST_TIMEOUT` | 30 | Maximum request duration in seconds. |
-| `OPENAI_MAX_OUTPUT_TOKENS` | 800 | Server-wide upper output limit. |
-| `OPENAI_MAX_RETRIES` | 2 | Bounded SDK retry budget for eligible temporary failures. |
-| `GENERATION_RATE_LIMIT_ATTEMPTS` | 10 | Requests allowed in the local burst window. |
-| `GENERATION_RATE_LIMIT_WINDOW_SECONDS` | 60 | Local burst window duration. |
-| `GENERATION_DAILY_LIMIT` | 50 | Shared provider-bound attempts per user per UTC day. |
-| `GENERATION_CONCURRENT_LIMIT` | 2 | Shared active provider-bound attempts per user. |
-| `GENERATION_ATTEMPT_TIMEOUT_SECONDS` | 180 | Active usage reservation lease. |
-| `GENERATION_USAGE_RETENTION_DAYS` | 90 | Completed usage-record retention. |
-| `GENERATION_AUDIT_RETENTION_DAYS` | 90 | Generation audit-event retention. |
-| `GENERATION_MONITORING_WINDOW_HOURS` | 24 | Default administrator metric window. |
+| Variable                               | Default | Purpose                                                           |
+| -------------------------------------- | ------: | ----------------------------------------------------------------- |
+| `OPENAI_API_KEY`                       |    None | Required server-side credential for OpenAI generation. Sensitive. |
+| `OPENAI_MODEL`                         |    None | Approved OpenAI model identifier.                                 |
+| `OPENAI_REQUEST_TIMEOUT`               |      30 | Maximum request duration in seconds.                              |
+| `OPENAI_MAX_OUTPUT_TOKENS`             |     800 | Server-wide upper output limit.                                   |
+| `OPENAI_MAX_RETRIES`                   |       2 | Bounded SDK retry budget for eligible temporary failures.         |
+| `GENERATION_RATE_LIMIT_ATTEMPTS`       |      10 | Requests allowed in the local burst window.                       |
+| `GENERATION_RATE_LIMIT_WINDOW_SECONDS` |      60 | Local burst window duration.                                      |
+| `GENERATION_DAILY_LIMIT`               |      50 | Shared provider-bound attempts per user per UTC day.              |
+| `GENERATION_CONCURRENT_LIMIT`          |       2 | Shared active provider-bound attempts per user.                   |
+| `GENERATION_ATTEMPT_TIMEOUT_SECONDS`   |     180 | Active usage reservation lease.                                   |
+| `GENERATION_USAGE_RETENTION_DAYS`      |      90 | Completed usage-record retention.                                 |
+| `GENERATION_AUDIT_RETENTION_DAYS`      |      90 | Generation audit-event retention.                                 |
+| `GENERATION_MONITORING_WINDOW_HOURS`   |      24 | Default administrator metric window.                              |
 
 Never place an OpenAI key in a `NEXT_PUBLIC_` variable, source code, documentation, Jira, screenshots, tests, or Git history.
 

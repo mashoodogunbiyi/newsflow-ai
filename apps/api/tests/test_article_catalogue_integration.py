@@ -130,6 +130,16 @@ def test_postgresql_catalogue_filters_pages_and_hides_restricted_articles(
                 ArticleCatalogueQuery(category="technology")
             )
             assert [item.category for item in technology.items] == ["Technology"]
+            exact_url = await catalogue.list_articles(
+                ArticleCatalogueQuery(source_url=technology.items[0].source_url)
+            )
+            assert [item.id for item in exact_url.items] == [technology.items[0].id]
+            missing_url = await catalogue.list_articles(
+                ArticleCatalogueQuery(
+                    source_url="https://example.invalid/newsflow-ai/not-in-catalogue"
+                )
+            )
+            assert missing_url.items == []
             selected = await catalogue.get_article(technology.items[0].id)
             assert selected.generation.allowed is True
             assert selected.generation.status == "available"

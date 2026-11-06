@@ -55,7 +55,10 @@ describe("LinkedIn generation controls", () => {
       true,
     );
     expect((screen.getByRole("radio", { name: /medium/i }) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getAllByRole("radio")).toHaveLength(6);
+    expect((screen.getByRole("radio", { name: /english/i }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect(screen.getAllByRole("radio")).toHaveLength(9);
     expect(screen.getByRole("button", { name: "Generate LinkedIn draft" })).toBeDefined();
   });
 
@@ -69,6 +72,7 @@ describe("LinkedIn generation controls", () => {
     renderAvailableControls();
 
     fireEvent.click(screen.getByRole("radio", { name: /analytical/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /spanish/i }));
     fireEvent.click(screen.getByRole("radio", { name: /long/i }));
     fireEvent.click(screen.getByRole("button", { name: "Generate LinkedIn draft" }));
 
@@ -79,7 +83,12 @@ describe("LinkedIn generation controls", () => {
       expect.objectContaining({
         method: "POST",
         credentials: "same-origin",
-        body: JSON.stringify({ article_id: articleId, tone: "analytical", length: "long" }),
+        body: JSON.stringify({
+          article_id: articleId,
+          tone: "analytical",
+          length: "long",
+          language: "spanish",
+        }),
       }),
     );
     expect(new Headers(options?.headers).get("x-csrf-token")).toBe("csrf-test-token");
@@ -256,6 +265,7 @@ describe("LinkedIn generation controls", () => {
     expect(document.activeElement).toBe(conversational);
     expect((conversational as HTMLInputElement).checked).toBe(true);
     expect(screen.getByRole("group", { name: "Writing tone" })).toBeDefined();
+    expect(screen.getByRole("group", { name: "Draft language" })).toBeDefined();
     expect(screen.getByRole("group", { name: "Post length" })).toBeDefined();
   });
 });

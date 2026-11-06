@@ -57,7 +57,9 @@ def _raise_unavailable(
         "Return one cursor-paginated page of current article metadata. "
         "Only active records with enabled sources and verified, unexpired display "
         "rights are returned. Search covers the permitted title and description, "
-        "and category filtering uses approved stable identifiers."
+        "source_url performs an exact approved-catalogue URL lookup, and category "
+        "filtering uses approved stable identifiers. The endpoint never fetches a "
+        "submitted URL."
     ),
     responses={
         401: {"description": "Authentication is required."},

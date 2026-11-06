@@ -484,7 +484,8 @@ class LinkedInGenerationService:
         fingerprint = hashlib.sha256(
             (
                 f"{article_id}:{preferences.tone.value}:"
-                f"{preferences.post_length.value}:{prompt_version}"
+                f"{preferences.post_length.value}:{preferences.language.value}:"
+                f"{prompt_version}"
             ).encode()
         ).hexdigest()
         return f"Prompt content not retained. Request fingerprint: {fingerprint}"

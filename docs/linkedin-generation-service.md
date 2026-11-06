@@ -98,7 +98,7 @@ Example response:
     "checked_claim_count": 1,
     "human_review_required": true
   },
-  "prompt_version": "linkedin_post_v1",
+  "prompt_version": "linkedin_post_v2",
   "model_identifier": "configured-model",
   "token_usage": {
     "input_tokens": 120,
@@ -145,10 +145,10 @@ The generation request uses the Responses API integration from NFA-38 and adds a
 The backend still validates the returned JSON with Pydantic. This defence rejects malformed JSON, missing or extra fields, empty ready drafts, contradictory status values, and unsupported insufficiency structures. It also enforces the versioned NFA-39 word ranges:
 
 | Length | Required words | Maximum output tokens |
-|---|---:|---:|
-| Short | 80 to 120 | 220 |
-| Medium | 130 to 200 | 360 |
-| Long | 220 to 320 | 560 |
+| ------ | -------------: | --------------------: |
+| Short  |      80 to 120 |                   220 |
+| Medium |     130 to 200 |                   360 |
+| Long   |     220 to 320 |                   560 |
 
 OpenAI's [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses) recommends JSON Schema enforcement where supported. Application validation remains necessary because structured output does not prove factual accuracy.
 
@@ -187,22 +187,22 @@ The in-process burst limiter is suitable as an extra local defence. The cost-sen
 
 ## Controlled errors
 
-| Condition | HTTP status | Safe code |
-|---|---:|---|
-| Missing session | 401 | `authentication_required` |
-| Invalid CSRF proof | 403 | `csrf_validation_failed` |
-| Article is not permitted | 403 | `article_ai_generation_not_permitted` |
-| Article is unavailable | 404 | `generation_article_not_found` |
-| Source information is insufficient | 422 | `insufficient_source_information` |
-| Short burst or daily limit reached | 429 | `generation_limit_exceeded` |
-| Concurrent generation limit reached | 429 | `generation_concurrency_limit` |
-| Identical request already active | 409 | `generation_in_progress` |
-| Idempotency key reused differently | 409 | `idempotency_key_conflict` |
-| Empty, malformed, or out-of-range model result | 502 | Generation validation code |
-| Blocking factual-grounding result | 502 | `grounding_validation_rejected` |
-| OpenAI returns an invalid response | 502 | Safe provider response code |
-| OpenAI request times out | 504 | `openai_timeout` |
-| OpenAI or PostgreSQL is unavailable | 503 | Safe service-specific code |
+| Condition                                      | HTTP status | Safe code                             |
+| ---------------------------------------------- | ----------: | ------------------------------------- |
+| Missing session                                |         401 | `authentication_required`             |
+| Invalid CSRF proof                             |         403 | `csrf_validation_failed`              |
+| Article is not permitted                       |         403 | `article_ai_generation_not_permitted` |
+| Article is unavailable                         |         404 | `generation_article_not_found`        |
+| Source information is insufficient             |         422 | `insufficient_source_information`     |
+| Short burst or daily limit reached             |         429 | `generation_limit_exceeded`           |
+| Concurrent generation limit reached            |         429 | `generation_concurrency_limit`        |
+| Identical request already active               |         409 | `generation_in_progress`              |
+| Idempotency key reused differently             |         409 | `idempotency_key_conflict`            |
+| Empty, malformed, or out-of-range model result |         502 | Generation validation code            |
+| Blocking factual-grounding result              |         502 | `grounding_validation_rejected`       |
+| OpenAI returns an invalid response             |         502 | Safe provider response code           |
+| OpenAI request times out                       |         504 | `openai_timeout`                      |
+| OpenAI or PostgreSQL is unavailable            |         503 | Safe service-specific code            |
 
 Provider bodies, database details, credentials, source content, and generated prose are not written to error messages or operational logs.
 
