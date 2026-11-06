@@ -25,7 +25,7 @@ const article = {
   id: ARTICLE_ID,
   title: "Synthetic technology update for responsible AI testing",
   description: "A permitted synthetic article used only for deterministic NewsFlow AI tests.",
-  source_url: "https://example.invalid/newsflow-ai/synthetic-technology-update",
+  source_url: "https://example.invalid/newsflow/synthetic-clean-energy",
   provider: "NewsFlow AI synthetic fixture",
   published_at: "2026-11-03T09:00:00Z",
   category: "technology",

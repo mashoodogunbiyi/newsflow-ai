@@ -10,7 +10,7 @@ test("completes article-to-generation-to-private-library lifecycle", async ({ co
 
   await page
     .getByLabel("Search URL")
-    .fill("https://example.invalid/newsflow-ai/synthetic-technology-update");
+    .fill("https://example.invalid/newsflow/synthetic-clean-energy");
   await page.getByRole("button", { name: "Use this article" }).click();
   await expect(
     page.getByRole("heading", { name: "Review the source before generating." }),

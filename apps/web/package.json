@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "demo": "node scripts/start-demonstration.mjs",
     "build": "next build --webpack",
     "prestart": "node scripts/prepare-standalone.mjs",
     "start": "node .next/standalone/server.js",
