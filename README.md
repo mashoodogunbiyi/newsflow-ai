@@ -313,11 +313,28 @@ From the repository root:
 python3 scripts/scan_secrets.py
 python3 scripts/verify_architecture_documentation.py
 python3 scripts/verify_deployment_documentation.py
+python3 scripts/verify_demonstration_package.py
 python3 scripts/verify_readme_documentation.py
 git diff --check
 ```
 
 Routine tests use synthetic fixtures and mocked provider responses. They do not require live CNN access, real OpenAI credentials, production data or paid API calls. See [testing.md](docs/testing.md) for integration-database safety rules, current results and CI coverage.
+
+## Demonstration
+
+The recommended portfolio demonstration runs the real Next.js interface against the deterministic local mock API. It exercises sign-in, approved URL selection, draft generation, editing, image generation, preview, private saving, reopening, copying, downloading and deletion without contacting CNN or OpenAI.
+
+From the repository root:
+
+```bash
+cd apps/web
+npm ci
+npm run demo
+```
+
+Open [http://127.0.0.1:3100](http://127.0.0.1:3100). The terminal prints the mock-only account and approved synthetic article URL. These public fixture credentials work only with the loopback demonstration API and are not application, database or provider secrets.
+
+The [complete demonstration package](docs/demonstration/README.md) contains the presenter script, architecture talking points, rehearsal checklist, fallback plan, screenshots, verification evidence and honest limitations. A real OpenAI key is optional for the integrated Docker environment and is deliberately not read by this reliable mock demonstration.
 
 ## API documentation
 
@@ -408,7 +425,7 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 | Saved-content lifecycle, export and deletion                    | Implemented and tested                                        |
 | Security, reliability, accessibility and performance automation | Implemented with documented manual and production limitations |
 | Architecture and developer documentation                        | Implemented                                                   |
-| Controlled local synthetic-data demonstration                   | Conditional Go pending owner acceptance                       |
+| Controlled local synthetic-data demonstration                   | Package prepared; manual rehearsal and owner acceptance pending |
 | Live CNN integration                                            | No-Go                                                         |
 | Public production release                                       | No-Go                                                         |
 
@@ -428,6 +445,7 @@ Detailed evidence is available in the [testing guide](docs/testing.md), [release
 | [Deployment guide](docs/deployment/deployment-guide.md)                   | Proposed hosting architecture and release procedure        |
 | [Operations runbook](docs/deployment/operations-runbook.md)               | Health, monitoring, maintenance and incidents              |
 | [Backup and recovery](docs/deployment/backup-and-recovery.md)             | Proposed backup, restore and reconciliation controls       |
+| [Demonstration package](docs/demonstration/README.md)                     | Presenter script, rehearsal, fallback and evidence         |
 | [Project plan](PROJECT_PLAN.md)                                           | Epics and delivery tasks                                   |
 | [Project management](PROJECT_MANAGEMENT.md)                               | Jira workflow and working agreements                       |
 
