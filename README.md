@@ -8,9 +8,11 @@ NewsFlow AI is a planned full-stack application that turns authorised CNN Intern
 
 > NFA-85 status: the proposed deployment architecture, complete environment reference, operations runbook, backup and recovery policy, release restrictions, and automated documentation contract are implemented. No production deployment or backup is claimed.
 
+> NFA-86 status: the maintainable Mermaid system architecture, authentication boundary, article ingestion, text generation, image generation, persistence, export, trust-boundary, and architecture-decision documentation is implemented and checked against the repository.
+
 > NFA-82 status: final E8 evidence is consolidated. Packaging and a controlled local synthetic-data demonstration have a proposed Conditional Go. Public release and live CNN integration remain No-Go.
 >
-> Current implementation: NFA-84 completes the E9 local Docker package within NFA-82's Conditional Go scope. NFA-85 now documents how an approved deployment would be configured, operated, monitored, backed up, recovered, verified, and rolled back. The guidance is deliberately platform-neutral because no hosting environment has been selected. Public release, production storage and backups, and live CNN integration remain No-Go.
+> Current implementation: NFA-84 completes the E9 local Docker package within NFA-82's Conditional Go scope. NFA-85 documents how an approved deployment would be operated, while NFA-86 maps the implemented components, security boundaries, and complete user-data lifecycle to repository evidence. Public release, production storage and backups, and live CNN integration remain No-Go.
 
 ## Product workflow
 
@@ -120,6 +122,9 @@ All OpenAI calls will therefore run on our backend. The `OPENAI_API_KEY` will be
 - [docs/deployment/environment-configuration.md](docs/deployment/environment-configuration.md) - NFA-85 complete runtime variable classification, secret handling, environment differences, and validation guidance.
 - [docs/deployment/operations-runbook.md](docs/deployment/operations-runbook.md) - NFA-85 health, logging, monitoring, maintenance, incident, startup, shutdown, and dependency recovery procedures.
 - [docs/deployment/backup-and-recovery.md](docs/deployment/backup-and-recovery.md) - NFA-85 proposed backup scope, recovery objectives, retention, consistency, restore, and verification controls.
+- [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md) - NFA-86 high-level system, component, authentication, Docker, trust-boundary, status, and security architecture diagrams.
+- [docs/architecture/data-flow.md](docs/architecture/data-flow.md) - NFA-86 article ingestion, text generation, image generation, draft persistence, export, user-journey, and recovery flows.
+- [docs/architecture/architecture-decisions.md](docs/architecture/architecture-decisions.md) - NFA-86 decision register covering providers, gateways, sessions, PostgreSQL, rights, OpenAI, images, review, packaging, and deployment gates.
 - [docs/jira/NFA-3.md](docs/jira/NFA-3.md) - functional and non-functional requirements baseline with measurable acceptance criteria.
 - [docs/jira/NFA-4.md](docs/jira/NFA-4.md) - research and recommendation for authorised CNN data access.
 - [docs/jira/NFA-5.md](docs/jira/NFA-5.md) - authorisation decision, current restrictions, and supporting evidence record.
@@ -149,7 +154,7 @@ newsflow-ai/
 │   ├── api/                 # FastAPI application, Alembic migrations, seed data, and Dockerfile
 │   └── web/                 # Next.js application and standalone runtime Dockerfile
 ├── packages/                # Shared contracts, schemas, or generated clients
-├── scripts/                 # Secret, Docker packaging, and deployment-documentation verification
+├── scripts/                 # Secret, packaging, deployment-documentation, and architecture verification
 ├── infrastructure/
 │   ├── database/            # Future hosted database, backup, and restore configuration
 │   └── docker/              # Container and local-service configuration
@@ -207,7 +212,7 @@ newsflow-ai/
 │   ├── development-setup.md # Complete local development guide
 │   ├── source-provider-interface.md # Provider-neutral news boundary
 │   ├── testing.md           # Automated test strategy and commands
-│   ├── architecture/        # Architecture Decision Records and E4 system design
+│   ├── architecture/        # NFA-86 system diagrams, data flows, decisions, and E4 design
 │   └── jira/                # Jira task deliverables and approved baselines
 ├── tests/                   # Cross-service and end-to-end tests
 ├── .editorconfig            # Shared text-formatting defaults
@@ -288,6 +293,9 @@ The frontend and backend directories contain working application foundations. Po
 | `docs/deployment/environment-configuration.md`    | NFA-85 runtime variables, secret classification, environment rules, validation, and known limitations                               |
 | `docs/deployment/operations-runbook.md`           | NFA-85 health, monitoring, routine operations, incident response, recovery, and shutdown procedures                                  |
 | `docs/deployment/backup-and-recovery.md`          | NFA-85 proposed backup schedule, objectives, consistency rules, restore procedures, and release gates                                |
+| `docs/architecture/system-architecture.md`        | NFA-86 high-level system, components, authentication, Docker, trust boundaries, status, and security controls                        |
+| `docs/architecture/data-flow.md`                  | NFA-86 ingestion, text, image, saving, library, export, user-journey, minimisation, and recovery flows                                |
+| `docs/architecture/architecture-decisions.md`     | NFA-86 significant implementation decisions, trade-offs, evidence, open decisions, and maintenance rules                             |
 | `docs/authorization.md`                           | Object ownership rules, protected operations, safe errors, and test evidence                                                        |
 | `docs/cnn-adapter.md`                             | NFA-29 disabled CNN boundary, blocked criteria, tests, and future activation gates                                                  |
 | `docs/source-provider-interface.md`               | Provider interface, article contract, fixture adapter, safe errors, and integration instructions                                    |
@@ -503,6 +511,16 @@ NFA-85 documents the next operational layer without pretending that production a
 
 Start with the [deployment guide](docs/deployment/deployment-guide.md), then use the linked [environment configuration](docs/deployment/environment-configuration.md), [operations runbook](docs/deployment/operations-runbook.md), and [backup and recovery guide](docs/deployment/backup-and-recovery.md). These documents are planning and operational guidance, not proof of deployment, backup execution, or production readiness.
 
+### Architecture and data flows
+
+NFA-86 provides maintainable Mermaid diagrams that can be viewed directly in GitHub and updated alongside the source code:
+
+- The [system architecture](docs/architecture/system-architecture.md) distinguishes the browser, Next.js gateway, FastAPI boundary, PostgreSQL, local private image storage, OpenAI, fixture provider, blocked CNN integration, and proposed production services.
+- The [data-flow guide](docs/architecture/data-flow.md) traces article ingestion, LinkedIn generation, image generation and delivery, draft saving and history, personal-library retrieval, export, deletion, and failure recovery.
+- The [architecture decision register](docs/architecture/architecture-decisions.md) records the reasons and trade-offs behind the provider boundary, same-origin gateways, server sessions, PostgreSQL, point-of-use rights, backend-only OpenAI calls, private image separation, mandatory human review, Docker packaging, and gated deployment.
+
+Authentication, CSRF, object ownership, private storage, external-provider, and operational trust boundaries are explicit. Implemented, local-only, proposed, and blocked components are labelled so the diagrams do not imply live CNN access or a completed production deployment. GitHub Actions checks the diagrams against current route prefixes, provider behavior, storage restrictions, gateway files, README links, and repository evidence paths.
+
 ### Code quality and testing
 
 NFA-17 records the following tool selection:
@@ -568,7 +586,7 @@ NFA-51 adds synthetic image validation, private storage, metadata, idempotency, 
 
 ## Current next step
 
-Review the NFA-85 deployment and operations package. After this branch is pushed, confirm the deployment-documentation, backend, frontend, and Docker packaging jobs pass in GitHub Actions. Before any real deployment, select an approved hosting platform, close the NFA-82 and SEC-01 through SEC-06 release blockers, implement private production object storage, approve recovery targets, and complete an isolated restore exercise. Live CNN access remains blocked because no authorised method or Go decision exists.
+Review the NFA-86 architecture diagrams and decision register in GitHub's Mermaid preview. After this branch is pushed, confirm the architecture-documentation, deployment-documentation, backend, frontend, and Docker packaging jobs pass in GitHub Actions. Any future component, route, trust-boundary, provider, storage, authentication, or deployment change must update these diagrams in the same pull request. Live CNN access remains blocked because no authorised method or Go decision exists.
 
 ## Licence
 
