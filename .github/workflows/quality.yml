@@ -14,6 +14,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  readme-documentation:
+    name: README and developer documentation contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Verify README, links, screenshots, commands, and project status
+        run: python3 scripts/verify_readme_documentation.py
+
+      - name: Verify documentation from an isolated candidate checkout
+        run: python3 scripts/verify_readme_clean_checkout.py
+
   architecture-documentation:
     name: Architecture documentation contract
     runs-on: ubuntu-latest

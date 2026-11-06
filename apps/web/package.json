@@ -9,6 +9,7 @@
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "performance:bundle": "node scripts/check-performance-budget.mjs",
+    "screenshots:docs": "node scripts/capture-documentation-screenshots.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
