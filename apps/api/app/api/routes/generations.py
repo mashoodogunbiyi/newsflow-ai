@@ -46,6 +46,7 @@ def _public_response(draft: LinkedInDraft) -> GenerationResponse:
     description=(
         "Create a private LinkedIn post draft for the authenticated user. The "
         "request requires the HTTP-only session cookie and matching CSRF header. "
+        "Tone, length, and one supported output language are validated by the API. "
         "Before OpenAI is called, the reused NFA-40 service loads the selected "
         "PostgreSQL article and verifies current display and AI-processing rights. "
         "Shared per-user burst, daily, concurrent, and duplicate controls apply. "

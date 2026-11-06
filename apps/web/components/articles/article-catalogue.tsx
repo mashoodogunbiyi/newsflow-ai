@@ -14,6 +14,7 @@ export type DashboardSearchParams = {
   cursor?: string | string[];
   search?: string | string[];
   sort?: string | string[];
+  url?: string | string[];
 };
 
 type ArticleCatalogueProps = {
@@ -83,7 +84,7 @@ export function CatalogueControls({
     >
       <div>
         <label className="text-sm font-semibold text-emerald-950" htmlFor="article-search">
-          Search permitted topics
+          Filter catalogue by topic
         </label>
         <input
           className="mt-2 min-h-11 w-full rounded-2xl border border-emerald-950/15 bg-white px-4 py-2.5 text-sm text-emerald-950 outline-none transition placeholder:text-emerald-950/65 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
@@ -91,7 +92,7 @@ export function CatalogueControls({
           id="article-search"
           maxLength={200}
           name="search"
-          placeholder="For example: technology"
+          placeholder="For example: energy"
           type="search"
         />
       </div>

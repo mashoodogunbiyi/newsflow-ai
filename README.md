@@ -12,7 +12,7 @@ NewsFlow AI demonstrates how a modern AI-assisted content product can be built w
 
 An authenticated user can:
 
-1. Browse a catalogue containing rights-approved article metadata.
+1. Paste an exact approved article URL or browse rights-approved article metadata.
 2. Review the selected source and its attribution.
 3. Generate a source-grounded LinkedIn draft with controlled tone and length.
 4. Edit the text and inspect automated grounding warnings.
@@ -51,14 +51,15 @@ NewsFlow AI addresses those concerns through a provider-neutral ingestion bounda
 - Validation, normalisation, sanitisation, stable identity and deduplication.
 - Provenance, attribution and versioned permitted-use records.
 - Manual administrator synchronisation with durable job evidence.
-- Search, category filtering, ordering and cursor-based catalogue pagination.
+- Exact approved-URL lookup plus topic filtering, category filtering, ordering and cursor-based catalogue pagination.
 - Fail-closed behavior when an authorised source is unavailable.
 
 ### AI-assisted creation
 
 - Backend-only OpenAI text and image service boundaries.
 - Versioned, source-grounded prompt construction with prompt-injection separation.
-- Tone and length controls with idempotency, daily limits and concurrency controls.
+- Professional, conversational and analytical tone controls in English, French or Spanish.
+- Length controls with idempotency, daily limits and concurrency controls.
 - Deterministic schema, length and factual-grounding validation.
 - Sensitive-news image policy, conceptual illustration rules and AI designation.
 - Generated-image validation, metadata removal, digest checking and private delivery.
@@ -83,16 +84,16 @@ NewsFlow AI addresses those concerns through a provider-neutral ingestion bounda
 
 ## Technology stack
 
-| Layer | Technology | Responsibility |
-| --- | --- | --- |
-| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 | Responsive pages, protected workspace, editor, preview and content library |
-| Frontend testing | Vitest, React Testing Library, Playwright, axe-core | Components, gateways, browser journeys and accessibility checks |
-| Backend | Python, FastAPI, Pydantic | HTTP APIs, validation, authentication, authorisation and orchestration |
-| Data | PostgreSQL 16, SQLAlchemy, Alembic | Accounts, sessions, articles, rights, drafts, images, versions and audit evidence |
-| AI integration | Official OpenAI Python SDK | Structured text generation and original illustration generation |
-| Image processing | Pillow | Image format, size, pixel, metadata and integrity validation |
-| Packaging | Docker, Docker Compose | Reproducible local services, migrations, health checks and persistent volumes |
-| Quality | Ruff, ESLint, Prettier, Pytest, GitHub Actions | Formatting, static checks, automated tests and CI enforcement |
+| Layer            | Technology                                          | Responsibility                                                                    |
+| ---------------- | --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, TypeScript, Tailwind CSS 4    | Responsive pages, protected workspace, editor, preview and content library        |
+| Frontend testing | Vitest, React Testing Library, Playwright, axe-core | Components, gateways, browser journeys and accessibility checks                   |
+| Backend          | Python, FastAPI, Pydantic                           | HTTP APIs, validation, authentication, authorisation and orchestration            |
+| Data             | PostgreSQL 16, SQLAlchemy, Alembic                  | Accounts, sessions, articles, rights, drafts, images, versions and audit evidence |
+| AI integration   | Official OpenAI Python SDK                          | Structured text generation and original illustration generation                   |
+| Image processing | Pillow                                              | Image format, size, pixel, metadata and integrity validation                      |
+| Packaging        | Docker, Docker Compose                              | Reproducible local services, migrations, health checks and persistent volumes     |
+| Quality          | Ruff, ESLint, Prettier, Pytest, GitHub Actions      | Formatting, static checks, automated tests and CI enforcement                     |
 
 ## System architecture
 
@@ -177,6 +178,15 @@ Use development-only credentials. The local application and normal test suite do
 git check-ignore -v .env
 ```
 
+To make real text generation calls, add an API key and a text model available to your OpenAI API project to the ignored `.env` file. Image generation uses the same key and the separately configured `OPENAI_IMAGE_MODEL`:
+
+```dotenv
+OPENAI_API_KEY=replace_with_your_own_api_key
+OPENAI_MODEL=replace_with_an_approved_text_model
+```
+
+Never add the real value to `.env.example`, source code, screenshots or Git. ChatGPT access and OpenAI API billing are separate; a key authorises this backend to make metered API requests.
+
 The complete variable reference is in [environment-configuration.md](docs/deployment/environment-configuration.md).
 
 ## Running with Docker
@@ -189,15 +199,15 @@ docker compose up --build --detach --wait
 docker compose ps
 ```
 
-Compose starts PostgreSQL, applies every Alembic migration through a one-shot service, waits for FastAPI readiness and then starts Next.js.
+Compose starts PostgreSQL, applies every Alembic migration, loads one idempotent synthetic demonstration record through a development-only one-shot service, waits for FastAPI readiness and then starts Next.js.
 
-| Service | Local address |
-| --- | --- |
-| Frontend | [http://localhost:3000](http://localhost:3000) |
-| FastAPI health | [http://localhost:8000/health](http://localhost:8000/health) |
-| FastAPI readiness | [http://localhost:8000/ready](http://localhost:8000/ready) |
-| Swagger UI | [http://localhost:8000/docs](http://localhost:8000/docs) |
-| ReDoc | [http://localhost:8000/redoc](http://localhost:8000/redoc) |
+| Service           | Local address                                                |
+| ----------------- | ------------------------------------------------------------ |
+| Frontend          | [http://localhost:3000](http://localhost:3000)               |
+| FastAPI health    | [http://localhost:8000/health](http://localhost:8000/health) |
+| FastAPI readiness | [http://localhost:8000/ready](http://localhost:8000/ready)   |
+| Swagger UI        | [http://localhost:8000/docs](http://localhost:8000/docs)     |
+| ReDoc             | [http://localhost:8000/redoc](http://localhost:8000/redoc)   |
 
 View logs:
 
@@ -245,7 +255,7 @@ The frontend requires FastAPI and PostgreSQL for authentication and protected ap
 
 ## Database migrations and seed data
 
-Docker applies migrations automatically. For a manual backend:
+Docker applies migrations and loads the safe synthetic demonstration record automatically. For a manual backend:
 
 ```bash
 cd apps/api
@@ -254,13 +264,21 @@ alembic upgrade head
 alembic current
 ```
 
-Load the repeatable synthetic fixture only in development or test:
+When running without Compose, load the repeatable synthetic fixture only in development or test:
 
 ```bash
 SEED_DATA_ENABLED=true python -m app.database.seed
 ```
 
 Never enable development seed loading in staging or production. Migration integration tests require a separately named disposable database and explicit reset permission; see the [testing guide](docs/testing.md).
+
+After signing in, the dashboard can resolve this development-only catalogue URL without contacting the domain:
+
+```text
+https://example.invalid/newsflow/synthetic-clean-energy
+```
+
+The URL workflow intentionally matches an existing approved catalogue record. It does not download or scrape arbitrary pages.
 
 ## Running tests
 
@@ -315,12 +333,12 @@ The [API reference](docs/api-reference.md) explains authentication cookies, CSRF
 
 All screenshots use a synthetic account, synthetic article metadata and mocked provider output.
 
-| Article dashboard | Generation workspace |
-| --- | --- |
+| Article dashboard                                                                    | Generation workspace                                                                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | ![Authenticated synthetic article catalogue](docs/screenshots/article-dashboard.png) | ![Editable LinkedIn draft and illustration workspace](docs/screenshots/generation-workspace.png) |
 
-| Content library | Public homepage |
-| --- | --- |
+| Content library                                                                                     | Public homepage                                               |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | ![Private content library containing a synthetic saved draft](docs/screenshots/content-library.png) | ![Public NewsFlow AI homepage](docs/screenshots/homepage.png) |
 
 The [screenshot manifest](docs/screenshots/README.md) records the data source and repeatable capture command.
@@ -359,6 +377,7 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 
 - Live CNN ingestion is blocked pending written authorisation and a new Go decision.
 - The included article catalogue uses synthetic fixtures, not live news.
+- Pasted URLs must already exist in the rights-approved catalogue; arbitrary web-page ingestion is intentionally disabled.
 - Live text and image generation require approved OpenAI configuration and available provider credit.
 - The only implemented image-storage adapter is local and is rejected in staging and production.
 - No production hosting platform, secret store, monitoring stack, backup system or restore proof exists.
@@ -379,38 +398,38 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 
 ## Project status
 
-| Area | Status |
-| --- | --- |
-| Engineering foundation and Docker packaging | Implemented and locally verified |
-| Accounts, sessions and object authorisation | Implemented and tested |
-| Synthetic article pipeline and catalogue | Implemented and tested |
-| OpenAI text and image service boundaries | Implemented and mocked in routine tests |
-| Editor, preview and image alternatives | Implemented and tested |
-| Saved-content lifecycle, export and deletion | Implemented and tested |
+| Area                                                            | Status                                                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| Engineering foundation and Docker packaging                     | Implemented and locally verified                              |
+| Accounts, sessions and object authorisation                     | Implemented and tested                                        |
+| Synthetic article pipeline and catalogue                        | Implemented and tested                                        |
+| OpenAI text and image service boundaries                        | Implemented and mocked in routine tests                       |
+| Editor, preview and image alternatives                          | Implemented and tested                                        |
+| Saved-content lifecycle, export and deletion                    | Implemented and tested                                        |
 | Security, reliability, accessibility and performance automation | Implemented with documented manual and production limitations |
-| Architecture and developer documentation | Implemented |
-| Controlled local synthetic-data demonstration | Conditional Go pending owner acceptance |
-| Live CNN integration | No-Go |
-| Public production release | No-Go |
+| Architecture and developer documentation                        | Implemented                                                   |
+| Controlled local synthetic-data demonstration                   | Conditional Go pending owner acceptance                       |
+| Live CNN integration                                            | No-Go                                                         |
+| Public production release                                       | No-Go                                                         |
 
 Detailed evidence is available in the [testing guide](docs/testing.md), [release-readiness review](docs/release-readiness-quality-signoff.md), [Docker packaging record](docs/docker-packaging.md), and [deployment guide](docs/deployment/deployment-guide.md).
 
 ## Documentation
 
-| Document | Purpose |
-| --- | --- |
-| [Local development setup](docs/development-setup.md) | Complete installation, configuration and troubleshooting |
-| [Developer guide](docs/developer-guide.md) | Daily workflow, code structure and engineering conventions |
-| [API reference](docs/api-reference.md) | OpenAPI access, authentication and endpoint overview |
-| [Testing guide](docs/testing.md) | Commands, coverage, CI, isolation and current evidence |
-| [System architecture](docs/architecture/system-architecture.md) | Components, authentication and trust boundaries |
-| [Data flows](docs/architecture/data-flow.md) | Ingestion, generation, storage, export and recovery |
-| [Environment configuration](docs/deployment/environment-configuration.md) | Complete runtime variable and secret classification |
-| [Deployment guide](docs/deployment/deployment-guide.md) | Proposed hosting architecture and release procedure |
-| [Operations runbook](docs/deployment/operations-runbook.md) | Health, monitoring, maintenance and incidents |
-| [Backup and recovery](docs/deployment/backup-and-recovery.md) | Proposed backup, restore and reconciliation controls |
-| [Project plan](PROJECT_PLAN.md) | Epics and delivery tasks |
-| [Project management](PROJECT_MANAGEMENT.md) | Jira workflow and working agreements |
+| Document                                                                  | Purpose                                                    |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [Local development setup](docs/development-setup.md)                      | Complete installation, configuration and troubleshooting   |
+| [Developer guide](docs/developer-guide.md)                                | Daily workflow, code structure and engineering conventions |
+| [API reference](docs/api-reference.md)                                    | OpenAPI access, authentication and endpoint overview       |
+| [Testing guide](docs/testing.md)                                          | Commands, coverage, CI, isolation and current evidence     |
+| [System architecture](docs/architecture/system-architecture.md)           | Components, authentication and trust boundaries            |
+| [Data flows](docs/architecture/data-flow.md)                              | Ingestion, generation, storage, export and recovery        |
+| [Environment configuration](docs/deployment/environment-configuration.md) | Complete runtime variable and secret classification        |
+| [Deployment guide](docs/deployment/deployment-guide.md)                   | Proposed hosting architecture and release procedure        |
+| [Operations runbook](docs/deployment/operations-runbook.md)               | Health, monitoring, maintenance and incidents              |
+| [Backup and recovery](docs/deployment/backup-and-recovery.md)             | Proposed backup, restore and reconciliation controls       |
+| [Project plan](PROJECT_PLAN.md)                                           | Epics and delivery tasks                                   |
+| [Project management](PROJECT_MANAGEMENT.md)                               | Jira workflow and working agreements                       |
 
 ## Contributing workflow
 

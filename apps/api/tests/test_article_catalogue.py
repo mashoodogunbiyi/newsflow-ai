@@ -164,6 +164,7 @@ def test_list_endpoint_returns_only_public_rights_approved_metadata() -> None:
         "/api/articles",
         params={
             "search": "technology",
+            "source_url": record.canonical_url,
             "category": "technology",
             "provider": "FIXTURE-V1",
             "published_from": "2026-10-01T00:00:00Z",
@@ -204,6 +205,7 @@ def test_list_endpoint_returns_only_public_rights_approved_metadata() -> None:
     )
     filters, cursor, checked_at, requested_limit = repository.list_calls[0]
     assert filters.search == "technology"
+    assert filters.source_url == record.canonical_url
     assert filters.category == "technology"
     assert filters.provider == "fixture-v1"
     assert filters.published_from == datetime(2026, 10, 1, tzinfo=UTC)
@@ -356,6 +358,26 @@ def test_search_input_is_forwarded_as_data_without_interpretation() -> None:
     assert repository.list_calls[0][0].search == malicious_text
 
 
+def test_source_url_is_validated_and_forwarded_for_exact_catalogue_lookup() -> None:
+    record = article_record()
+    repository = InMemoryArticleCatalogueRepository([record])
+    client = make_client(repository)
+
+    response = client.get(
+        "/api/articles",
+        params={"source_url": record.canonical_url},
+    )
+    unsafe = client.get(
+        "/api/articles",
+        params={"source_url": "file:///etc/passwd"},
+    )
+
+    assert response.status_code == 200
+    assert repository.list_calls[0][0].source_url == record.canonical_url
+    assert unsafe.status_code == 422
+    assert unsafe.json()["error"]["code"] == "validation_error"
+
+
 def test_invalid_query_parameters_use_standard_validation_response() -> None:
     client = make_client(InMemoryArticleCatalogueRepository([]))
 
@@ -418,6 +440,7 @@ def test_openapi_documents_catalogue_parameters_security_and_responses() -> None
         "limit",
         "cursor",
         "search",
+        "source_url",
         "category",
         "provider",
         "published_from",

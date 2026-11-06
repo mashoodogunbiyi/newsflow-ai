@@ -456,11 +456,11 @@ NFA-38 itself exposes no provider client directly. NFA-40 and NFA-41 now wrap th
 
 ### Build source-grounded LinkedIn prompts
 
-NFA-39 adds `LinkedInPromptBuilder` between the article-rights service and the OpenAI service. It accepts a validated NFA-6 article, the current NFA-32 AI-generation decision, and strict tone and length preferences. It fails closed when the decision is denied or mismatched, content is restricted, attribution is incomplete, or permitted factual content is missing.
+NFA-39 adds `LinkedInPromptBuilder` between the article-rights service and the OpenAI service. It accepts a validated NFA-6 article, the current NFA-32 AI-generation decision, and strict tone, language and length preferences. It fails closed when the decision is denied or mismatched, content is restricted, attribution is incomplete, or permitted factual content is missing.
 
 The builder puts static application policy and validated preference wording in the higher-priority instructions. It serialises only title, source name, publication date, category, description, and explicitly permitted content into separate untrusted JSON input. The canonical URL, attribution, provider item ID, and rights-version ID remain in the prompt package outside model-generated prose.
 
-The initial `linkedin_post_v1` template supports professional, conversational, and analytical tones plus short, medium, and long length bands. It requires JSON output, prohibits invented facts, statistics, quotations, names, dates, and events, and defines an insufficiency response. The [LinkedIn prompting guide](../../docs/linkedin-prompting.md) records the full contract, version history, evaluation cases, security controls, tests, and limitations.
+The current `linkedin_post_v2` template supports professional, conversational, and analytical tones; English, French, and Spanish output; and short, medium, and long length bands. It requires JSON output, prohibits invented facts, statistics, quotations, names, dates, and events, and defines an insufficiency response. The [LinkedIn prompting guide](../../docs/linkedin-prompting.md) records the full contract, version history, evaluation cases, security controls, tests, and limitations.
 
 ### Generate and retrieve private LinkedIn drafts
 
@@ -471,7 +471,7 @@ POST /api/v1/linkedin-drafts
 GET  /api/v1/linkedin-drafts/{draft_id}
 ```
 
-The POST endpoint requires the HTTP-only session cookie, CSRF proof, an article ID, and validated tone and length choices. It loads the current PostgreSQL snapshot, verifies current AI-processing and derivative-output rights, builds the NFA-39 prompt, calls the NFA-38 OpenAI service, validates strict JSON and configured word limits, runs the NFA-42 factual-grounding checks, and stores an allowed private draft. The result always has `status = "draft"` and `review_required = true`; nothing is published automatically.
+The POST endpoint requires the HTTP-only session cookie, CSRF proof, an article ID, and validated tone, language and length choices. It loads the current PostgreSQL snapshot, verifies current AI-processing and derivative-output rights, builds the NFA-39 prompt, calls the NFA-38 OpenAI service, validates strict JSON and configured word limits, runs the NFA-42 factual-grounding checks, and stores an allowed private draft. The result always has `status = "draft"` and `review_required = true`; nothing is published automatically.
 
 The optional `Idempotency-Key` header prevents repeated storage for one completed request. Per-user generation requests are limited to 10 per 60 seconds by default. NFA-43 also enforces shared defaults of 50 provider-bound attempts per UTC day and 2 concurrent attempts per user through PostgreSQL. An identical active request returns `generation_in_progress` without another OpenAI call. The GET endpoint includes the authenticated owner in its database query, so a missing draft and another user's draft share the same HTTP 404 response.
 

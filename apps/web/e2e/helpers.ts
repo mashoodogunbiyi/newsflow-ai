@@ -18,5 +18,7 @@ export async function signIn(
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("heading", { name: "Find a story worth sharing." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "From trusted link to thoughtful post." }),
+  ).toBeVisible();
 }

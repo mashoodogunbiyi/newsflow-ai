@@ -173,7 +173,7 @@ docker compose up --build --detach --wait
 docker compose ps
 ```
 
-Docker starts PostgreSQL first, automatically applies Alembic migrations, starts FastAPI after the database is healthy and the migration succeeds, and starts Next.js after FastAPI is ready.
+Docker starts PostgreSQL first, automatically applies Alembic migrations, loads the idempotent synthetic demonstration record, starts FastAPI after those one-shot tasks succeed, and starts Next.js after FastAPI is ready.
 
 To keep all service logs in the current terminal instead:
 
@@ -183,14 +183,14 @@ docker compose up --build
 
 All three services should eventually report running or healthy.
 
-The one-shot `migrate` service creates or updates the database schema automatically. Confirm its result and optionally load the synthetic fixture:
+The one-shot `migrate` service creates or updates the database schema. The one-shot `demo-data` service then loads the safe synthetic fixture automatically. Confirm both results:
 
 ```bash
 docker compose exec backend alembic current
-docker compose exec -e SEED_DATA_ENABLED=true backend python -m app.database.seed
+docker compose ps --all
 ```
 
-The seed command is repeatable and does not create duplicate fixtures.
+The seed is repeatable and does not create duplicate fixtures. It refuses to run when `APP_ENV` is not `development` or `test`. The normal backend container still receives `SEED_DATA_ENABLED=false`.
 
 ### Local addresses
 

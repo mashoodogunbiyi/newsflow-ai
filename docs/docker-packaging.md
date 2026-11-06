@@ -10,25 +10,27 @@ The package builds and coordinates:
 - the FastAPI backend;
 - the PostgreSQL 16 database;
 - automatic Alembic migrations; and
+- one repeatable synthetic demonstration record loaded by a development-only one-shot service; and
 - persistent private development image storage.
 
 This evidence does not approve a public or production deployment.
 
 ## Packaging decisions
 
-| Area             | Decision                                                                    | Reason                                                                                   |
-| ---------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Frontend image   | Multi-stage Node.js 22 Alpine build with Next.js standalone output          | Keeps build tooling and development dependencies out of the runtime stage.               |
-| Backend image    | Multi-stage Python 3.12 slim build with a prebuilt virtual environment      | Installs an immutable application package and excludes test and local development files. |
-| Runtime identity | UID and GID 10001 for frontend and backend                                  | Avoids running application processes as root.                                            |
-| Backend command  | `uvicorn app.main:app --host 0.0.0.0 --port 8000`                           | Loads the installed Python module without depending on a source-file path.               |
-| Database         | Official PostgreSQL 16 Alpine image                                         | Matches the supported development database.                                              |
-| Migrations       | One-shot `migrate` service before backend startup                           | Prevents the API from starting against an outdated schema.                               |
-| Persistence      | Named PostgreSQL and private-image volumes                                  | Preserves development data across normal container recreation.                           |
-| Network exposure | Host ports bind to `127.0.0.1`                                              | Limits the development services to the local computer by default.                        |
-| Configuration    | Required PostgreSQL variables plus safe optional defaults                   | Missing database configuration fails before startup and secrets remain outside Git.      |
-| Startup order    | Database health, migration success, backend readiness, then frontend        | Each dependent service starts only when its prerequisite is usable.                      |
-| Runtime controls | Non-root users, all capabilities dropped, `no-new-privileges`, init process | Applies practical local container hardening without claiming production isolation.       |
+| Area             | Decision                                                                    | Reason                                                                                    |
+| ---------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Frontend image   | Multi-stage Node.js 22 Alpine build with Next.js standalone output          | Keeps build tooling and development dependencies out of the runtime stage.                |
+| Backend image    | Multi-stage Python 3.12 slim build with a prebuilt virtual environment      | Installs an immutable application package and excludes test and local development files.  |
+| Runtime identity | UID and GID 10001 for frontend and backend                                  | Avoids running application processes as root.                                             |
+| Backend command  | `uvicorn app.main:app --host 0.0.0.0 --port 8000`                           | Loads the installed Python module without depending on a source-file path.                |
+| Database         | Official PostgreSQL 16 Alpine image                                         | Matches the supported development database.                                               |
+| Migrations       | One-shot `migrate` service before backend startup                           | Prevents the API from starting against an outdated schema.                                |
+| Demo data        | One-shot `demo-data` service after migrations                               | Makes the local dashboard usable while the seed safety checks prevent production loading. |
+| Persistence      | Named PostgreSQL and private-image volumes                                  | Preserves development data across normal container recreation.                            |
+| Network exposure | Host ports bind to `127.0.0.1`                                              | Limits the development services to the local computer by default.                         |
+| Configuration    | Required PostgreSQL variables plus safe optional defaults                   | Missing database configuration fails before startup and secrets remain outside Git.       |
+| Startup order    | Database health, migration success, backend readiness, then frontend        | Each dependent service starts only when its prerequisite is usable.                       |
+| Runtime controls | Non-root users, all capabilities dropped, `no-new-privileges`, init process | Applies practical local container hardening without claiming production isolation.        |
 
 ## Configuration and secret handling
 
@@ -45,7 +47,8 @@ The verification script uses synthetic, test-only database values. It passes the
 - FastAPI `/ready` proves application and PostgreSQL connectivity.
 - Next.js is checked over HTTP on port 3000.
 - `migrate` runs `alembic upgrade head` after PostgreSQL is healthy.
-- The backend requires a successful migration and database readiness.
+- `demo-data` runs the idempotent synthetic seed after a successful migration.
+- The backend requires successful migration, demo-data loading and database readiness.
 - The frontend requires a healthy backend.
 
 The migration service is repeatable. Already-applied revisions are not reapplied.

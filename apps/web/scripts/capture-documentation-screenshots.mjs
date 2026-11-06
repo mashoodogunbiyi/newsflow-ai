@@ -99,7 +99,7 @@ async function main() {
     await page.getByLabel("Email address").fill("owner@example.com");
     await page.getByLabel("Password", { exact: true }).fill("TestPassword123!");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await page.getByRole("heading", { name: "Find a story worth sharing." }).waitFor();
+    await page.getByRole("heading", { name: "From trusted link to thoughtful post." }).waitFor();
     await capture(page, "article-dashboard.png");
 
     await page.getByRole("link", { name: "Select article" }).click();

@@ -329,7 +329,7 @@ def test_success_connects_rights_prompt_openai_validation_and_persistence() -> N
     assert result.source.rights_version_id == RIGHTS_VERSION_ID
     assert result.source.source_url == source().article.url
     assert result.draft == draft_text()
-    assert result.prompt_version == "linkedin_post_v1"
+    assert result.prompt_version == "linkedin_post_v2"
     assert result.token_usage.total_tokens == 220
     assert rights.calls == [
         (ARTICLE_ID, ArticleUseOperation.DISPLAY_METADATA),
@@ -339,6 +339,7 @@ def test_success_connects_rights_prompt_openai_validation_and_persistence() -> N
     assert request.json_schema_format.name == "linkedin_post_draft"
     assert request.json_schema_format.schema_definition["additionalProperties"] is False
     assert "Tone: professional" in request.instructions.get_secret_value()
+    assert "Language: english" in request.instructions.get_secret_value()
     assert repository.save_calls[0]["word_count"] == 80
     assert repository.save_calls[0]["grounding"] == result.grounding
     assert generator.closed is True

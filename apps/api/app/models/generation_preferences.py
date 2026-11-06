@@ -25,11 +25,20 @@ class LinkedInPostLength(str, Enum):
     LONG = "long"
 
 
+class LinkedInLanguage(str, Enum):
+    """Supported output languages for the first multilingual release."""
+
+    ENGLISH = "english"
+    FRENCH = "french"
+    SPANISH = "spanish"
+
+
 class LinkedInGenerationPreferences(BaseModel):
     """Strict user choices converted into trusted application constants."""
 
     tone: LinkedInTone = LinkedInTone.PROFESSIONAL
     post_length: LinkedInPostLength = LinkedInPostLength.MEDIUM
+    language: LinkedInLanguage = LinkedInLanguage.ENGLISH
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

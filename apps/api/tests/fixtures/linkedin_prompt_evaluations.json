@@ -1,6 +1,6 @@
 {
   "evaluation_version": "linkedin_grounding_eval_v1",
-  "prompt_version": "linkedin_post_v1",
+  "prompt_version": "linkedin_post_v2",
   "cases": [
     {
       "id": "grounded-healthcare-summary",

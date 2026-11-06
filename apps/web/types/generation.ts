@@ -34,11 +34,31 @@ export const GENERATION_LENGTHS = [
   },
 ] as const;
 
+export const GENERATION_LANGUAGES = [
+  {
+    description: "Write the complete draft in English.",
+    label: "English",
+    value: "english",
+  },
+  {
+    description: "Write the complete draft in French.",
+    label: "French",
+    value: "french",
+  },
+  {
+    description: "Write the complete draft in Spanish.",
+    label: "Spanish",
+    value: "spanish",
+  },
+] as const;
+
 export type GenerationTone = (typeof GENERATION_TONES)[number]["value"];
 export type GenerationLength = (typeof GENERATION_LENGTHS)[number]["value"];
+export type GenerationLanguage = (typeof GENERATION_LANGUAGES)[number]["value"];
 
 export type GenerationRequest = {
   article_id: string;
+  language: GenerationLanguage;
   length: GenerationLength;
   tone: GenerationTone;
 };
@@ -77,6 +97,10 @@ export function isGenerationTone(value: unknown): value is GenerationTone {
 
 export function isGenerationLength(value: unknown): value is GenerationLength {
   return GENERATION_LENGTHS.some((option) => option.value === value);
+}
+
+export function isGenerationLanguage(value: unknown): value is GenerationLanguage {
+  return GENERATION_LANGUAGES.some((option) => option.value === value);
 }
 
 export function isArticleId(value: unknown): value is string {

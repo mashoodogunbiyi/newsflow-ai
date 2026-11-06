@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { getArticleDetail, getArticlePage } from "@/lib/article-api";
+import {
+  getArticleDetail,
+  getArticlePage,
+  normaliseSourceUrl,
+  resolveArticleUrl,
+} from "@/lib/article-api";
 import type { ArticleCategory } from "@/types/article";
 
 const cookieState = vi.hoisted(() => ({ session: undefined as string | undefined }));
@@ -91,6 +96,36 @@ describe("article catalogue API client", () => {
     await expect(getArticlePage()).resolves.toEqual({
       status: "error",
       reason: "authentication_required",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("resolves one exact approved source URL without fetching that website", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ...articlePage, next_cursor: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(resolveArticleUrl(articlePage.items[0].source_url)).resolves.toEqual({
+      status: "success",
+      data: articlePage.items[0],
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      `http://backend:8000/api/articles?limit=9&sort=newest&source_url=${encodeURIComponent(articlePage.items[0].source_url)}`,
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(fetch).not.toHaveBeenCalledWith(articlePage.items[0].source_url, expect.anything());
+  });
+
+  test("rejects unsafe source URLs before contacting FastAPI", async () => {
+    expect(normaliseSourceUrl("file:///etc/passwd")).toBeNull();
+    expect(normaliseSourceUrl("https://user:secret@example.com/story")).toBeNull();
+    expect(normaliseSourceUrl("https://example.com/story#private-fragment")).toBeNull();
+    await expect(resolveArticleUrl("javascript:alert(1)")).resolves.toEqual({
+      status: "error",
+      reason: "invalid_request",
     });
     expect(fetch).not.toHaveBeenCalled();
   });

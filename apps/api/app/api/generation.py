@@ -133,6 +133,7 @@ async def create_generation_resource(
             preferences=LinkedInGenerationPreferences(
                 tone=payload.tone,
                 post_length=payload.length,
+                language=payload.language,
             ),
             idempotency_key=idempotency_key,
         )

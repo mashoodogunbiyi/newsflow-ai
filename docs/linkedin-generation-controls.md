@@ -12,7 +12,7 @@ The browser never calls OpenAI directly. It sends a narrow request through a sam
 Authorised article selected in NFA-59
     |
     v
-Choose tone and length
+Choose tone, language and length
     |
     v
 Next.js validates the visible preferences
@@ -35,14 +35,17 @@ No step publishes content to LinkedIn. A successful result remains a private AI 
 
 The controls and backend share these exact enum values:
 
-| Control | API value        | Interface meaning                                            |
-| ------- | ---------------- | ------------------------------------------------------------ |
-| Tone    | `professional`   | Clear and polished writing for a broad professional audience |
-| Tone    | `conversational` | Approachable writing that invites discussion                 |
-| Tone    | `analytical`     | Structured writing focused on context and implications       |
-| Length  | `short`          | Approximately 80 to 120 words                                |
-| Length  | `medium`         | Approximately 130 to 200 words                               |
-| Length  | `long`           | Approximately 220 to 320 words                               |
+| Control  | API value        | Interface meaning                                            |
+| -------- | ---------------- | ------------------------------------------------------------ |
+| Tone     | `professional`   | Clear and polished writing for a broad professional audience |
+| Tone     | `conversational` | Approachable writing that invites discussion                 |
+| Tone     | `analytical`     | Structured writing focused on context and implications       |
+| Language | `english`        | Complete draft in English                                    |
+| Language | `french`         | Complete draft in French without adding facts                |
+| Language | `spanish`        | Complete draft in Spanish without adding facts               |
+| Length   | `short`          | Approximately 80 to 120 words                                |
+| Length   | `medium`         | Approximately 130 to 200 words                               |
+| Length   | `long`           | Approximately 220 to 320 words                               |
 
 The default request is `professional` and `medium`. Next.js validates these choices for user experience, while FastAPI performs the authoritative validation.
 
@@ -109,7 +112,7 @@ An unreadable, malformed, or request-mismatched success response is rejected by 
 
 ## Accessibility and responsive behaviour
 
-- Tone and length use native radio inputs grouped by labelled `fieldset` and `legend` elements.
+- Tone, language and length use native radio inputs grouped by labelled `fieldset` and `legend` elements.
 - Every choice has a visible label and description.
 - The form and Generate button work with keyboard navigation.
 - Disabled states use real HTML `disabled` behaviour rather than colour alone.
@@ -149,7 +152,7 @@ Frontend tests cover:
 
 - Professional and medium defaults.
 - Exact supported option list.
-- Tone and length selection in the submitted JSON request.
+- Tone, language and length selection in the submitted JSON request.
 - Article UUID, CSRF header, cookies, and idempotency header handling.
 - Missing and restricted article states.
 - Synchronous duplicate submission protection and active loading state.
@@ -193,8 +196,8 @@ Verified locally on 1 November 2026:
 
 1. Start PostgreSQL, FastAPI, and Next.js.
 2. Sign in and select an available synthetic article from `/dashboard`.
-3. Confirm Professional and Medium are selected by default.
-4. Operate every tone, length, and Generate control using only the keyboard.
+3. Confirm Professional, English, and Medium are selected by default.
+4. Operate every tone, language, length, and Generate control using only the keyboard.
 5. Submit one request and confirm a processing state immediately disables another request.
 6. Confirm a successful request is described as a private draft requiring human review.
 7. Confirm the interface does not claim that content was published or factually verified.

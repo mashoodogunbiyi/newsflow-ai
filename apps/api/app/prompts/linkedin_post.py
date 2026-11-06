@@ -2,9 +2,13 @@
 
 from dataclasses import dataclass
 
-from app.models.generation_preferences import LinkedInPostLength, LinkedInTone
+from app.models.generation_preferences import (
+    LinkedInLanguage,
+    LinkedInPostLength,
+    LinkedInTone,
+)
 
-LINKEDIN_PROMPT_VERSION = "linkedin_post_v1"
+LINKEDIN_PROMPT_VERSION = "linkedin_post_v2"
 
 
 @dataclass(frozen=True)
@@ -47,6 +51,18 @@ LINKEDIN_TONE_REQUIREMENTS = {
     ),
 }
 
+LINKEDIN_LANGUAGE_REQUIREMENTS = {
+    LinkedInLanguage.ENGLISH: ("Write the entire draft in clear English."),
+    LinkedInLanguage.FRENCH: (
+        "Write the entire draft in natural French. Preserve proper names, numbers, "
+        "and source-supported meaning exactly."
+    ),
+    LinkedInLanguage.SPANISH: (
+        "Write the entire draft in natural Spanish. Preserve proper names, numbers, "
+        "and source-supported meaning exactly."
+    ),
+}
+
 BASE_LINKEDIN_INSTRUCTIONS = """You generate a professional LinkedIn post draft for NewsFlow AI.
 
 APPLICATION RULES
@@ -82,6 +98,7 @@ def build_linkedin_instructions(
     *,
     tone: LinkedInTone,
     post_length: LinkedInPostLength,
+    language: LinkedInLanguage,
 ) -> tuple[str, LinkedInLengthSpecification]:
     """Add validated writing preferences to the trusted versioned template."""
 
@@ -89,6 +106,8 @@ def build_linkedin_instructions(
     writing_requirements = f"""
 WRITING REQUIREMENTS
 - Tone: {tone.value}. {LINKEDIN_TONE_REQUIREMENTS[tone]}
+- Language: {language.value}. {LINKEDIN_LANGUAGE_REQUIREMENTS[language]}
+- Translation must not introduce facts, interpretation, or detail that is absent from the permitted source information.
 - Length: {post_length.value}. Target {length.minimum_words} to {length.maximum_words} words when the permitted information is sufficient.
 - Write an original post suitable for LinkedIn with readable short paragraphs.
 - Keep opinions visibly separate from source-supported facts.

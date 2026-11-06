@@ -5,6 +5,7 @@ import {
   isArticleDetail,
   isArticlePage,
   type ArticleCategory,
+  type Article,
   type ArticleDetail,
   type ArticlePage,
 } from "@/types/article";
@@ -19,6 +20,7 @@ export type ArticlePageOptions = {
   category?: ArticleCategory;
   cursor?: string;
   search?: string;
+  sourceUrl?: string;
   sort?: ArticleSort;
 };
 
@@ -31,6 +33,13 @@ export type ArticlePageResult =
 
 export type ArticleDetailResult =
   | { data: ArticleDetail; status: "success" }
+  | {
+      reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
+      status: "error";
+    };
+
+export type ArticleUrlResult =
+  | { data: Article; status: "success" }
   | {
       reason: "authentication_required" | "invalid_request" | "not_found" | "unavailable";
       status: "error";
@@ -49,6 +58,7 @@ function hasValidOptions(options: ArticlePageOptions) {
   return (
     (!options.cursor || options.cursor.length <= 512) &&
     (!options.search || options.search.length <= 200) &&
+    (!options.sourceUrl || normaliseSourceUrl(options.sourceUrl) !== null) &&
     (!options.category || isArticleCategory(options.category)) &&
     (!options.sort || options.sort === "newest" || options.sort === "oldest")
   );
@@ -69,8 +79,44 @@ function buildArticleUrl(options: ArticlePageOptions) {
   if (options.search) {
     searchParameters.set("search", options.search);
   }
+  if (options.sourceUrl) {
+    searchParameters.set("source_url", normaliseSourceUrl(options.sourceUrl) ?? "");
+  }
 
   return `${getBackendBaseUrl()}/api/articles?${searchParameters.toString()}`;
+}
+
+export function normaliseSourceUrl(value: string) {
+  if (!value || value.length > 2048) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.username || url.password || url.hash || !url.hostname) {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveArticleUrl(sourceUrl: string): Promise<ArticleUrlResult> {
+  const normalisedUrl = normaliseSourceUrl(sourceUrl);
+  if (!normalisedUrl) {
+    return { status: "error", reason: "invalid_request" };
+  }
+
+  const result = await getArticlePage({ sourceUrl: normalisedUrl });
+  if (result.status === "error") {
+    return result;
+  }
+
+  const match = result.data.items.find(
+    (article) => normaliseSourceUrl(article.source_url) === normalisedUrl,
+  );
+  return match ? { status: "success", data: match } : { status: "error", reason: "not_found" };
 }
 
 export async function getArticlePage(options: ArticlePageOptions = {}): Promise<ArticlePageResult> {

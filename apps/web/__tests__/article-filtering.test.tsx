@@ -62,7 +62,7 @@ describe("article category filtering and browsing state", () => {
     expect(form?.getAttribute("action")).toBe("/dashboard");
     expect(form?.getAttribute("method")).toBe("get");
     expect(screen.getByLabelText("Category")).toHaveProperty("value", "business");
-    expect(screen.getByLabelText("Search permitted topics")).toHaveProperty("value", "markets");
+    expect(screen.getByLabelText("Filter catalogue by topic")).toHaveProperty("value", "markets");
     expect(screen.getByLabelText("Publication order")).toHaveProperty("value", "oldest");
     expect(form?.querySelector('[name="cursor"]')).toBeNull();
   });
