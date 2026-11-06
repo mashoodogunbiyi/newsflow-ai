@@ -1235,8 +1235,23 @@ python3 scripts/scan_secrets.py
 git diff --check
 ```
 
+- The NFA-86 architecture-documentation contract passed on 5 November 2026. It verified three linked documents, eleven maintainable Mermaid diagrams, all required components and flows, ten architecture decisions, trust-boundary and implementation-status language, local documentation links, and README integration.
+- The NFA-86 contract parsed the current FastAPI router prefixes for article catalogue, administrator synchronisation, authentication, text generation, image generation, and saved drafts. It also verified repository evidence for the fail-closed fixture provider, session and CSRF dependencies, private image-storage abstraction, staging and production storage restriction, and Next.js generation, image, and draft gateways.
+- The focused backend architecture workflow run passed all 103 tests across provider selection, article synchronisation, authentication, text generation API, image regeneration, private image delivery, and saved drafts.
+- The focused frontend gateway run passed all 12 tests across 4 files for text generation, image generation, draft persistence, and private image download.
+- The project secret scan, Ruff lint and formatting, and `git diff --check` passed. The diagrams contain no credential values and use normal ASCII hyphens.
+- GitHub Actions now runs `python3 scripts/verify_architecture_documentation.py` as a separate architecture-documentation job on pull requests and updates to `main`.
+
+Run the focused NFA-86 documentation check from the repository root:
+
+```bash
+python3 scripts/verify_architecture_documentation.py
+python3 scripts/scan_secrets.py
+git diff --check
+```
+
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, and NFA-85
-- Implementation status: NFA-85 deployment and operations documentation package ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, and NFA-86
+- Implementation status: NFA-86 architecture and data-flow documentation package ready for owner review
 - Approval status: Pending Mashood Ogunbiyi's review
