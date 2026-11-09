@@ -316,6 +316,8 @@ python3 scripts/verify_deployment_documentation.py
 python3 scripts/verify_demonstration_package.py
 python3 scripts/verify_technical_report.py
 python3 scripts/verify_readme_documentation.py
+python3 scripts/verify_handover_package.py
+python3 scripts/verify_handover_clean_checkout.py
 git diff --check
 ```
 
@@ -342,6 +344,19 @@ The [complete demonstration package](docs/demonstration/README.md) contains the 
 The [technical report](docs/technical-report.md) explains the project background, requirements, architecture, database, ingestion pipeline, provenance, text and image generation, authentication, content lifecycle, testing, challenges, decisions, results and limitations.
 
 The shorter [portfolio case study](docs/portfolio-case-study.md) presents the same verified work for technical recruiters and hiring managers. It highlights the implemented software engineering, data engineering, AI integration, security, testing, Docker, Git, CI and Jira experience without claiming live CNN access or a production deployment.
+
+## Handover and reproducibility
+
+The [NFA-90 handover package](docs/handover/README.md) provides a future maintainer with a reproducibility checklist, executed-results record, maintenance guide, final transfer checklist, version-capture procedure and outstanding production ownership information.
+
+The package distinguishes the tested pre-NFA-90 baseline from the final merged commit. It can verify every tracked and intended untracked candidate file in an isolated temporary checkout without copying the developer's ignored `.env`, virtual environment, installed dependencies or local storage:
+
+```bash
+python3 scripts/verify_handover_package.py
+python3 scripts/verify_handover_clean_checkout.py
+```
+
+Final handover acceptance still requires the NFA-90 branch to be reviewed and merged, local `main` to be pulled, the immutable commit and pull request to be recorded in Jira, and Mashood Ogunbiyi to approve or request changes. The handover does not change the No-Go decision for public production or live CNN integration.
 
 ## API documentation
 
@@ -433,6 +448,7 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 | Security, reliability, accessibility and performance automation | Implemented with documented manual and production limitations |
 | Architecture and developer documentation                        | Implemented                                                   |
 | Technical report and portfolio case study                       | Implemented and verified                                      |
+| Reproducibility and maintenance handover package                | Technical candidate prepared; final merge and owner review pending |
 | Controlled local synthetic-data demonstration                   | Package prepared; manual rehearsal and owner acceptance pending |
 | Live CNN integration                                            | No-Go                                                         |
 | Public production release                                       | No-Go                                                         |
@@ -456,6 +472,7 @@ Detailed evidence is available in the [testing guide](docs/testing.md), [release
 | [Demonstration package](docs/demonstration/README.md)                     | Presenter script, rehearsal, fallback and evidence         |
 | [Technical report](docs/technical-report.md)                              | Design, implementation, evaluation and outcomes            |
 | [Portfolio case study](docs/portfolio-case-study.md)                      | Concise recruiter-facing project summary                   |
+| [Handover package](docs/handover/README.md)                               | Reproducibility, maintenance, transfer, and final review    |
 | [Project plan](PROJECT_PLAN.md)                                           | Epics and delivery tasks                                   |
 | [Project management](PROJECT_MANAGEMENT.md)                               | Jira workflow and working agreements                       |
 

@@ -1291,8 +1291,37 @@ python3 scripts/scan_secrets.py
 git diff --check
 ```
 
+## NFA-90 reproducibility and handover verification
+
+The NFA-90 handover package records the tested pre-NFA-90 baseline, candidate version, complete local reproducibility procedure, maintenance responsibilities, actual verification results, final post-merge capture steps, known limitations, and owner approval boundary.
+
+Verified results on 9 November 2026:
+
+- The handover contract and isolated candidate-checkout verification passed. The isolated test copied tracked and intended untracked, non-ignored files to a temporary directory and reran the handover, architecture, deployment, demonstration, technical-report, and README contracts without the developer's `.env`, virtual environment, installed dependencies, or local storage.
+- The secret scan passed and `git check-ignore -v .env` confirmed that the local environment file is excluded by `.gitignore`.
+- Ruff linting and formatting passed. The deterministic backend run passed 489 tests, skipped 16 explicitly safety-gated tests, and deselected 1 optional live-provider test.
+- `pip-audit` reported no known dependency vulnerability; it skipped only the unpublished local `newsflow-api` package.
+- Frontend ESLint, Prettier, TypeScript, all 173 tests across 36 files, and the Next.js production build passed.
+- The production dependency audit passed with 0 vulnerabilities at the repository's high-severity threshold.
+- The clean CI-mode Playwright run passed all 13 Chromium scenarios. It covered authentication, the full synthetic article-to-library lifecycle, ownership isolation, provider errors, accessibility, responsive layouts, keyboard behaviour and private image delivery.
+- Two earlier Playwright attempts failed before tests ran: the restricted sandbox blocked port 4100, then an approved local-server attempt timed out. `CI=1` forced clean web servers and the complete suite passed without changing application code or weakening an assertion.
+- The isolated Docker lifecycle proof passed on ports 43200 to 43202. It rejected missing PostgreSQL configuration, built the images, migrated through `20261102_0015`, loaded synthetic seed data, reported healthy services, verified non-root users, survived service restart and full stop/start, preserved a database marker, and removed its disposable project afterward.
+- `git diff --check`, the README contract and all linked documentation contracts passed.
+- The final immutable commit, pull request URL, tracked-file confirmation and owner approval remain post-merge steps. A release tag does not currently exist.
+- Public production, live CNN integration, human UAT, representative screen-reader acceptance, managed storage, monitoring, backup and restore remain explicit No-Go or unverified items.
+
+Run the focused NFA-90 checks from the repository root:
+
+```bash
+python3 scripts/verify_handover_package.py
+python3 scripts/verify_handover_clean_checkout.py
+python3 scripts/scan_secrets.py
+git check-ignore -v .env
+git diff --check
+```
+
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, NFA-87, NFA-88, and NFA-89
-- Implementation status: NFA-89 technical report and portfolio case study ready for owner review
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, NFA-87, NFA-88, NFA-89, and NFA-90
+- Implementation status: NFA-90 technical handover candidate ready for owner review and merge
 - Approval status: Pending Mashood Ogunbiyi's review
