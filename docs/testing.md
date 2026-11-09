@@ -1320,8 +1320,35 @@ git check-ignore -v .env
 git diff --check
 ```
 
+## NFA-91 project closure and retrospective verification
+
+NFA-91 reviews the original objectives, final implemented scope, all 10 Epics, completed deliverables, incomplete work, defects, risks, demonstration, handover, achievements, challenges, lessons and future improvements.
+
+Verified results on 9 November 2026:
+
+- `verify_project_closure.py` passed. It checks all six closure documents, local links, the E0 through E9 review order, 14 outstanding-work identifiers, version `0.1.0`, 15 Alembic revisions, current No-Go and Conditional Go decisions, UAT status, NFA-90 handover results, README integration, project-plan status, CI integration, unsupported claims and normal ASCII hyphens.
+- The NFA-90 handover contract and isolated candidate-checkout test passed after the closure verifier was added to the isolated verifier set.
+- The README, architecture, deployment, demonstration, technical-report and portfolio-case-study contracts passed.
+- The project secret scan and `git diff --check` passed.
+- Ruff linting and formatting passed for the closure and updated handover verification scripts.
+- No application source code changed under NFA-91, so the closure report uses the final NFA-90 test evidence rather than presenting an unnecessary documentation-only rerun as a new application baseline.
+- The reviewed application baseline remains 489 passed backend tests, 16 explicit safety-gated skips, 1 optional live-provider deselection, 173 passed frontend tests across 36 files, 13 passed Playwright scenarios and a successful isolated Docker lifecycle proof.
+- The closure decision is Project completed with documented limitations for the controlled local synthetic-data portfolio scope.
+- Public production, live CNN integration, human UAT, representative screen-reader acceptance, managed storage, production operations, password reset and software licensing remain incomplete or No-Go.
+
+Run the focused NFA-91 checks from the repository root:
+
+```bash
+python3 scripts/verify_project_closure.py
+python3 scripts/verify_handover_package.py
+python3 scripts/verify_handover_clean_checkout.py
+python3 scripts/verify_readme_documentation.py
+python3 scripts/scan_secrets.py
+git diff --check
+```
+
 ## Review status
 
-- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, NFA-87, NFA-88, NFA-89, and NFA-90
-- Implementation status: NFA-90 technical handover candidate ready for owner review and merge
+- Jira issues covered: NFA-36, NFA-38, NFA-39, NFA-40, NFA-41, NFA-42, NFA-43, NFA-44, NFA-45, NFA-46, NFA-48, NFA-49, NFA-50, NFA-51, NFA-52, NFA-53, NFA-54, NFA-56, NFA-58, NFA-59, NFA-60, NFA-61, NFA-62, NFA-63, NFA-64, NFA-65, NFA-67, NFA-68, NFA-69, NFA-70, NFA-71, NFA-72, NFA-73, NFA-75, NFA-76, NFA-77, NFA-78, NFA-79, NFA-80, NFA-81, NFA-82, NFA-84, NFA-85, NFA-86, NFA-87, NFA-88, NFA-89, NFA-90, and NFA-91
+- Implementation status: NFA-91 technical project closure package ready for owner review and merge
 - Approval status: Pending Mashood Ogunbiyi's review

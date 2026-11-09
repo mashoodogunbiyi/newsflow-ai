@@ -16,6 +16,7 @@ VERIFIERS = (
     "verify_demonstration_package.py",
     "verify_technical_report.py",
     "verify_readme_documentation.py",
+    "verify_project_closure.py",
 )
 
 

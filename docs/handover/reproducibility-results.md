@@ -10,7 +10,7 @@
 | Candidate branch | `nfa-90-reproducibility-handover` |
 | Application version | `0.1.0` |
 | Release tag | None |
-| Final merged commit | Pending merge and post-merge capture |
+| Final merged commit | `14c97464be98d7d6a4275158b7215401122974c7` through [PR #82](https://github.com/mashoodogunbiyi/newsflow-ai/pull/82) |
 | Data boundary | Synthetic records and mocked providers only |
 
 ## 2. Verification environment
@@ -51,14 +51,12 @@ This result supports owner review and merge of the handover candidate. It does n
 
 The following items cannot be marked complete by code changes alone:
 
-1. The final immutable commit does not exist until the branch is merged.
-2. Required-file commit status must be confirmed after the NFA-90 commit and merge.
-3. A release tag has not been created.
-4. The owner has not yet completed final handover review.
-5. Human UAT and representative screen-reader acceptance remain incomplete.
-6. Public hosting, production secrets, managed private storage, monitoring, backups, restore testing, and incident operations are not implemented.
-7. Live CNN ingestion remains No-Go without written authorisation.
-8. Live OpenAI calls depend on a separately configured key, approved model access, available credit, and external provider availability.
+1. A release tag has not been created.
+2. Final project closure is reviewed under NFA-91.
+3. Human UAT and representative screen-reader acceptance remain incomplete.
+4. Public hosting, production secrets, managed private storage, monitoring, backups, restore testing, and incident operations are not implemented.
+5. Live CNN ingestion remains No-Go without written authorisation.
+6. Live OpenAI calls depend on a separately configured key, approved model access, available credit, and external provider availability.
 
 These are reported limitations, not passing test results.
 

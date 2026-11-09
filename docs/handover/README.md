@@ -15,12 +15,13 @@ It records what has been verified, what remains manual, and which production and
 | Release tag | None created |
 | Documentation review date | 9 November 2026 |
 | NFA-90 candidate | `nfa-90-reproducibility-handover` |
-| Final merged commit | Must be captured after merge with `git rev-parse HEAD` |
+| Final merged commit | `14c97464be98d7d6a4275158b7215401122974c7` |
+| Pull request | [PR #82](https://github.com/mashoodogunbiyi/newsflow-ai/pull/82) |
 | Controlled local demonstration | Supported with synthetic data and mocked providers |
 | Public production release | No-Go |
 | Live CNN integration | No-Go - written authorisation is not available |
 
-The baseline hash identifies the merged repository from which NFA-90 started. The NFA-90 branch cannot honestly identify its final immutable version until it is reviewed, merged, and pulled to local `main`.
+The baseline hash identifies the merged repository from which NFA-90 started. PR #82 merged the handover package into `main` on 9 November 2026, producing the final NFA-90 merge commit above.
 
 ## 3. Package contents
 
@@ -69,12 +70,5 @@ The following are not verified by this handover:
 
 ## 6. Ownership and final acceptance
 
-Mashood Ogunbiyi is the current project owner. Technical preparation of this package does not replace owner review. Final handover acceptance requires the owner to:
-
-1. merge the NFA-90 pull request;
-2. pull the merged `main` branch;
-3. record the final commit and pull request in Jira;
-4. confirm that required files are tracked and the working tree is clean;
-5. review the known limitations and outstanding risks; and
-6. approve the handover checklist or record requested changes.
+Mashood Ogunbiyi is the current project owner. PR #82 merged the technical handover, local `main` was confirmed current and the final version was captured. The NFA-91 project closure package now owns the remaining review of limitations, outstanding risks, Jira accuracy and final project status.
 
