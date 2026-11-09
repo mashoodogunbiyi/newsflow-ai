@@ -41,6 +41,9 @@ jobs:
       - name: Verify the NFA-90 isolated handover candidate
         run: python3 scripts/verify_handover_clean_checkout.py
 
+      - name: Verify the NFA-91 project closure package
+        run: python3 scripts/verify_project_closure.py
+
   architecture-documentation:
     name: Architecture documentation contract
     runs-on: ubuntu-latest

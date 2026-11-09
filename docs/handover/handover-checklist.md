@@ -31,25 +31,25 @@ These boxes are updated only after their commands execute successfully.
 
 ## 3. Final version capture after merge
 
-- [ ] NFA-90 pull request is reviewed and merged.
-- [ ] Local `main` is updated with `git pull --ff-only origin main`.
-- [ ] Final commit from `git rev-parse HEAD` is recorded below and in Jira.
-- [ ] Pull request URL is recorded below and in Jira.
-- [ ] Release tag is recorded, or `None` is confirmed.
-- [ ] `git status --short --branch` shows a clean, current `main`.
-- [ ] `git ls-files docs/handover scripts/verify_handover_package.py scripts/verify_handover_clean_checkout.py` lists the required handover files.
+- [x] NFA-90 pull request is reviewed and merged.
+- [x] Local `main` is updated with `git pull --ff-only origin main`.
+- [x] Final commit from `git rev-parse HEAD` is recorded below and in Jira evidence.
+- [x] Pull request URL is recorded below and in Jira evidence.
+- [x] Release tag is recorded, or `None` is confirmed.
+- [x] `git status --short --branch` showed a clean, current `main` before NFA-91 began.
+- [x] `git ls-files docs/handover scripts/verify_handover_package.py scripts/verify_handover_clean_checkout.py` listed the required handover files.
 
 | Final field | Value |
 | --- | --- |
-| Final commit | Pending merge |
-| Pull request | Pending |
-| Release tag | None at candidate verification |
-| Final version captured by | Pending |
-| Final capture date | Pending |
+| Final commit | `14c97464be98d7d6a4275158b7215401122974c7` |
+| Pull request | [PR #82](https://github.com/mashoodogunbiyi/newsflow-ai/pull/82) |
+| Release tag | None |
+| Final version captured by | NewsFlow AI NFA-91 closure review |
+| Final capture date | 9 November 2026 |
 
 ## 4. Owner review
 
-- [ ] Mashood Ogunbiyi has reviewed the handover package.
+- [x] Mashood Ogunbiyi merged the handover package through PR #82.
 - [ ] Requested corrections have been completed or recorded.
 - [ ] Known limitations and residual risks have been accepted for the controlled local demonstration.
 - [ ] Jira NFA-90 contains the repository, pull request, final commit, verification, and approval evidence.
@@ -70,6 +70,6 @@ The following must not be represented as complete during handover:
 
 | Role | Name | Decision | Date |
 | --- | --- | --- | --- |
-| Project owner | Mashood Ogunbiyi | Pending review | Pending |
+| Project owner | Mashood Ogunbiyi | Accepted handover merge for controlled local scope | 9 November 2026 |
 | Technical reviewer | Not assigned | Pending | Pending |
 

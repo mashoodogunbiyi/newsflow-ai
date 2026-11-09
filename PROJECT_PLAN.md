@@ -1,9 +1,11 @@
-# NewsFlow AI — Project Plan
+# NewsFlow AI - Project Plan
 
-- **Plan version:** 1.0
-- **Last updated:** 11 October 2026
+- **Plan version:** 1.1
+- **Last updated:** 9 November 2026
 - **Delivery model:** two-week sprints; three-sprint target for a small cross-functional team, subject to capacity and the CNN access gate
-- **Project status:** planning
+- **Project status:** Project completed with documented limitations for the controlled local synthetic-data portfolio scope; public production and live CNN integration remain No-Go
+
+> **Closure note:** This document preserves the original planning baseline and its original task checkboxes. It is not the live Jira status record. The evidence-based final scope, review of all 10 Epics, incomplete work, risks and closure decision are recorded in the [NFA-91 project closure package](docs/project-closure/README.md). Jira items must be updated from actual acceptance evidence rather than by changing every historical planning checkbox here.
 
 ## 1. Purpose
 

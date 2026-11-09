@@ -42,7 +42,8 @@ def verify_document_structure() -> None:
         (
             "## 2. Handover status",
             "375cdcb2557b8953a8776654b563ae9001f0b9e2",
-            "Final merged commit",
+            "14c97464be98d7d6a4275158b7215401122974c7",
+            "PR #82",
             "## 3. Package contents",
             "## 4. Reproducibility boundary",
             "## 5. First actions for a new maintainer",
@@ -83,7 +84,7 @@ def verify_document_structure() -> None:
             "## 4. Reproducibility conclusions",
             "## 5. Gaps and unresolved items",
             "## 6. Failure and retest record",
-            "Final merged commit | Pending merge and post-merge capture",
+            "Final merged commit | `14c97464be98d7d6a4275158b7215401122974c7`",
         ),
     )
 
@@ -113,8 +114,8 @@ def verify_document_structure() -> None:
             "## 4. Owner review",
             "## 5. Explicit No-Go items",
             "## 6. Approval record",
-            "Pending merge",
-            "Mashood Ogunbiyi | Pending review",
+            "PR #82",
+            "Mashood Ogunbiyi | Accepted handover merge for controlled local scope",
         ),
     )
 

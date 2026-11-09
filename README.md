@@ -2,7 +2,7 @@
 
 NewsFlow AI is a full-stack, review-first workspace that turns permitted news facts into editable LinkedIn drafts and original AI-generated illustrations while preserving source attribution, content rights, ownership and human control.
 
-> **Current status:** the application is implemented and tested for a controlled local demonstration using synthetic article data and mocked external providers. Public production release and live CNN integration remain **No-Go**.
+> **Current status:** the project closure decision is **Project completed with documented limitations** for a controlled local demonstration using synthetic article data and mocked external providers. Public production release and live CNN integration remain **No-Go**.
 
 ![NewsFlow AI homepage showing the fixture-mode product introduction](docs/screenshots/homepage.png)
 
@@ -318,6 +318,7 @@ python3 scripts/verify_technical_report.py
 python3 scripts/verify_readme_documentation.py
 python3 scripts/verify_handover_package.py
 python3 scripts/verify_handover_clean_checkout.py
+python3 scripts/verify_project_closure.py
 git diff --check
 ```
 
@@ -356,7 +357,19 @@ python3 scripts/verify_handover_package.py
 python3 scripts/verify_handover_clean_checkout.py
 ```
 
-Final handover acceptance still requires the NFA-90 branch to be reviewed and merged, local `main` to be pulled, the immutable commit and pull request to be recorded in Jira, and Mashood Ogunbiyi to approve or request changes. The handover does not change the No-Go decision for public production or live CNN integration.
+PR #82 merged NFA-90 into `main` as commit `14c97464be98d7d6a4275158b7215401122974c7`. The NFA-91 closure review records that final handover version and carries its outstanding production and acceptance work forward. The handover does not change the No-Go decision for public production or live CNN integration.
+
+## Project closure
+
+The [NFA-91 project closure package](docs/project-closure/README.md) reviews the original objectives, final scope, all 10 Epics, completed deliverables, incomplete work, defects, risks, achievements, challenges and lessons learned.
+
+The final technical decision is **Project completed with documented limitations** for the controlled local portfolio scope. This closes the active implementation phase after NFA-91 review and merge. It does not mark human UAT, public production, live CNN access, managed storage, production operations or full accessibility acceptance as complete.
+
+The package includes an evidence-based Epic assessment, deliverable inventory, outstanding-work register and retrospective. Verify it with:
+
+```bash
+python3 scripts/verify_project_closure.py
+```
 
 ## API documentation
 
@@ -448,7 +461,8 @@ See [ADR-001](docs/jira/NFA-8.md), the [grounding policy](docs/factual-grounding
 | Security, reliability, accessibility and performance automation | Implemented with documented manual and production limitations |
 | Architecture and developer documentation                        | Implemented                                                   |
 | Technical report and portfolio case study                       | Implemented and verified                                      |
-| Reproducibility and maintenance handover package                | Technical candidate prepared; final merge and owner review pending |
+| Reproducibility and maintenance handover package                | Merged and verified through PR #82                           |
+| Formal project closure and retrospective                        | Technical decision recorded; NFA-91 owner review and merge pending |
 | Controlled local synthetic-data demonstration                   | Package prepared; manual rehearsal and owner acceptance pending |
 | Live CNN integration                                            | No-Go                                                         |
 | Public production release                                       | No-Go                                                         |
@@ -473,6 +487,7 @@ Detailed evidence is available in the [testing guide](docs/testing.md), [release
 | [Technical report](docs/technical-report.md)                              | Design, implementation, evaluation and outcomes            |
 | [Portfolio case study](docs/portfolio-case-study.md)                      | Concise recruiter-facing project summary                   |
 | [Handover package](docs/handover/README.md)                               | Reproducibility, maintenance, transfer, and final review    |
+| [Project closure package](docs/project-closure/README.md)                 | Epic review, deliverables, outstanding work, and retrospective |
 | [Project plan](PROJECT_PLAN.md)                                           | Epics and delivery tasks                                   |
 | [Project management](PROJECT_MANAGEMENT.md)                               | Jira workflow and working agreements                       |
 
